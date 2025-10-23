@@ -236,3 +236,8 @@ def course_form(request):
         'instructors': instructors,
         'categories': categories,
     })
+
+
+def course_list(request):
+    courses = Course.objects.all().select_related('instructor', 'category')
+    return render(request, 'course_list.html', {'courses': courses})
