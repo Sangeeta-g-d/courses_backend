@@ -1,0 +1,61 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+<div class="container py-5">
+  <h2 class="fw-bold mb-4 text-center">Live Sessions</h2>
+
+  <div class="row g-4">
+    {% for session in sessions %}
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0 h-100">
+        {% if session.thumbnail %}
+        <img src="{{ session.thumbnail.url }}" class="card-img-top" alt="{{ session.title }}">
+        {% endif %}
+        <div class="card-body">
+          <h5 class="card-title fw-semibold">{{ session.title }}</h5>
+          <p class="text-muted mb-1"><strong>Agenda:</strong> {{ session.agenda }}</p>
+          <p class="small mb-2">
+            <i class="bi bi-calendar-event"></i>
+            {{ session.session_date }} at {{ session.session_time }}
+          </p>
+
+          {% if session.is_active %}
+          <button class="btn btn-success w-100 join-session"
+                  data-url="{{ session.meeting_url }}">
+            <i class="bi bi-camera-video"></i> Join Session
+          </button>
+          {% else %}
+          <button class="btn btn-secondary w-100" disabled>
+            <i class="bi bi-hourglass-split"></i> Not Yet Started
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <p class="text-center text-muted">No live sessions available.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Bootstrap icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+<script>
+// Open meeting link in a centered popup window
+document.querySelectorAll('.join-session').forEach(btn => {
+  btn.addEventListener('click', function () {
+    const url = this.getAttribute('data-url');
+    const width = 1000;
+    const height = 700;
+    const left = (screen.width / 2) - (width / 2);
+    const top = (screen.height / 2) - (height / 2);
+
+    window.open(
+      url,
+      "Live Session",
+      `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes,status=yes`
+    );
+  });
+});
+</script>
+{% endblock %}

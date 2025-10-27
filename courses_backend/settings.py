@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'admin_part',
     'auth_app',
+    'user_part',
 ]
 AUTH_USER_MODEL = 'auth_app.CustomUser'
 MIDDLEWARE = [

@@ -1,6 +1,10 @@
 from django.db import models
 from django.conf import settings
 from django.utils.text import slugify
+from django.utils import timezone
+from django.utils import timezone
+from datetime import timedelta, datetime
+from zoneinfo import ZoneInfo
 
 # ---------------------------------------------------------
 # CATEGORY MODEL (e.g., Development, Business, Design)
@@ -22,62 +26,42 @@ class Category(models.Model):
 
 
 # ---------------------------------------------------------
-# INSTRUCTOR MODEL (details about instructors)
-# ---------------------------------------------------------
-class Instructor(models.Model):
-    full_name = models.CharField(max_length=255)
-    email = models.EmailField(unique=True)
-    phone_number = models.CharField(max_length=15, blank=True, null=True)
-    password = models.CharField(max_length=255)
-    bio = models.TextField(blank=True, null=True)
-    profile_image = models.ImageField(upload_to='instructors/', blank=True, null=True)
-    designation = models.CharField(max_length=255, blank=True, null=True)
-
-    # Separate social media fields
-    linkedin = models.URLField(max_length=255, blank=True, null=True)
-    youtube = models.URLField(max_length=255, blank=True, null=True)
-    website = models.URLField(max_length=255, blank=True, null=True)
-    
-
-    def __str__(self):
-        return self.full_name
-
-
-
-# ---------------------------------------------------------
 # COURSE MODEL (main model)
 # ---------------------------------------------------------
 
 
 class Course(models.Model):
-    instructor = models.ForeignKey('Instructor', on_delete=models.CASCADE, related_name='courses')
     category = models.ForeignKey('Category', on_delete=models.SET_NULL, null=True, related_name='courses')
 
     title = models.CharField(max_length=1000)
-    slug = models.SlugField(unique=True, blank=True)
     thumbnail = models.ImageField(upload_to='course_thumbnails/', blank=True, null=True)
-    preview_video = models.FileField(upload_to='course_videos/', blank=True, null=True, help_text="Upload a short preview video")
+    preview_video = models.FileField(
+        upload_to='course_videos/', blank=True, null=True, 
+        help_text="Upload a short preview video"
+    )
 
     short_description = models.TextField(max_length=2000)
     full_description = models.TextField()
 
     language = models.CharField(max_length=1000, default='English')
-    level = models.CharField(max_length=500, choices=[
-        ('Beginner', 'Beginner'),
-        ('Intermediate', 'Intermediate'),
-        ('Advanced', 'Advanced')
-    ], default='Beginner')
+    level = models.CharField(
+        max_length=500,
+        choices=[
+            ('Beginner', 'Beginner'),
+            ('Intermediate', 'Intermediate'),
+            ('Advanced', 'Advanced')
+        ],
+        default='Beginner'
+    )
 
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     discount = models.PositiveIntegerField(default=0)  # percentage
     is_free = models.BooleanField(default=False)
 
-    # ✅ Single column for “This course includes”
     course_includes = models.TextField(
         blank=True, null=True,
         help_text="Add course features separated by commas (e.g. '31.5 hours on-demand video, 131 coding exercises, 93 articles')"
     )
-
     requirements = models.TextField(blank=True, null=True)
     learning_outcomes = models.TextField(blank=True, null=True)
 
@@ -86,12 +70,14 @@ class Course(models.Model):
     is_published = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = slugify(self.title)
-        super(Course, self).save(*args, **kwargs)
+        # Auto-set price to 0 if course is free
+        if self.is_free:
+            self.price = 0
+            self.discount = 0  # no discount needed for free courses
+        super().save(*args, **kwargs)
 
     def get_discounted_price(self):
-        if self.discount > 0:
+        if self.discount > 0 and not self.is_free:
             return self.price - (self.price * self.discount / 100)
         return self.price
 
@@ -103,6 +89,7 @@ class Course(models.Model):
 
     def __str__(self):
         return self.title
+
     
 
 
@@ -128,42 +115,6 @@ class Lecture(models.Model):
     is_preview = models.BooleanField(default=False)
     resource = models.FileField(upload_to='lectures/resources/', blank=True, null=True)
 
-    order = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        ordering = ['order']
-
-    def __str__(self):
-        return f"{self.section.title} - {self.title}"
-
-
-
-
-# ---------------------------------------------------------
-# SECTION MODEL (each course can have multiple sections)
-# ---------------------------------------------------------
-class Section(models.Model):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='sections_old')  # changed here
-    title = models.CharField(max_length=255)
-    order = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        ordering = ['order']
-
-    def __str__(self):
-        return f"{self.course.title} - {self.title}"
-
-
-# ---------------------------------------------------------
-# LESSON MODEL (each section can have multiple lessons/videos)
-# ---------------------------------------------------------
-class Lesson(models.Model):
-    section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name='lessons')
-    title = models.CharField(max_length=255)
-    video_url = models.URLField(blank=True, null=True)
-    video_file = models.FileField(upload_to='course_videos/', blank=True, null=True)
-    duration = models.CharField(max_length=20, blank=True, null=True)
-    is_preview = models.BooleanField(default=False)
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -231,3 +182,34 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+
+# session models
+class LiveSession(models.Model):
+    title = models.CharField(max_length=255)
+    agenda = models.TextField()
+    thumbnail = models.ImageField(upload_to='live_sessions/thumbnails/')
+    meeting_url = models.URLField()
+    session_date = models.DateField()
+    session_time = models.TimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_active(self):
+        """
+        Returns True if current time (IST) is within 5 minutes before or after session start.
+        """
+        ist = ZoneInfo("Asia/Kolkata")
+
+        # Combine date and time and make timezone-aware
+        session_datetime = datetime.combine(self.session_date, self.session_time).replace(tzinfo=ist)
+
+        # Current time in IST
+        now_ist = timezone.now().astimezone(ist)
+
+        # Allow join 5 minutes before start
+        return now_ist >= (session_datetime - timedelta(minutes=5))
+
+    def __str__(self):
+        return self.title

@@ -1,0 +1,340 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+<div class="page-heading d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="">Courses</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ course.title }}</li>
+            </ol>
+        </nav>
+        <h3 class="mb-0">{{ course.title }}</h3>
+        <p class="text-muted mb-0">Manage course content and structure</p>
+    </div>
+    <div>
+        <a href="{% url 'edit_course' course.id %}" class="btn btn-warning me-2">
+            <i class="bi bi-pencil-square me-1"></i> Edit Course
+        </a>
+        <a href="{% url 'delete_course' course.id %}" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this course?')">
+            <i class="bi bi-trash me-1"></i> Delete
+        </a>
+    </div>
+</div>
+
+<div class="page-content">
+<!-- Course Info Card -->
+<div class="card mb-4 border-0 shadow-sm">
+    <div class="card-header bg-primary text-white py-3">
+        <h5 class="mb-0 text-white"><i class="bi bi-info-circle me-2"></i>Course Information</h5>
+    </div>
+
+    <div class="row g-0">
+        <div class="col-md-4">
+            <div class="p-3">
+                {% if course.thumbnail %}
+                <img src="{{ course.thumbnail.url }}" class="img-fluid rounded shadow-sm" alt="{{ course.title }}">
+                {% else %}
+                <div class="bg-light d-flex align-items-center justify-content-center rounded" style="height: 250px;">
+                    <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                </div>
+                {% endif %}
+                
+                {% if course.preview_video %}
+                <div class="mt-3">
+                    <p class="fw-bold mb-2">Preview Video:</p>
+                    <video width="100%" controls class="rounded shadow-sm">
+                        <source src="{{ course.preview_video.url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card-body">
+                <div class="row g-3">
+                    
+                    <!-- Basic Info -->
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <h6 class="fw-bold text-primary mb-3">Basic Information</h6>
+                            <p class="mb-2"><strong>Title:</strong> {{ course.title }}</p>
+                            <p class="mb-2"><strong>Price:</strong> 
+                                {% if course.is_free %}
+                                <span class="badge bg-success">Free</span>
+                                {% else %}
+                                <span class="text-decoration-line-through text-muted me-1">₹{{ course.price }}</span>
+                                <span class="fw-bold">₹{{ course.get_discounted_price }}</span>
+                                {% endif %}
+                            </p>
+                            <p class="mb-2"><strong>Level:</strong> <span class="badge bg-secondary">{{ course.level }}</span></p>
+                            <p class="mb-0"><strong>Language:</strong> <span class="badge bg-info">{{ course.language }}</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Course Details (Short Description + Includes) -->
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100 d-flex flex-column">
+                            <h6 class="fw-bold text-primary mb-3">Course Details</h6>
+                            <div class="overflow-auto" style="max-height: 200px;">
+                                <p class="mb-2"><strong>Short Description:</strong> {{ course.short_description }}</p>
+                                {% if course.course_includes %}
+                                <p class="mb-2"><strong>Includes:</strong></p>
+                                <ul class="list-group list-group-flush">
+                                    {% for item in course.get_course_includes_list %}
+                                    <li class="list-group-item px-0 py-1">
+                                        <i class="bi bi-check-circle text-success me-1"></i>{{ item }}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Requirements -->
+                    {% if course.requirements %}
+                    <div class="col-12">
+                        <div class="border rounded p-3">
+                            <h6 class="fw-bold text-primary mb-2">Requirements</h6>
+                            <div class="overflow-auto" style="max-height: 180px;">
+                                <p class="mb-0">{{ course.requirements }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Learning Outcomes -->
+                    {% if course.learning_outcomes %}
+                    <div class="col-12">
+                        <div class="border rounded p-3">
+                            <h6 class="fw-bold text-primary mb-2">Learning Outcomes</h6>
+                            <div class="overflow-auto" style="max-height: 180px;">
+                                <p class="mb-0">{{ course.learning_outcomes }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Full Description Section -->
+        {% if course.full_description %}
+        <div class="col-12 px-4 pb-4">
+            <div class="border rounded p-4 mt-3 shadow-sm bg-light">
+                <h6 class="fw-bold text-primary mb-3">Full Description</h6>
+                <div class="overflow-auto" style="max-height: 300px;">
+                    <p class="mb-0">{{ course.full_description|linebreaks }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+
+    <!-- Add Section Form -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Add Section</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{% url 'add_section' course.id %}">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="section_title" class="form-label">Section Title</label>
+                        <input type="text" class="form-control" id="section_title" name="title" required>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="section_order" class="form-label">Order</label>
+                        <input type="number" class="form-control" id="section_order" name="order" value="{{ course.course_sections.count|add:1 }}" min="0">
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">Add Section</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sections List -->
+    {% for section in course.course_sections.all %}
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">{{ section.title }}</h6>
+            <div>
+                <button type="button" class="btn btn-sm btn-warning me-2"
+    onclick="openEditSectionModal('{{ section.id }}', '{{ section.title|escapejs }}', '{{ section.order }}')">
+    <i class="bi bi-pencil-square"></i> Edit
+</button>
+                <a href="{% url 'delete_section' section.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
+                    <i class="bi bi-trash"></i> Delete
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+
+            <!-- Add Lecture Form -->
+            <form method="POST" action="{% url 'add_lecture' section.id %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="lecture_title_{{ section.id }}" class="form-label">Lecture Title</label>
+                        <input type="text" class="form-control" id="lecture_title_{{ section.id }}" name="title" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="lecture_order_{{ section.id }}" class="form-label">Order</label>
+                        <input type="number" class="form-control" id="lecture_order_{{ section.id }}" name="order" value="{{ section.lectures.count|add:1 }}" min="0">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="lecture_duration_{{ section.id }}" class="form-label">Duration</label>
+                        <input type="text" class="form-control" id="lecture_duration_{{ section.id }}" name="duration" placeholder="e.g. 05:05 or 10min">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="lecture_video_{{ section.id }}" class="form-label">Video</label>
+                        <input type="file" class="form-control" id="lecture_video_{{ section.id }}" name="video" accept="video/*">
+                    </div>
+                    <div class="col-md-12 mt-2">
+                        <label for="lecture_resource_{{ section.id }}" class="form-label">Resource (Optional)</label>
+                        <input type="file" class="form-control" id="lecture_resource_{{ section.id }}" name="resource">
+                    </div>
+                    <div class="col-12 mt-3">
+                        <button type="submit" class="btn btn-success btn-sm">Add Lecture</button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Lecture List -->
+            {% if section.lectures.all %}
+            <ul class="list-group list-group-flush mt-3">
+                {% for lecture in section.lectures.all %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ lecture.title }} ({{ lecture.duration }})
+                    <div>
+                        <button type="button" class="btn btn-sm btn-warning me-1"
+    onclick="openEditLectureModal({{ lecture.id }}, '{{ lecture.title|escapejs }}', {{ lecture.order }}, '{{ lecture.duration|default_if_none:'' }}', {{ lecture.is_preview|yesno:'true,false' }})">
+    <i class="bi bi-pencil-square"></i>
+</button>
+                        <a href="{% url 'delete_lecture' lecture.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+
+
+
+<!-- edit -->
+ <!-- Edit Section Modal -->
+<div class="modal fade" id="editSectionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="editSectionForm" method="POST">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Section</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="edit_section_title" class="form-label">Section Title</label>
+            <input type="text" class="form-control" id="edit_section_title" name="title" required>
+          </div>
+          <div class="mb-3">
+            <label for="edit_section_order" class="form-label">Order</label>
+            <input type="number" class="form-control" id="edit_section_order" name="order" min="0">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Lecture Modal -->
+<div class="modal fade" id="editLectureModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="editLectureForm" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Lecture</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="edit_lecture_title" class="form-label">Title</label>
+              <input type="text" class="form-control" id="edit_lecture_title" name="title" required>
+            </div>
+            <div class="col-md-3">
+              <label for="edit_lecture_order" class="form-label">Order</label>
+              <input type="number" class="form-control" id="edit_lecture_order" name="order" min="0">
+            </div>
+            <div class="col-md-3">
+              <label for="edit_lecture_duration" class="form-label">Duration</label>
+              <input type="text" class="form-control" id="edit_lecture_duration" name="duration">
+            </div>
+            <div class="col-md-6">
+              <label for="edit_lecture_video" class="form-label">Video</label>
+              <input type="file" class="form-control" id="edit_lecture_video" name="video">
+            </div>
+            <div class="col-md-6">
+              <label for="edit_lecture_resource" class="form-label">Resource</label>
+              <input type="file" class="form-control" id="edit_lecture_resource" name="resource">
+            </div>
+            <div class="col-md-12 form-check mt-2">
+              <input type="checkbox" class="form-check-input" id="edit_is_preview" name="is_preview">
+              <label class="form-check-label" for="edit_is_preview">Preview Lecture</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+function openEditSectionModal(sectionId, title, order) {
+    const form = document.getElementById('editSectionForm');
+    form.action = `/edit_section/${sectionId}/`;  // Set the form action dynamically
+    document.getElementById('edit_section_title').value = title;
+    document.getElementById('edit_section_order').value = order;
+    new bootstrap.Modal(document.getElementById('editSectionModal')).show();
+}
+
+function openEditLectureModal(lectureId, title, order, duration, isPreview) {
+    const form = document.getElementById('editLectureForm');
+    form.action = `/edit_lecture/${lectureId}/`;  // Set the form action dynamically
+    document.getElementById('edit_lecture_title').value = title;
+    document.getElementById('edit_lecture_order').value = order;
+    document.getElementById('edit_lecture_duration').value = duration;
+    document.getElementById('edit_is_preview').checked = isPreview;
+    new bootstrap.Modal(document.getElementById('editLectureModal')).show();
+}
+</script>
+
+{% include 'notify.html' %}
+
+{% endblock %}
