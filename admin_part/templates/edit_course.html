@@ -1,0 +1,171 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+<div class="page-heading d-flex justify-content-between align-items-center">
+    <h3>Edit Course</h3>
+</div>
+
+<div class="page-content mt-4">
+    <div class="card">
+        <div class="card-body">
+            <form id="editCourseForm" method="POST" action="{% url 'edit_course' course.id %}" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+                <div class="row g-3">
+                    <!-- Category -->
+                    <div class="col-md-6">
+                        <label for="category" class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category" required>
+                            <option value="">Select Category</option>
+                            {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if course.category.id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Title -->
+                    <div class="col-md-6">
+                        <label for="title" class="form-label">Course Title</label>
+                        <input type="text" class="form-control" id="title" name="title" value="{{ course.title }}" required>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Thumbnail -->
+                    <div class="col-md-6">
+                        <label for="thumbnail" class="form-label">Thumbnail</label>
+                        <input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*">
+                        {% if course.thumbnail %}
+                            <img src="{{ course.thumbnail.url }}" width="100" class="mt-2">
+                        {% endif %}
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Preview Video -->
+                    <div class="col-md-6">
+                        <label for="preview_video" class="form-label">Preview Video</label>
+                        <input type="file" class="form-control" id="preview_video" name="preview_video" accept="video/*">
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Short Description -->
+                    <div class="col-12">
+                        <label for="short_description" class="form-label">Short Description</label>
+                        <textarea class="form-control" id="short_description" name="short_description" rows="3" required>{{ course.short_description }}</textarea>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Full Description -->
+                    <div class="col-12">
+                        <label for="full_description" class="form-label">Full Description</label>
+                        <textarea class="form-control" id="full_description" name="full_description" rows="4" required>{{ course.full_description }}</textarea>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Language -->
+                    <div class="col-md-6">
+                        <label for="language" class="form-label">Language</label>
+                        <input type="text" class="form-control" id="language" name="language" value="{{ course.language }}" required>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Level -->
+                    <div class="col-md-6">
+                        <label for="level" class="form-label">Level</label>
+                        <select class="form-select" id="level" name="level" required>
+                            <option value="Beginner" {% if course.level == 'Beginner' %}selected{% endif %}>Beginner</option>
+                            <option value="Intermediate" {% if course.level == 'Intermediate' %}selected{% endif %}>Intermediate</option>
+                            <option value="Advanced" {% if course.level == 'Advanced' %}selected{% endif %}>Advanced</option>
+                        </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Free Course Checkbox -->
+                    <div class="col-md-6 d-flex align-items-center">
+                        <div class="form-check mt-4">
+                            <input type="checkbox" class="form-check-input" id="is_free" name="is_free" {% if course.is_free %}checked{% endif %}>
+                            <label class="form-check-label" for="is_free">Free Course</label>
+                        </div>
+                    </div>
+
+                    <!-- Price -->
+                    <div class="col-md-6">
+                        <label for="price" class="form-label">Price</label>
+                        <input type="number" class="form-control" id="price" name="price" min="0" step="0.01" value="{{ course.price }}" {% if course.is_free %}readonly{% endif %} required>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Discount -->
+                    <div class="col-md-6">
+                        <label for="discount" class="form-label">Discount (%)</label>
+                        <input type="number" class="form-control" id="discount" name="discount" min="0" max="100" value="{{ course.discount }}">
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Course Includes -->
+                    <div class="col-12">
+                        <label for="course_includes" class="form-label">Course Includes (comma separated)</label>
+                        <input type="text" class="form-control" id="course_includes" name="course_includes" value="{{ course.course_includes }}">
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Requirements -->
+                    <div class="col-12">
+                        <label for="requirements" class="form-label">Requirements</label>
+                        <textarea class="form-control" id="requirements" name="requirements" rows="2">{{ course.requirements }}</textarea>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Learning Outcomes -->
+                    <div class="col-12">
+                        <label for="learning_outcomes" class="form-label">Learning Outcomes</label>
+                        <textarea class="form-control" id="learning_outcomes" name="learning_outcomes" rows="2">{{ course.learning_outcomes }}</textarea>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-success">Update Course</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% include 'notify.html' %}
+
+<script>
+document.getElementById('is_free').addEventListener('change', function() {
+    const priceInput = document.getElementById('price');
+    const discountInput = document.getElementById('discount');
+    if (this.checked) {
+        priceInput.value = 0;
+        priceInput.setAttribute('readonly', true);
+        discountInput.value = 0;
+        discountInput.setAttribute('readonly', true);
+    } else {
+        priceInput.removeAttribute('readonly');
+        discountInput.removeAttribute('readonly');
+    }
+});
+
+// Frontend validation
+document.getElementById('editCourseForm').addEventListener('submit', function(e) {
+    let valid = true;
+    const fields = ['category', 'title', 'short_description', 'full_description', 'language', 'level', 'price'];
+
+    fields.forEach(function(id) {
+        const input = document.getElementById(id);
+        const feedback = input.nextElementSibling;
+        if (!input.value || (input.type==='number' && input.value<0)) {
+            feedback.innerText = 'This field is required';
+            input.classList.add('is-invalid');
+            valid = false;
+        } else {
+            feedback.innerText = '';
+            input.classList.remove('is-invalid');
+        }
+    });
+
+    if (!valid) e.preventDefault();
+});
+</script>
+{% endblock %}

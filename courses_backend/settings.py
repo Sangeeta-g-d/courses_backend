@@ -29,7 +29,10 @@ ALLOWED_HOSTS = []
 
 
 # Application definition
-
+# settings.py
+# Zoom Integration Settings
+ZOOM_API_KEY = 'jh9wuo8Qu6cSSsB4CXqBA'
+ZOOM_API_SECRET = 'Jo4Kr7R0rTzx8Cdb1XHFDSufNz1SVd4F'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -40,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'admin_part',
     'auth_app',
+    'user_part',
 ]
 AUTH_USER_MODEL = 'auth_app.CustomUser'
 MIDDLEWARE = [

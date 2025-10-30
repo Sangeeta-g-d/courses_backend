@@ -23,6 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('admin_part.urls')),   # 👈 Add this line
     path('auth/', include('auth_app.urls')),  # if you have an auth app
+    path('user/', include('user_part.urls')),  # 👈 Add this line
 ]
 
 if settings.DEBUG:

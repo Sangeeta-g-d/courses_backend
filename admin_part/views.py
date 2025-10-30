@@ -1,12 +1,20 @@
 from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
-from .models import Category,Instructor,Course
+from .models import *
 from django.utils.text import slugify
 from django.contrib.auth import logout
 import json
 from django.http import JsonResponse
+from datetime import datetime, date, time
+import uuid
+import jwt
+import requests
 # Create your views here.
+
+
+def index(request):
+    return render(request, 'index.html')
 
 
 def admin_dashboard(request):
@@ -19,156 +27,69 @@ def admin_logout(request):
 def admin_login(request):
     if request.user.is_authenticated and request.user.is_superuser:
         return redirect('admin_dashboard')
+
     if request.method == 'POST':
         email = request.POST.get('email')
         password = request.POST.get('password')
+        remember_me = request.POST.get('remember_me')  # ✅ checkbox value
+
         user = authenticate(request, username=email, password=password)
         if user is not None and user.is_superuser:
             login(request, user)
+
+            # ✅ Session expiry logic
+            if not remember_me:
+                request.session.set_expiry(0)  # Session ends when browser closes
+            else:
+                request.session.set_expiry(60 * 60 * 24 * 30)  # 30 days
+
+            messages.success(request, f"Welcome back, {user.email}!")
             return redirect('admin_dashboard')
         else:
             messages.error(request, "Invalid credentials or not an admin user.")
+
     return render(request, 'admin_login.html')
-
-
-def category_form(request):
-    if request.method == "POST":
-        name = request.POST.get('name')
-        if not name:
-            messages.error(request, "Please enter a category name.")
-            return redirect('category_form')
-        # Check if category already exists
-        if Category.objects.filter(name__iexact=name).exists():
-            messages.warning(request, "This category already exists.")
-            return redirect('category_form')
-        # Create new category
-        Category.objects.create(name=name)
-        messages.success(request, "Category added successfully!")
-        return redirect('category_form')
-    
-    # Get recent categories for display
-    recent_categories = Category.objects.all().order_by('-id')[:5]
-    
-    context = {
-        'recent_categories': recent_categories
-    }
-    return render(request, 'category_form.html', context)
 
 def categories(request):
     categories = Category.objects.all().order_by('id')
     return render(request, 'categories.html', {'categories': categories})
 
-
-def edit_category(request):
+def save_category(request):
     if request.method == "POST":
-        category_id = request.POST.get("id")
-        name = request.POST.get("name")
+        name = request.POST.get("name", "").strip()
+        category_id = request.POST.get("category_id")
 
-        if not category_id or not name:
-            messages.error(request, "Missing required fields.")
-            return redirect("categories")
+        if not name:
+            messages.error(request, "Category name cannot be empty.")
+            return redirect('categories')
 
-        category = get_object_or_404(Category, id=category_id)
-
-        # Check for duplicates (case insensitive, excluding current)
-        if Category.objects.filter(name__iexact=name).exclude(id=category_id).exists():
-            messages.error(request, "Category with this name already exists.")
-        else:
+        if category_id:  # Update existing
+            category = get_object_or_404(Category, id=category_id)
             category.name = name
             category.slug = slugify(name)
             category.save()
-            messages.success(request, "Category updated successfully!")
+            messages.success(request, f"Category '{name}' updated successfully!")
+        else:  # Add new
+            if Category.objects.filter(name__iexact=name).exists():
+                messages.warning(request, "Category with this name already exists.")
+            else:
+                Category.objects.create(name=name, slug=slugify(name))
+                messages.success(request, f"Category '{name}' added successfully!")
 
-    return redirect("categories")
-
-
-def delete_category(request, id):
-    if request.method == 'POST':
-        category = get_object_or_404(Category, id=id)
-        category.delete()
-        return JsonResponse({'success': True})
-    return JsonResponse({'success': False}, status=400)
-
- 
-
-
-def instructor_form(request):
-    if request.method == 'POST':
-        full_name = request.POST.get('full_name')
-        email = request.POST.get('email')
-        phone_number = request.POST.get('phone_number')
-        password = request.POST.get('password')
-        bio = request.POST.get('bio')
-        designation = request.POST.get('designation')
-        profile_image = request.FILES.get('profile_image')
-
-        linkedin = request.POST.get('linkedin')
-        website = request.POST.get('website')
-        
-        youtube = request.POST.get('youtube')
-
-        # Check if email already exists
-        if Instructor.objects.filter(email=email).exists():
-            messages.error(request, "An instructor with this email already exists.")
-            return redirect('instructor_form')
-
-        # Create instructor
-        Instructor.objects.create(
-            full_name=full_name,
-            email=email,
-            phone_number=phone_number,
-            password=password,  # (Later you can hash this)
-            bio=bio,
-            designation=designation,
-            profile_image=profile_image,
-            linkedin=linkedin,
-            website=website,
-            youtube=youtube
-        )
-
-        messages.success(request, f"Instructor '{full_name}' added successfully!")
-        return redirect('instructor_form')
-
-    recent_instructors = Instructor.objects.all().order_by('-id')[:5]
-    return render(request, 'instructor_form.html', {'recent_instructors': recent_instructors})
-
-def instructors(request):
-    instructor_list = Instructor.objects.all().order_by('-id')  # latest first
-    return render(request, 'instructors.html', {'instructor_list': instructor_list})
-
-def instructor_edit(request, instructor_id):
-    instructor = get_object_or_404(Instructor, id=instructor_id)
-    
-    if request.method == 'POST':
-        instructor.full_name = request.POST.get('full_name')
-        instructor.email = request.POST.get('email')
-        instructor.phone_number = request.POST.get('phone_number')
-        instructor.designation = request.POST.get('designation')
-        instructor.bio = request.POST.get('bio')
-        instructor.linkedin = request.POST.get('linkedin')
-        instructor.youtube = request.POST.get('youtube')
-        instructor.website = request.POST.get('website')
-
-        profile_image = request.FILES.get('profile_image')
-        if profile_image:
-            instructor.profile_image = profile_image
-        
-        instructor.save()
-        # Optionally, add a success message here
-        return redirect('instructors')
-    
-    return render(request, 'instructor_edit.html', {'instructor': instructor})
+        return redirect('categories')
+    else:
+        messages.error(request, "Invalid request.")
+        return redirect('categories')
 
 
-def delete_instructor(request, pk):
-    if request.method == "POST":
-        instructor = get_object_or_404(Instructor, pk=pk)
-        instructor.delete()
-        return JsonResponse({"success": True})
-    return JsonResponse({"error": "Invalid request"}, status=400)
+def delete_category(request, pk):
+    category = get_object_or_404(Category, id=pk)
+    category.delete()
+    messages.success(request, f"Category '{category.name}' deleted successfully!")
+    return redirect('categories')
+
 
 def course_form(request):
-    instructors = Instructor.objects.all()
     categories = Category.objects.all()
 
     if request.method == 'POST':
@@ -197,11 +118,10 @@ def course_form(request):
 
         # Create Course Object
         try:
-            instructor = Instructor.objects.get(id=instructor_id)
+           
             category = Category.objects.get(id=category_id)
 
             course = Course.objects.create(
-                instructor=instructor,
                 category=category,
                 title=title,
                 slug=slugify(title),
@@ -222,9 +142,6 @@ def course_form(request):
 
             messages.success(request, f"Course '{course.title}' added successfully!")
             return redirect('courses_list')  # change to your actual course list URL name
-
-        except Instructor.DoesNotExist:
-            messages.error(request, "Invalid instructor selected.")
         except Category.DoesNotExist:
             messages.error(request, "Invalid category selected.")
         except Exception as e:
@@ -233,11 +150,496 @@ def course_form(request):
         return redirect('course_form')
 
     return render(request, 'course_form.html', {
-        'instructors': instructors,
         'categories': categories,
     })
 
 
-def course_list(request):
-    courses = Course.objects.all().select_related('instructor', 'category')
-    return render(request, 'course_list.html', {'courses': courses})
+def add_course(request):
+    categories = Category.objects.all()
+    if request.method == 'POST':
+        try:
+            category_id = request.POST.get('category')
+            category = Category.objects.get(id=category_id) if category_id else None
+
+            title = request.POST.get('title')
+            thumbnail = request.FILES.get('thumbnail')
+            preview_video = request.FILES.get('preview_video')
+            short_description = request.POST.get('short_description')
+            full_description = request.POST.get('full_description')
+            language = request.POST.get('language', 'English')
+            level = request.POST.get('level', 'Beginner')
+            price = float(request.POST.get('price', 0))
+            discount = int(request.POST.get('discount', 0))
+            is_free = request.POST.get('is_free') == 'on'
+            course_includes = request.POST.get('course_includes', '')
+            requirements = request.POST.get('requirements', '')
+            learning_outcomes = request.POST.get('learning_outcomes', '')
+
+            course = Course(
+                category=category,
+                title=title,
+                thumbnail=thumbnail,
+                preview_video=preview_video,
+                short_description=short_description,
+                full_description=full_description,
+                language=language,
+                level=level,
+                price=price,
+                discount=discount,
+                is_free=is_free,
+                course_includes=course_includes,
+                requirements=requirements,
+                learning_outcomes=learning_outcomes
+            )
+            course.save()
+            messages.success(request, "Course added successfully!")
+            return redirect('add_course')
+        except Exception as e:
+            messages.error(request, f"Error adding course: {str(e)}")
+            return redirect('add_course')
+
+    return render(request, 'add_course.html', {'categories': categories})
+
+def view_courses(request):
+    courses = Course.objects.all().order_by('-created_at')
+    return render(request, 'view_course.html', {'courses': courses})
+
+def edit_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    categories = Category.objects.all()
+
+    if request.method == "POST":
+        try:
+            course.title = request.POST.get('title')
+            course.category_id = request.POST.get('category')
+            course.short_description = request.POST.get('short_description')
+            course.full_description = request.POST.get('full_description')
+            course.language = request.POST.get('language')
+            course.level = request.POST.get('level')
+            course.is_free = True if request.POST.get('is_free') == 'on' else False
+            course.price = request.POST.get('price') if not course.is_free else 0
+            course.discount = request.POST.get('discount') if not course.is_free else 0
+            course.course_includes = request.POST.get('course_includes')
+            course.requirements = request.POST.get('requirements')
+            course.learning_outcomes = request.POST.get('learning_outcomes')
+
+            # Handle file uploads
+            if 'thumbnail' in request.FILES:
+                course.thumbnail = request.FILES['thumbnail']
+            if 'preview_video' in request.FILES:
+                course.preview_video = request.FILES['preview_video']
+
+            course.save()
+            messages.success(request, "Course updated successfully!")
+            return redirect('/view_courses/')  # your course list view
+        except Exception as e:
+            messages.error(request, f"Error updating course: {str(e)}")
+
+    return render(request, 'edit_course.html', {'course': course, 'categories': categories})
+
+
+def delete_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    course.delete()
+    messages.success(request, "Course deleted successfully!")
+    return redirect('view_courses')
+
+
+def course_detail(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    return render(request, 'course_detail.html', {'course': course})
+
+def add_section(request, course_id):
+    if request.method == "POST":
+        course = get_object_or_404(Course, id=course_id)
+        title = request.POST.get('title', '').strip()
+        order = request.POST.get('order', '').strip()
+
+        # Backend Validation
+        if not title:
+            messages.error(request, "Section title is required.")
+            return redirect('course_detail', course_id=course.id)
+
+        if not order:
+            order = course.course_sections.count() + 1
+        else:
+            try:
+                order = int(order)
+            except ValueError:
+                messages.error(request, "Order must be a number.")
+                return redirect('course_detail', course_id=course.id)
+
+        # Create the section
+        try:
+            section = CourseSection.objects.create(
+                course=course,
+                title=title,
+                order=order
+            )
+            messages.success(request, f"Section '{section.title}' added successfully!")
+        except Exception as e:
+            messages.error(request, f"Error adding section: {str(e)}")
+
+    return redirect('course_detail', course_id=course_id)
+
+
+def edit_section(request, section_id):
+    section = get_object_or_404(CourseSection, id=section_id)
+    course_id = section.course.id
+
+    if request.method == "POST":
+        title = request.POST.get('title', '').strip()
+        order = request.POST.get('order', '').strip()
+
+        # Validation
+        if not title:
+            messages.error(request, "Section title is required.")
+            return redirect('course_detail', course_id=course_id)
+
+        if order:
+            try:
+                order = int(order)
+                section.order = order
+            except ValueError:
+                messages.error(request, "Order must be a number.")
+                return redirect('course_detail', course_id=course_id)
+
+        section.title = title
+
+        try:
+            section.save()
+            messages.success(request, f"Section '{section.title}' updated successfully!")
+        except Exception as e:
+            messages.error(request, f"Error updating section: {str(e)}")
+
+    return redirect('course_detail', course_id=course_id)
+
+def delete_section(request, section_id):
+    section = get_object_or_404(CourseSection, id=section_id)
+    course_id = section.course.id  # to redirect back
+
+    try:
+        section.delete()
+        messages.success(request, f"Section '{section.title}' deleted successfully!")
+    except Exception as e:
+        messages.error(request, f"Error deleting section: {str(e)}")
+
+    return redirect('course_detail', course_id=course_id)
+
+def add_lecture(request, section_id):
+    section = get_object_or_404(CourseSection, id=section_id)
+    
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        duration = request.POST.get("duration", "").strip()
+        is_preview = request.POST.get("is_preview") == "on"
+        video = request.FILES.get("video")
+        resource = request.FILES.get("resource")
+        order = request.POST.get("order") or 0
+
+        if not title:
+            messages.error(request, "Lecture title is required.")
+            return redirect('course_detail', course_id=section.course.id)
+
+        try:
+            lecture = Lecture.objects.create(
+                section=section,
+                title=title,
+                duration=duration,
+                is_preview=is_preview,
+                video=video,
+                resource=resource,
+                order=order
+            )
+            messages.success(request, f"Lecture '{lecture.title}' added successfully!")
+        except Exception as e:
+            messages.error(request, f"Error adding lecture: {str(e)}")
+
+        return redirect('course_detail', course_id=section.course.id)
+    
+    # GET request can optionally render a modal or separate template if needed
+    return render(request, 'add_lecture.html', {'section': section})
+
+
+def edit_lecture(request, lecture_id):
+    lecture = get_object_or_404(Lecture, id=lecture_id)
+    
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        duration = request.POST.get("duration", "").strip()
+        is_preview = request.POST.get("is_preview") == "on"
+        video = request.FILES.get("video")
+        resource = request.FILES.get("resource")
+        order = request.POST.get("order") or 0
+
+        if not title:
+            messages.error(request, "Lecture title is required.")
+            return redirect('course_detail', course_id=lecture.section.course.id)
+
+        try:
+            lecture.title = title
+            lecture.duration = duration
+            lecture.is_preview = is_preview
+            lecture.order = order
+            if video:
+                lecture.video = video
+            if resource:
+                lecture.resource = resource
+            lecture.save()
+            messages.success(request, f"Lecture '{lecture.title}' updated successfully!")
+        except Exception as e:
+            messages.error(request, f"Error updating lecture: {str(e)}")
+
+        return redirect('course_detail', course_id=lecture.section.course.id)
+    
+    # GET request to render form (optional modal)
+    return render(request, 'edit_lecture.html', {'lecture': lecture})
+
+def delete_lecture(request, lecture_id):
+    lecture = get_object_or_404(Lecture, id=lecture_id)
+    course_id = lecture.section.course.id
+    try:
+        lecture.delete()
+        messages.success(request, f"Lecture '{lecture.title}' deleted successfully!")
+    except Exception as e:
+        messages.error(request, f"Error deleting lecture: {str(e)}")
+    return redirect('course_detail', course_id=course_id)
+
+
+
+
+# add session
+def admin_live_sessions(request):
+    sessions = LiveSession.objects.all().order_by('-session_date', '-session_time')
+    return render(request, 'live_sessions_list.html', {'sessions': sessions})
+
+
+# Admin: Add session
+def add_live_session(request):
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        agenda = request.POST.get('agenda')
+        meeting_url = request.POST.get('meeting_url')
+
+        session_date = request.POST.get('session_date')
+        session_time = request.POST.get('session_time')
+        thumbnail = request.FILES.get('thumbnail')
+
+        LiveSession.objects.create(
+            title=title,
+            agenda=agenda,
+            meeting_url=meeting_url,
+            session_date=session_date,
+            session_time=session_time,
+            thumbnail=thumbnail
+        )
+        messages.success(request, "Live session added successfully.")
+        return redirect('admin_live_sessions')
+
+    return render(request, 'add_live_session.html')
+
+
+# Admin: Edit session
+def edit_live_session(request, session_id):
+    session = get_object_or_404(LiveSession, id=session_id)
+    if request.method == 'POST':
+        session.title = request.POST.get('title')
+        session.agenda = request.POST.get('agenda')
+        session.zoom_meeting_url = request.POST.get('zoom_meeting_url')
+        session.session_date = request.POST.get('session_date')
+        session.session_time = request.POST.get('session_time')
+
+        if request.FILES.get('thumbnail'):
+            session.thumbnail = request.FILES.get('thumbnail')
+
+        session.save()
+        messages.success(request, "Live session updated successfully.")
+        return redirect('admin_live_sessions')
+
+    return render(request, 'edit_live_session.html', {'session': session})
+
+
+# Admin: Delete session
+def delete_live_session(request, session_id):
+    session = get_object_or_404(LiveSession, id=session_id)
+    session.delete()
+    messages.success(request, "Live session deleted successfully.")
+    return redirect('admin_live_sessions')
+
+
+# Live session testttttt
+# views.py
+def create_zoom_meeting(topic, agenda, start_time, duration=60, timezone="UTC"):
+    """Create Zoom meeting directly in the view"""
+    try:
+        # Generate JWT Token
+        payload = {
+            'iss': settings.ZOOM_API_KEY,
+            'exp': datetime.utcnow() + timedelta(minutes=90)
+        }
+        token = jwt.encode(payload, settings.ZOOM_API_SECRET, algorithm='HS256')
+        
+        # Prepare headers
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Format time for Zoom API
+        if isinstance(start_time, datetime):
+            formatted_time = start_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+        else:
+            formatted_time = start_time
+        
+        # Meeting data
+        data = {
+            "topic": topic,
+            "agenda": agenda,
+            "type": 2,  # Scheduled meeting
+            "start_time": formatted_time,
+            "duration": duration,
+            "timezone": timezone,
+            "settings": {
+                "host_video": True,
+                "participant_video": True,
+                "join_before_host": False,
+                "mute_upon_entry": True,
+                "watermark": False,
+                "audio": "both",
+                "auto_recording": "none",
+                "waiting_room": True
+            }
+        }
+        
+        # Create meeting
+        url = "https://api.zoom.us/v2/users/me/meetings"
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        
+        if response.status_code == 201:
+            return response.json(), "Meeting created successfully"
+        else:
+            return None, f"Zoom API Error: {response.status_code} - {response.text}"
+            
+    except Exception as e:
+        return None, f"Error creating meeting: {str(e)}"
+
+def test_zoom_connection(request):
+    """Test Zoom API connection"""
+    try:
+        # Generate JWT Token
+        payload = {
+            'iss': settings.ZOOM_API_KEY,
+            'exp': datetime.utcnow() + timedelta(minutes=90)
+        }
+        token = jwt.encode(payload, settings.ZOOM_API_SECRET, algorithm='HS256')
+        
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Test API call
+        url = "https://api.zoom.us/v2/users/me"
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            messages.success(request, '✅ Zoom connection successful! API credentials are working.')
+        else:
+            messages.error(request, f'❌ Zoom connection failed: {response.status_code} - {response.text}')
+            
+    except Exception as e:
+        messages.error(request, f'❌ Zoom connection error: {str(e)}')
+    
+    return redirect('create_live_session')
+
+def create_live_session(request):
+    """View to create live session with Zoom integration"""
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        agenda = request.POST.get('agenda')
+        session_date = request.POST.get('session_date')
+        session_time = request.POST.get('session_time')
+        duration = request.POST.get('duration', 60)
+        timezone = request.POST.get('timezone', 'UTC')
+        
+        # Validate required fields
+        if not all([title, agenda, session_date, session_time]):
+            messages.error(request, 'All fields are required.')
+            return render(request, 'create_live_session.html')
+        
+        # Combine date and time
+        try:
+            start_datetime_str = f"{session_date} {session_time}"
+            start_datetime = datetime.strptime(start_datetime_str, '%Y-%m-%d %H:%M')
+            
+            # Ensure the session is in the future
+            if start_datetime <= datetime.now():
+                messages.error(request, 'Session must be scheduled for a future time.')
+                return render(request, 'create_live_session.html')
+                
+        except ValueError as e:
+            messages.error(request, 'Invalid date or time format.')
+            return render(request, 'create_live_session.html')
+        
+        # Create Zoom meeting
+        zoom_meeting, message = create_zoom_meeting(
+            topic=title,
+            agenda=agenda,
+            start_time=start_datetime,
+            duration=int(duration),
+            timezone=timezone
+        )
+        
+        if zoom_meeting:
+            # Create LiveSession object
+            LiveSession.objects.create(
+                title=title,
+                agenda=agenda,
+                session_date=session_date,
+                session_time=session_time,
+                meeting_url=zoom_meeting['join_url'],
+                meeting_id=zoom_meeting['id'],
+                start_url=zoom_meeting.get('start_url', ''),
+                duration=duration,
+                timezone=timezone,
+                is_active=False
+            )
+            messages.success(request, '✅ Live session created successfully!')
+            return redirect('live_session_test')
+        else:
+            messages.error(request, f'❌ Failed to create Zoom meeting: {message}')
+    
+    # Timezone options
+    timezones = [
+        'UTC', 'America/New_York', 'America/Los_Angeles', 'Europe/London',
+        'Europe/Paris', 'Asia/Kolkata', 'Asia/Tokyo', 'Australia/Sydney'
+    ]
+    
+    return render(request, 'create_live_session.html', {
+        'timezones': timezones
+    })
+
+def live_session_test(request):
+    """Display all live sessions"""
+    sessions = LiveSession.objects.all().order_by('-session_date', '-session_time')
+    
+    # Check if sessions are active based on current time
+    current_datetime = datetime.now()
+    for session in sessions:
+        session_datetime = datetime.combine(session.session_date, session.session_time)
+        # Consider session active if it's within 30 minutes of start time
+        time_difference = (session_datetime - current_datetime).total_seconds()
+        session.is_active = time_difference <= 1800  # 30 minutes before start
+    
+    return render(request, 'live_session_test.html', {'sessions': sessions})
+
+def delete_live_session(request, session_id):
+    """Delete a live session"""
+    try:
+        session = LiveSession.objects.get(id=session_id)
+        session.delete()
+        messages.success(request, 'Session deleted successfully!')
+    except LiveSession.DoesNotExist:
+        messages.error(request, 'Session not found!')
+    
+    return redirect('live_session_test')
