@@ -61,14 +61,6 @@
                         <div class="border rounded p-3 h-100">
                             <h6 class="fw-bold text-primary mb-3">Basic Information</h6>
                             <p class="mb-2"><strong>Title:</strong> {{ course.title }}</p>
-                            <p class="mb-2"><strong>Price:</strong> 
-                                {% if course.is_free %}
-                                <span class="badge bg-success">Free</span>
-                                {% else %}
-                                <span class="text-decoration-line-through text-muted me-1">₹{{ course.price }}</span>
-                                <span class="fw-bold">₹{{ course.get_discounted_price }}</span>
-                                {% endif %}
-                            </p>
                             <p class="mb-2"><strong>Level:</strong> <span class="badge bg-secondary">{{ course.level }}</span></p>
                             <p class="mb-0"><strong>Language:</strong> <span class="badge bg-info">{{ course.language }}</span></p>
                         </div>

@@ -50,116 +50,101 @@ def admin_login(request):
 
     return render(request, 'admin_login.html')
 
-def categories(request):
-    categories = Category.objects.all().order_by('id')
-    return render(request, 'categories.html', {'categories': categories})
 
-def save_category(request):
+def add_bundle(request):
     if request.method == "POST":
-        name = request.POST.get("name", "").strip()
-        category_id = request.POST.get("category_id")
-
-        if not name:
-            messages.error(request, "Category name cannot be empty.")
-            return redirect('categories')
-
-        if category_id:  # Update existing
-            category = get_object_or_404(Category, id=category_id)
-            category.name = name
-            category.slug = slugify(name)
-            category.save()
-            messages.success(request, f"Category '{name}' updated successfully!")
-        else:  # Add new
-            if Category.objects.filter(name__iexact=name).exists():
-                messages.warning(request, "Category with this name already exists.")
-            else:
-                Category.objects.create(name=name, slug=slugify(name))
-                messages.success(request, f"Category '{name}' added successfully!")
-
-        return redirect('categories')
-    else:
-        messages.error(request, "Invalid request.")
-        return redirect('categories')
-
-
-def delete_category(request, pk):
-    category = get_object_or_404(Category, id=pk)
-    category.delete()
-    messages.success(request, f"Category '{category.name}' deleted successfully!")
-    return redirect('categories')
-
-
-def course_form(request):
-    categories = Category.objects.all()
-
-    if request.method == 'POST':
-        instructor_id = request.POST.get('instructor')
-        category_id = request.POST.get('category')
-        title = request.POST.get('title')
+        name = request.POST.get('name')
+        price = request.POST.get('price') or 0
+        discount = request.POST.get('discount') or 0
+        is_free = bool(request.POST.get('is_free'))
         short_description = request.POST.get('short_description')
         full_description = request.POST.get('full_description')
-        language = request.POST.get('language', 'English')
-        level = request.POST.get('level', 'Beginner')
-        price = request.POST.get('price', 0.00)
-        discount = request.POST.get('discount', 0)
-        is_free = 'is_free' in request.POST
-        is_published = 'is_published' in request.POST
-        course_includes = request.POST.get('course_includes', '')
-        requirements = request.POST.get('requirements', '')
-        learning_outcomes = request.POST.get('learning_outcomes', '')
+        is_published = bool(request.POST.get('is_published'))
 
         thumbnail = request.FILES.get('thumbnail')
-        preview_video = request.FILES.get('preview_video')
 
-        # Basic Validation
-        if not (instructor_id and category_id and title and short_description and full_description):
-            messages.error(request, "Please fill all required fields.")
-            return redirect('course_form')
+        # ✅ Validation
+        if not name:
+            messages.error(request, "Name is required.")
+            return redirect('add_category')
 
-        # Create Course Object
+        # ✅ Create and save bundle
+        category = Bundle(
+            name=name,
+            slug=slugify(name),
+            price=price,
+            discount=discount,
+            is_free=is_free,
+            short_description=short_description,
+            full_description=full_description,
+            thumbnail=thumbnail,
+            is_published=is_published,
+            created_at=timezone.now()
+        )
+        category.save()
+
+        messages.success(request, f'Bundle "{category.name}" added successfully!')
+        return redirect('bundles')
+
+    return render(request, 'add_bundle.html')
+
+
+def bundles(request):
+    bundles = Bundle.objects.all().order_by('id')
+    return render(request, 'bundles.html', {'bundles': bundles})
+
+def delete_bundle(request, bundle_id):
+    bundle = get_object_or_404(Bundle, id=bundle_id)
+    bundle.delete()
+    messages.success(request, f'Bundle "{bundle.name}" has been deleted successfully.')
+    return redirect('bundles')
+
+def edit_bundle(request, bundle_id):
+    bundle = get_object_or_404(Bundle, id=bundle_id)
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        price = request.POST.get('price', 0)
+        discount = request.POST.get('discount', 0)
+        is_free = bool(request.POST.get('is_free'))
+        short_description = request.POST.get('short_description', '').strip()
+        full_description = request.POST.get('full_description', '').strip()
+        is_published = bool(request.POST.get('is_published'))
+        thumbnail = request.FILES.get('thumbnail')
+
+        # Update fields
+        bundle.name = name
+        bundle.slug = slugify(name)
+        bundle.price = price or 0
+        bundle.discount = discount or 0
+        bundle.is_free = is_free
+        bundle.short_description = short_description
+        bundle.full_description = full_description
+        bundle.is_published = is_published
+
+        # Replace thumbnail only if new file uploaded
+        if thumbnail:
+            bundle.thumbnail = thumbnail
+
         try:
-           
-            category = Category.objects.get(id=category_id)
-
-            course = Course.objects.create(
-                category=category,
-                title=title,
-                slug=slugify(title),
-                short_description=short_description,
-                full_description=full_description,
-                language=language,
-                level=level,
-                price=price if not is_free else 0,
-                discount=discount,
-                is_free=is_free,
-                course_includes=course_includes,
-                requirements=requirements,
-                learning_outcomes=learning_outcomes,
-                is_published=is_published,
-                thumbnail=thumbnail,
-                preview_video=preview_video
-            )
-
-            messages.success(request, f"Course '{course.title}' added successfully!")
-            return redirect('courses_list')  # change to your actual course list URL name
-        except Category.DoesNotExist:
-            messages.error(request, "Invalid category selected.")
+            bundle.save()
+            messages.success(request, "Bundle updated successfully!")
+            return redirect('bundles')  # Adjust to your listing URL name
         except Exception as e:
-            messages.error(request, f"Something went wrong: {str(e)}")
+            messages.error(request, f"Error updating bundle: {str(e)}")
 
-        return redirect('course_form')
-
-    return render(request, 'course_form.html', {
-        'categories': categories,
-    })
+    context = {
+        'bundle': bundle
+    }
+    return render(request, 'edit_bundle.html', context)
 
 
 def add_course(request):
-    categories = Category.objects.all()
+    categories = Bundle.objects.all()
     if request.method == 'POST':
         try:
             category_id = request.POST.get('category')
-            category = Category.objects.get(id=category_id) if category_id else None
+            category = Bundle.objects.get(id=category_id) if category_id else None
 
             title = request.POST.get('title')
             thumbnail = request.FILES.get('thumbnail')
@@ -168,9 +153,6 @@ def add_course(request):
             full_description = request.POST.get('full_description')
             language = request.POST.get('language', 'English')
             level = request.POST.get('level', 'Beginner')
-            price = float(request.POST.get('price', 0))
-            discount = int(request.POST.get('discount', 0))
-            is_free = request.POST.get('is_free') == 'on'
             course_includes = request.POST.get('course_includes', '')
             requirements = request.POST.get('requirements', '')
             learning_outcomes = request.POST.get('learning_outcomes', '')
@@ -184,9 +166,6 @@ def add_course(request):
                 full_description=full_description,
                 language=language,
                 level=level,
-                price=price,
-                discount=discount,
-                is_free=is_free,
                 course_includes=course_includes,
                 requirements=requirements,
                 learning_outcomes=learning_outcomes
@@ -201,24 +180,30 @@ def add_course(request):
     return render(request, 'add_course.html', {'categories': categories})
 
 def view_courses(request):
-    courses = Course.objects.all().order_by('-created_at')
-    return render(request, 'view_course.html', {'courses': courses})
+    bundles = Bundle.objects.all()
+    bundle_id = request.GET.get('bundle_id')
+
+    courses = Course.objects.select_related("bundle").all()
+    if bundle_id:
+        courses = courses.filter(bundle_id=bundle_id)
+
+    return render(request, "view_course.html", {
+        "bundles": bundles,
+        "courses": courses,
+    })
 
 def edit_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
-    categories = Category.objects.all()
+    categories = Bundle.objects.all()
 
     if request.method == "POST":
         try:
             course.title = request.POST.get('title')
-            course.category_id = request.POST.get('category')
+            course.bundle_id = request.POST.get('category')
             course.short_description = request.POST.get('short_description')
             course.full_description = request.POST.get('full_description')
             course.language = request.POST.get('language')
             course.level = request.POST.get('level')
-            course.is_free = True if request.POST.get('is_free') == 'on' else False
-            course.price = request.POST.get('price') if not course.is_free else 0
-            course.discount = request.POST.get('discount') if not course.is_free else 0
             course.course_includes = request.POST.get('course_includes')
             course.requirements = request.POST.get('requirements')
             course.learning_outcomes = request.POST.get('learning_outcomes')
