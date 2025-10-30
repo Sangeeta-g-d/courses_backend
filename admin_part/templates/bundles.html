@@ -1,0 +1,121 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+
+<style>
+/* --- Bundle Card Styling --- */
+.card {
+    height: 400px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #ccc transparent;
+}
+
+/* --- Fix image size --- */
+.card-img-top {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem;
+}
+
+/* --- Make scroll look cleaner --- */
+.card::-webkit-scrollbar {
+    width: 6px;
+}
+.card::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 10px;
+}
+.card::-webkit-scrollbar-track {
+    background: transparent;
+}
+</style>
+
+<div class="page-heading d-flex justify-content-between align-items-center">
+    <h3>Bundles List</h3>
+    <a href="/add_bundle/" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Add Bundle
+    </a>
+</div>
+
+<div class="page-content mt-4">
+    <div class="row">
+        {% for bundle in bundles %}
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm border-0 rounded-4">
+                {% if bundle.thumbnail %}
+                <img src="{{ bundle.thumbnail.url }}" class="card-img-top" alt="{{ bundle.name }}">
+                {% else %}
+                <img src="/static/assets/images/bundle.png" class="card-img-top" alt="No image">
+                {% endif %}
+
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title fw-bold text-dark mb-2">{{ bundle.name }}</h5>
+
+                    <p class="card-text text-muted small mb-3">
+                        {{ bundle.short_description|truncatechars:120 }}
+                    </p>
+
+                    <p class="card-text text-muted small mb-3">
+                        {{ bundle.full_description|truncatechars:120 }}
+                    </p>
+
+                    <!-- 💰 Price Section -->
+                    <div class="mb-3">
+                        {% if bundle.is_free %}
+                            <h6 class="text-success fw-bold mb-0">Free</h6>
+                        {% elif bundle.discount > 0 %}
+                            <h6 class="fw-bold text-dark mb-0">
+                                ₹{{ bundle.get_discounted_price|floatformat:2 }}
+                                <small class="text-muted text-decoration-line-through ms-1">₹{{ bundle.price }}</small>
+                            </h6>
+                        {% else %}
+                            <h6 class="fw-bold text-dark mb-0">₹{{ bundle.price }}</h6>
+                        {% endif %}
+                    </div>
+
+                    <!-- Footer Section -->
+                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                        <div>
+                            {% if bundle.is_free %}
+                                <span class="badge bg-success">Free</span>
+                            {% elif bundle.discount > 0 %}
+                                <span class="badge bg-warning text-dark">{{ bundle.discount }}% Off</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Not set</span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex">
+                            <!-- ✏️ Edit -->
+                            <a class="btn btn-sm btn-outline-info me-2" href="{% url 'edit_bundle' bundle.id %}">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+
+                            <!-- 🗑️ Delete -->
+                            <a href="{% url 'delete_bundle' bundle.id %}" class="btn btn-sm btn-outline-danger me-2"
+                               onclick="return confirm('Are you sure you want to delete this bundle?')">
+                                <i class="bi bi-trash"></i>
+                            </a>
+
+                            <!-- 📘 View Courses -->
+                            <a href="{% url 'view_courses' %}?bundle_id={{ bundle.id }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-journal-text"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center text-muted py-5">
+            <i class="bi bi-box-seam display-5 d-block mb-3"></i>
+            <h5>No bundles found</h5>
+            <p class="small">Start by adding your first bundle.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% include 'notify.html' %}
+{% endblock %}

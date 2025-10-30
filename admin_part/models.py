@@ -9,17 +9,41 @@ from zoneinfo import ZoneInfo
 # ---------------------------------------------------------
 # CATEGORY MODEL (e.g., Development, Business, Design)
 # ---------------------------------------------------------
-class Category(models.Model):
+class Bundle(models.Model):  # Keep table name the same
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
 
+    # Pricing moves here
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    discount = models.PositiveIntegerField(default=0)
+    is_free = models.BooleanField(default=False)
+
+    short_description = models.TextField(max_length=2000, blank=True, null=True)
+    full_description = models.TextField(blank=True, null=True)
+    thumbnail = models.ImageField(upload_to='bundle_thumbnails/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_published = models.BooleanField(default=False)
+
     class Meta:
-        verbose_name_plural = 'Categories'
+        verbose_name = "Bundle"
+        verbose_name_plural = "Bundles"
 
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)
-        super(Category, self).save(*args, **kwargs)
+
+        # Auto-set free logic
+        if self.is_free:
+            self.price = 0
+            self.discount = 0
+
+        super().save(*args, **kwargs)
+
+    def get_discounted_price(self):
+        if self.discount > 0 and not self.is_free:
+            return self.price - (self.price * self.discount / 100)
+        return self.price
 
     def __str__(self):
         return self.name
@@ -29,16 +53,13 @@ class Category(models.Model):
 # COURSE MODEL (main model)
 # ---------------------------------------------------------
 
-
 class Course(models.Model):
-    category = models.ForeignKey('Category', on_delete=models.SET_NULL, null=True, related_name='courses')
+    # Bundle reference
+    bundle = models.ForeignKey('Bundle', on_delete=models.SET_NULL, null=True, related_name='courses')
 
     title = models.CharField(max_length=1000)
     thumbnail = models.ImageField(upload_to='course_thumbnails/', blank=True, null=True)
-    preview_video = models.FileField(
-        upload_to='course_videos/', blank=True, null=True, 
-        help_text="Upload a short preview video"
-    )
+    preview_video = models.FileField(upload_to='course_videos/', blank=True, null=True)
 
     short_description = models.TextField(max_length=2000)
     full_description = models.TextField()
@@ -54,10 +75,6 @@ class Course(models.Model):
         default='Beginner'
     )
 
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    discount = models.PositiveIntegerField(default=0)  # percentage
-    is_free = models.BooleanField(default=False)
-
     course_includes = models.TextField(
         blank=True, null=True,
         help_text="Add course features separated by commas (e.g. '31.5 hours on-demand video, 131 coding exercises, 93 articles')"
@@ -69,20 +86,7 @@ class Course(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     is_published = models.BooleanField(default=False)
 
-    def save(self, *args, **kwargs):
-        # Auto-set price to 0 if course is free
-        if self.is_free:
-            self.price = 0
-            self.discount = 0  # no discount needed for free courses
-        super().save(*args, **kwargs)
-
-    def get_discounted_price(self):
-        if self.discount > 0 and not self.is_free:
-            return self.price - (self.price * self.discount / 100)
-        return self.price
-
     def get_course_includes_list(self):
-        """Return includes as a clean list for template display."""
         if self.course_includes:
             return [item.strip() for item in self.course_includes.split(',')]
         return []
@@ -127,17 +131,6 @@ class Lecture(models.Model):
 # ---------------------------------------------------------
 # ENROLLMENT MODEL (student course enrollment)
 # ---------------------------------------------------------
-class Enrollment(models.Model):
-    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='enrollments')
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollments')
-    enrolled_at = models.DateTimeField(auto_now_add=True)
-    progress = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
-
-    class Meta:
-        unique_together = ('student', 'course')
-
-    def __str__(self):
-        return f"{self.student.username} enrolled in {self.course.title}"
 
 
 # ---------------------------------------------------------

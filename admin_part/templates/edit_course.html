@@ -79,27 +79,7 @@
                     </div>
 
                     <!-- Free Course Checkbox -->
-                    <div class="col-md-6 d-flex align-items-center">
-                        <div class="form-check mt-4">
-                            <input type="checkbox" class="form-check-input" id="is_free" name="is_free" {% if course.is_free %}checked{% endif %}>
-                            <label class="form-check-label" for="is_free">Free Course</label>
-                        </div>
-                    </div>
-
-                    <!-- Price -->
-                    <div class="col-md-6">
-                        <label for="price" class="form-label">Price</label>
-                        <input type="number" class="form-control" id="price" name="price" min="0" step="0.01" value="{{ course.price }}" {% if course.is_free %}readonly{% endif %} required>
-                        <div class="invalid-feedback"></div>
-                    </div>
-
-                    <!-- Discount -->
-                    <div class="col-md-6">
-                        <label for="discount" class="form-label">Discount (%)</label>
-                        <input type="number" class="form-control" id="discount" name="discount" min="0" max="100" value="{{ course.discount }}">
-                        <div class="invalid-feedback"></div>
-                    </div>
-
+             
                     <!-- Course Includes -->
                     <div class="col-12">
                         <label for="course_includes" class="form-label">Course Includes (comma separated)</label>
@@ -133,19 +113,6 @@
 {% include 'notify.html' %}
 
 <script>
-document.getElementById('is_free').addEventListener('change', function() {
-    const priceInput = document.getElementById('price');
-    const discountInput = document.getElementById('discount');
-    if (this.checked) {
-        priceInput.value = 0;
-        priceInput.setAttribute('readonly', true);
-        discountInput.value = 0;
-        discountInput.setAttribute('readonly', true);
-    } else {
-        priceInput.removeAttribute('readonly');
-        discountInput.removeAttribute('readonly');
-    }
-});
 
 // Frontend validation
 document.getElementById('editCourseForm').addEventListener('submit', function(e) {

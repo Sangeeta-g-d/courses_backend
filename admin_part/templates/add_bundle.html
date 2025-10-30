@@ -1,0 +1,121 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+<div class="page-heading d-flex justify-content-between align-items-center">
+  <h3>Add Bundle</h3>
+</div>
+
+<div class="page-content mt-4">
+  <div class="card">
+    <div class="card-body">
+      <form id="addCategoryForm" method="POST" action="{% url 'add_bundle' %}" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <div class="row g-3">
+          <!-- Name -->
+          <div class="col-md-6">
+            <label for="name" class="form-label">Bundle Name</label>
+            <input type="text" class="form-control" id="name" name="name" required>
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <!-- Thumbnail -->
+          <div class="col-md-6">
+            <label for="thumbnail" class="form-label">Thumbnail</label>
+            <input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*">
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <!-- Is Free -->
+          <div class="col-md-6 d-flex align-items-center">
+            <div class="form-check mt-4">
+              <input type="checkbox" class="form-check-input" id="is_free" name="is_free">
+              <label class="form-check-label" for="is_free">Free Bundle</label>
+            </div>
+          </div>
+
+          <!-- Price -->
+          <div class="col-md-6">
+            <label for="price" class="form-label">Price</label>
+            <input type="number" class="form-control" id="price" name="price" min="0" step="0.01" required>
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <!-- Discount -->
+          <div class="col-md-6">
+            <label for="discount" class="form-label">Discount (%)</label>
+            <input type="number" class="form-control" id="discount" name="discount" min="0" max="100" value="0">
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <!-- Short Description -->
+          <div class="col-12">
+            <label for="short_description" class="form-label">Short Description</label>
+            <textarea class="form-control" id="short_description" name="short_description" rows="3"></textarea>
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <!-- Full Description -->
+          <div class="col-12">
+            <label for="full_description" class="form-label">Full Description</label>
+            <textarea class="form-control" id="full_description" name="full_description" rows="4"></textarea>
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <!-- Is Published -->
+          <div class="col-md-6 d-flex align-items-center">
+            <div class="form-check mt-4">
+              <input type="checkbox" class="form-check-input" id="is_published" name="is_published" checked>
+              <label class="form-check-label" for="is_published">Publish Bundle</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary">Add Bundle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% include 'notify.html' %}
+
+<script>
+// Free bundle logic
+document.getElementById('is_free').addEventListener('change', function() {
+  const priceInput = document.getElementById('price');
+  const discountInput = document.getElementById('discount');
+  if (this.checked) {
+    priceInput.value = 0;
+    priceInput.setAttribute('readonly', true);
+    discountInput.value = 0;
+    discountInput.setAttribute('readonly', true);
+  } else {
+    priceInput.removeAttribute('readonly');
+    discountInput.removeAttribute('readonly');
+  }
+});
+
+// Frontend Validation
+document.getElementById('addCategoryForm').addEventListener('submit', function(e) {
+  let valid = true;
+  const fields = ['name', 'price'];
+
+  fields.forEach(function(id) {
+    const input = document.getElementById(id);
+    const feedback = input.nextElementSibling;
+    if (!input.value || (input.type==='number' && input.value<0)) {
+      feedback.innerText = 'This field is required';
+      input.classList.add('is-invalid');
+      valid = false;
+    } else {
+      feedback.innerText = '';
+      input.classList.remove('is-invalid');
+    }
+  });
+
+  if (!valid) {
+    e.preventDefault();
+  }
+});
+</script>
+{% endblock %}
