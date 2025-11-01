@@ -8,13 +8,48 @@ from django.contrib.auth.decorators import login_required
 from django.core.files.storage import FileSystemStorage
 from django.utils import timezone
 from django.contrib.auth import authenticate, login, logout
-
-# Create your views here.
-
-
+import random
 def home(request):
-    return render(request, 'home.html')
+    # Your existing course code
+    qs = Course.objects.order_by('-created_at')
+    courses = []
+    for c in qs[:4]:
+        try:
+            thumb = c.thumbnail.url if c.thumbnail else '/static/home_assets/img/service-placeholder.jpg'
+        except ValueError:
+            thumb = '/static/home_assets/img/service-placeholder.jpg'
 
+        try:
+            detail_url = reverse('course_detail', args=[c.id])
+        except Exception:
+            detail_url = '#'
+
+        courses.append({
+            'title': c.title,
+            'thumbnail_url': thumb,
+            'level': c.level,
+            'language': c.language,
+            'short_description': c.short_description or "High-quality course to boost your skills.",
+            'detail_url': detail_url,
+        })
+
+    while len(courses) < 4:
+        courses.append({
+            'title': 'Coming Soon',
+            'thumbnail_url': '/static/home_assets/img/service-placeholder.jpg',
+            'level': '—',
+            'language': '—',
+            'short_description': 'New courses are added frequently — check back soon!',
+            'detail_url': '#',
+        })
+    
+    # Add bundles to the context
+    bundles = Bundle.objects.filter(is_published=True).order_by('-created_at')[:4]
+    
+    return render(request, 'home.html', {
+        'recent_courses': courses,
+        'bundles': bundles
+    })
 
 def user_login(request):
     if request.method == "POST":

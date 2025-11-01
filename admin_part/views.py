@@ -141,11 +141,13 @@ def edit_bundle(request, bundle_id):
 
 def add_course(request):
     categories = Bundle.objects.all()
+    print("hhhhhhhhhhhhhhh")
     if request.method == 'POST':
         try:
+            print("jjjjjjjjjjjjjjjjjj")
             category_id = request.POST.get('category')
             category = Bundle.objects.get(id=category_id) if category_id else None
-
+            print(category_id,category)
             title = request.POST.get('title')
             thumbnail = request.FILES.get('thumbnail')
             preview_video = request.FILES.get('preview_video')
@@ -158,7 +160,7 @@ def add_course(request):
             learning_outcomes = request.POST.get('learning_outcomes', '')
 
             course = Course(
-                category=category,
+                bundle=category,
                 title=title,
                 thumbnail=thumbnail,
                 preview_video=preview_video,
