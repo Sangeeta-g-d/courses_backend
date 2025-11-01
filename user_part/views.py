@@ -112,11 +112,8 @@ def dashboard(request):
     bundles = Bundle.objects.filter(is_published=True).order_by('-created_at')
     return render(request, 'dashboard.html',{'bundles': bundles})
 
-def user_course_detail(request):
-    # If no course_id provided, use course with ID 2 as default
-    
-    course_id = 2
-    
+
+def course_details(request, course_id):
     # Get the course with all related sections and lectures
     course = get_object_or_404(
         Course.objects.prefetch_related(
@@ -125,12 +122,17 @@ def user_course_detail(request):
         id=course_id
     )
     
+    # Calculate total lectures
+    total_lectures = 0
+    for section in course.course_sections.all():
+        total_lectures += section.lectures.count()
+    
     context = {
         'course': course,
+        'total_lectures': total_lectures,
     }
     
-    return render(request, 'course.html', context)
-
+    return render(request, 'course_details.html', context)
 
 def bundle_courses(request, bundle_id):
     bundle = get_object_or_404(Bundle, id=bundle_id)

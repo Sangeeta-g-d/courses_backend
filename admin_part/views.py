@@ -140,6 +140,7 @@ def add_course(request):
     if request.method == 'POST':
         try:
             category_id = request.POST.get('category')
+            print(category_id)
             category = Bundle.objects.get(id=category_id) if category_id else None
 
             title = request.POST.get('title')
@@ -154,7 +155,7 @@ def add_course(request):
             learning_outcomes = request.POST.get('learning_outcomes', '')
 
             course = Course(
-                category=category,
+                bundle=category,
                 title=title,
                 thumbnail=thumbnail,
                 preview_video=preview_video,
