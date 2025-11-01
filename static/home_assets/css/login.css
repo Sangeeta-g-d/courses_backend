@@ -1,0 +1,234 @@
+
+        /* LMS Animation Styles */
+        .lms-animation-container {
+            position: relative;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .lms-animation {
+            position: relative;
+            width: 300px;
+            height: 300px;
+        }
+        
+        /* Book Animation */
+        .book {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+            width: 100px;
+            height: 120px;
+            perspective: 1000px;
+            animation: floatBook 6s ease-in-out infinite;
+        }
+        
+        .cover {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #0d6efd, #0dcaf0);
+            border-radius: 5px 10px 10px 5px;
+            transform-origin: left center;
+            transform: rotateY(-20deg);
+            transition: transform 1s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .pages {
+            position: absolute;
+            width: 95%;
+            height: 95%;
+            top: 2.5%;
+            left: 2.5%;
+            background: white;
+            border-radius: 5px 10px 10px 5px;
+            transform-origin: left center;
+            transform: rotateY(-15deg);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .page {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #f8f9fa;
+            border-radius: 5px 10px 10px 5px;
+            transform-origin: left center;
+            animation: pageTurn 8s infinite;
+        }
+        
+        .page:nth-child(1) { animation-delay: 0.5s; }
+        .page:nth-child(2) { animation-delay: 1s; }
+        .page:nth-child(3) { animation-delay: 1.5s; }
+        .page:nth-child(4) { animation-delay: 2s; }
+        .page:nth-child(5) { animation-delay: 2.5s; }
+        .page:nth-child(6) { animation-delay: 3s; }
+        
+        /* Progress Circle Animation */
+        .progress-circle {
+            position: absolute;
+            top: 30px;
+            right: 40px;
+            width: 100px;
+            height: 100px;
+            animation: floatProgress 5s ease-in-out infinite;
+        }
+        
+        .circle {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .progress {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(#0d6efd 0% 75%, #e9ecef 75% 100%);
+            mask: radial-gradient(transparent 40px, #000 41px);
+            -webkit-mask: radial-gradient(transparent 40px, #000 41px);
+        }
+        
+        .percentage {
+            font-weight: bold;
+            color: #0d6efd;
+            font-size: 18px;
+        }
+        
+        /* Certificate Animation */
+        .certificate {
+            position: absolute;
+            bottom: 50px;
+            left: 80px;
+            width: 120px;
+            height: 90px;
+            animation: floatCert 7s ease-in-out infinite;
+        }
+        
+        .cert-border {
+            width: 100%;
+            height: 100%;
+            border: 3px solid #0d6efd;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: rotate(-5deg);
+        }
+        
+        .cert-content {
+            text-align: center;
+            padding: 5px;
+        }
+        
+        .cert-title {
+            font-weight: bold;
+            font-size: 14px;
+            color: #0d6efd;
+        }
+        
+        .cert-subtitle {
+            font-size: 10px;
+            color: #6c757d;
+        }
+        
+        /* Animations */
+        @keyframes floatBook {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
+        }
+        
+        @keyframes floatProgress {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-8px) scale(1.05); }
+        }
+        
+        @keyframes floatCert {
+            0%, 100% { transform: translateY(0) rotate(-5deg); }
+            50% { transform: translateY(-5px) rotate(-8deg); }
+        }
+        
+        @keyframes pageTurn {
+            0%, 100% { transform: rotateY(0deg); }
+            50% { transform: rotateY(-10deg); }
+        }
+
+          .file-upload-wrapper {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        
+        .file-upload-wrapper:hover {
+            border-color: #0d6efd;
+            background: #e9ecef;
+        }
+        
+        .benefits-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #0d6efd;
+        }
+        
+        .password-strength .progress-bar {
+            transition: width 0.3s ease;
+        }
+        
+        .form-floating {
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-control:focus {
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+            border-color: #0d6efd;
+        }
+        
+        .password-match-message {
+            padding: 4px 8px;
+            border-radius: 4px;
+            background-color: #f8d7da;
+        }
+        
+        .form-control.is-invalid {
+            border-color: #dc3545;
+        }
+        
+        .form-control.is-valid {
+            border-color: #198754;
+        }
+        
+        .required-field::after {
+            content: " *";
+            color: #dc3545;
+        }
+        
+        @media (max-width: 768px) {
+            .col-lg-6 {
+                margin-bottom: 1rem;
+            }
+        }

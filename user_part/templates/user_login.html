@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>SMTA - Login</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="" name="keywords">
+    <meta content="" name="description">
+
+    <!-- Favicon -->
+    <link href="/static/assets/images/logo/smta-final-logo.png" rel="icon">
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto:wght@700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Icon Font Stylesheet -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.4/font/bootstrap-icons.css">
+
+    <!-- Libraries Stylesheet -->
+    <link href="/static/home_assets/lib/animate/animate.min.css" rel="stylesheet">
+    <link href="/static/home_assets/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link href="/static/home_assets/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Template Stylesheet -->
+    <link href="/static/home_assets/css/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/home_assets/css/login.css">
+</head>
+
+<body>
+    <!-- Spinner Start -->
+    <div id="spinner"
+        class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    </div>
+    <!-- Spinner End -->
+
+
+    <!-- Topbar Start -->
+    <div class="container-fluid bg-primary text-white d-none d-lg-flex wow fadeIn" data-wow-delay="0.1s">
+        <div class="container py-3">
+            <div class="d-flex align-items-center">
+                <a href="/user/" style="display: flex; align-items: center; text-decoration: none;">
+                    <img src="/static/assets/images/logo/smta-final-logo.png" width="50" height="50" alt="">
+                    <h2 class="text-white fw-bold m-0">SMTA</h2>
+                </a>
+                <div class="ms-auto d-flex align-items-center">
+                    <small class="ms-4"><i class="fa fa-map-marker-alt me-3"></i>123 Street, Vijayapur</small>
+                    <small class="ms-4"><i class="fa fa-envelope me-3"></i>smta@gmail.com</small>
+                    <small class="ms-4"><i class="fa fa-phone-alt me-3"></i>+91 7867564534</small>
+                    <div class="ms-3 d-flex">
+                        <a class="btn btn-sm-square btn-light text-primary ms-2" href=""><i
+                                class="fab fa-facebook-f"></i></a>
+                        <a class="btn btn-sm-square btn-light text-primary ms-2" href=""><i
+                                class="fab fa-twitter"></i></a>
+                        <a class="btn btn-sm-square btn-light text-primary ms-2" href=""><i
+                                class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Topbar End -->
+
+    <!-- Login Start -->
+    <div class="container-fluid pt-6 pb-6">
+        <div class="container">
+            <div class="row g-5 align-items-center">
+                <!-- Login Form -->
+                <div class="col-lg-6 wow fadeIn" data-wow-delay="0.1s">
+                    <div class="bg-light p-5">
+                        <h1 class="display-6 text-uppercase mb-4">Login to Your Account</h1>
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="form-floating">
+                                        <input type="email" name="email" class="form-control border-0 bg-white" id="email" placeholder="Your Email">
+                                        <label for="email">Your Email</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-floating">
+                                        <input type="password" name="password" class="form-control border-0 bg-white" id="password" placeholder="Your Password">
+                                        <label for="password">Your Password</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <input name="remember" class="form-check-input" type="checkbox" id="remember">
+                                        <label class="form-check-label" for="remember">
+                                            Remember me
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <button class="btn btn-primary w-100 py-3" type="submit">Login</button>
+                                </div>
+                                <div class="col-12 text-center">
+                                    <a href="#" class="text-decoration-none">Forgot Password?</a>
+                                </div>
+                                <div class="col-12 text-center">
+                                    <p class="mb-0">Don't have an account? <a href="/user/register/" class="text-decoration-none">Sign up here</a></p>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- LMS Animation -->
+                <div class="col-lg-6 wow fadeIn" data-wow-delay="0.3s">
+                    <div class="lms-animation-container">
+                        <div class="lms-animation">
+                            <!-- Animation elements -->
+                            <div class="book">
+                                <div class="cover">
+                                    <div class="title">LMS</div>
+                                </div>
+                                <div class="pages">
+                                    <div class="page"></div>
+                                    <div class="page"></div>
+                                    <div class="page"></div>
+                                    <div class="page"></div>
+                                    <div class="page"></div>
+                                    <div class="page"></div>
+                                </div>
+                            </div>
+                            <div class="progress-circle">
+                                <div class="circle">
+                                    <div class="progress"></div>
+                                    <div class="percentage">75%</div>
+                                </div>
+                            </div>
+                            <div class="certificate">
+                                <div class="cert-border">
+                                    <div class="cert-content">
+                                        <div class="cert-title">Certificate</div>
+                                        <div class="cert-subtitle">of Completion</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-4">
+                            <h4 class="text-uppercase mb-2">Learning Management System</h4>
+                            <p class="mb-0">Access your courses, track progress, and achieve your learning goals</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'notify.html' %}
+    <!-- Login End -->
+
+    <!-- JavaScript Libraries -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/home_assets/lib/wow/wow.min.js"></script>
+    <script src="/static/home_assets/lib/easing/easing.min.js"></script>
+    <script src="/static/home_assets/lib/waypoints/waypoints.min.js"></script>
+    <script src="/static/home_assets/lib/counterup/counterup.min.js"></script>
+    <script src="/static/home_assets/lib/owlcarousel/owl.carousel.min.js"></script>
+
+    <!-- Template Javascript -->
+    <script src="/static/home_assets/js/main.js"></script>
+
+</body>
+
+</html>
