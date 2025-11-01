@@ -1,0 +1,55 @@
+{% extends 'user_base.html' %}
+{% block content %}
+
+<!-- Service Start -->
+<div class="container-fluid service pt-6 pb-6">
+    <div class="container">
+        <div class="text-center mx-auto wow fadeInUp" data-wow-delay="0.1s" style="max-width: 600px;">
+            <h1 class="display-6 text-uppercase mb-5">Our Bundles</h1>
+        </div>
+
+        <div class="row g-4">
+            {% for bundle in bundles %}
+                <div class="col-lg-4 col-md-6 wow fadeInUp" data-wow-delay="0.{{ forloop.counter }}s">
+                    <div class="service-item">
+                        <div class="service-inner pb-5">
+                            {% if bundle.thumbnail %}
+                                <img class="img-fluid w-100" src="{{ bundle.thumbnail.url }}" alt="{{ bundle.name }}">
+                            {% else %}
+                                <img class="img-fluid w-100" src="/static/home_assets/img/default-service.jpg" alt="{{ bundle.name }}">
+                            {% endif %}
+
+                            <div class="service-text px-5 pt-4">
+                                <h5 class="text-uppercase">{{ bundle.name }}</h5>
+                                <p>{{ bundle.short_description|truncatewords:20 }}</p>
+
+                                {% if bundle.is_free %}
+                                    <span class="badge bg-success">Free</span>
+                                {% elif bundle.discount > 0 %}
+                                    <p>
+                                        <span class="text-decoration-line-through text-muted">₹{{ bundle.price }}</span>
+                                        <span class="fw-bold text-primary">₹{{ bundle.get_discounted_price|floatformat:2 }}</span>
+                                        <span class="badge bg-warning text-dark">{{ bundle.discount }}% Off</span>
+                                    </p>
+                                {% else %}
+                                    <p class="fw-bold text-primary">₹{{ bundle.price|floatformat:2 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <a class="btn btn-light px-3" href="/user/bundle/{{ bundle.id }}/">
+                                More Details<i class="bi bi-chevron-double-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="text-center">
+                    <p>No bundles available at the moment.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+<!-- Service End -->
+
+{% endblock %}

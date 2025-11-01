@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>SMTA - Complete Your Profile</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link href="/static/assets/images/logo/smta-final-logo.png" rel="icon">
+    <link href="/static/home_assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/home_assets/css/style.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container-fluid bg-primary text-white d-none d-lg-flex">
+        <div class="container py-3">
+            <div class="d-flex align-items-center">
+                <a href="/user/" style="display:flex;align-items:center;text-decoration:none;">
+                    <img src="/static/assets/images/logo/smta-final-logo.png" width="50" height="50" alt="">
+                    <h2 class="text-white fw-bold m-0 ms-2">SMTA</h2>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Details Start -->
+    <div class="container-fluid pt-6 pb-6">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="bg-light p-5 shadow-sm rounded">
+                        <h1 class="display-6 text-uppercase text-center mb-5">Complete Your Profile</h1>
+                        <form method="POST">
+                            {% csrf_token %}
+                            <div class="row g-4">
+                                <div class="col-md-12">
+                                    <div class="form-floating">
+                                        <input type="date" class="form-control border-0 bg-white" name="dob" id="dob"
+                                            placeholder="Date of Birth" required>
+                                        <label for="dob">Date of Birth <span class="text-danger">*</span></label>
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="form-floating">
+                                        <select class="form-select border-0 bg-white" name="highest_qualification" id="highest_qualification" required>
+                                            <option value="">Select Qualification</option>
+                                            <option value="sslc">SSLC</option>
+                                            <option value="puc">PUC</option>
+                                            <option value="degree">Degree</option>
+                                            <option value="master">Master Degree</option>
+                                        </select>
+                                        <label for="highest_qualification">Highest Qualification <span class="text-danger">*</span></label>
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="form-floating">
+                                        <input type="text" class="form-control border-0 bg-white" name="city" id="city"
+                                            placeholder="City" required>
+                                        <label for="city">City <span class="text-danger">*</span></label>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 text-center mt-4">
+                                    <button class="btn btn-primary py-3 px-5" type="submit">Save Details</button>
+                                </div>
+                            </div>
+                        </form>
+                        <p class="text-center mt-4 mb-0 text-muted">Welcome, {{ user.full_name }}!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Profile Details End -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

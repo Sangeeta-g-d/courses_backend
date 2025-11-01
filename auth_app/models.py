@@ -55,3 +55,25 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class UserProfile(models.Model):
+    QUALIFICATION_CHOICES = [
+        ('sslc', 'SSLC'),
+        ('puc', 'PUC'),
+        ('degree', 'Degree'),
+        ('master', 'Master Degree'),
+    ]
+
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile')
+    dob = models.DateField(verbose_name='Date of Birth', blank=True, null=True)
+    highest_qualification = models.CharField(
+        max_length=50,
+        choices=QUALIFICATION_CHOICES,
+        blank=True,
+        null=True
+    )
+    city = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user.full_name or self.user.email}'s Profile"
