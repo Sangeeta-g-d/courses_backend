@@ -2,162 +2,223 @@
 {% block content %}
 
     <!-- Carousel Start -->
-    <div class="container-fluid p-0 mb-6 wow fadeIn" data-wow-delay="0.1s">
-        <div id="header-carousel" class="carousel slide" data-bs-ride="carousel">
-            <div class="carousel-indicators">
-                <button type="button" data-bs-target="#header-carousel" data-bs-slide-to="0" class="active"
-                    aria-current="true" aria-label="Slide 1">
-                    <img class="img-fluid" src="/static/home_assets/img/carousel-1.jpg" alt="Image">
-                </button>
-                <button type="button" data-bs-target="#header-carousel" data-bs-slide-to="1" aria-label="Slide 2">
-                    <img class="img-fluid" src="/static/home_assets/img/carousel-2.jpg" alt="Image">
-                </button>
-                <button type="button" data-bs-target="#header-carousel" data-bs-slide-to="2" aria-label="Slide 3">
-                    <img class="img-fluid" src="/static/home_assets/img/carousel-3.jpg" alt="Image">
-                </button>
+   <div class="container-fluid p-0 mb-6 wow fadeIn" data-wow-delay="0.1s">
+    <div id="header-carousel" class="carousel slide" data-bs-ride="carousel">
+        <!-- Indicators -->
+        <div class="carousel-indicators">
+            <button type="button" data-bs-target="#header-carousel" data-bs-slide-to="0" class="active"
+                aria-current="true" aria-label="Slide 1">
+                <img class="img-fluid rounded" src="/static/home_assets/img/home-10.png" alt="Image">
+            </button>
+            <button type="button" data-bs-target="#header-carousel" data-bs-slide-to="1" aria-label="Slide 2">
+                <img class="img-fluid rounded" src="/static/home_assets/img/home-9.png" alt="Image">
+            </button>
+            <button type="button" data-bs-target="#header-carousel" data-bs-slide-to="2" aria-label="Slide 3">
+                <img class="img-fluid rounded" src="/static/home_assets/img/home-11.png" alt="Image">
+            </button>
+        </div>
+
+        <!-- Carousel Inner -->
+        <div class="carousel-inner">
+            <!-- Slide 1 -->
+            <div class="carousel-item active">
+                <img class="w-100" src="/static/home_assets/img/home-10.png" alt="Image" 
+                     style="height: 80vh; object-fit: cover;">
+                <div class="carousel-caption d-flex flex-column align-items-center justify-content-center h-100">
+                    <h1 class="display-3 fw-bold text-white mb-3 animated zoomIn text-uppercase">
+                        Learn From The Best Instructors
+                    </h1>
+                    <p class="lead text-white mb-4 animated fadeInUp">
+                        Join thousands of learners and upskill yourself anytime, anywhere.
+                    </p>
+                    <a href="#" class="btn btn-primary py-3 px-4 rounded-pill animated fadeInUp">Start Learning</a>
+                </div>
             </div>
-            <div class="carousel-inner">
-                <div class="carousel-item active">
-                    <img class="w-100" src="/static/home_assets/img/carousel-1.jpg" alt="Image">
-                    <div class="carousel-caption">
-                        <h1 class="display-1 text-uppercase text-white mb-4 animated zoomIn">Best Metalcraft Solutions
-                        </h1>
-                        <a href="#" class="btn btn-primary py-3 px-4">Explore More</a>
-                    </div>
+
+            <!-- Slide 2 -->
+            <div class="carousel-item">
+                <img class="w-100" src="/static/home_assets/img/home-9.png" alt="Image" 
+                     style="height: 80vh; object-fit: cover;">
+                <div class="carousel-caption d-flex flex-column align-items-center justify-content-center h-100">
+                    <h1 class="display-3 fw-bold text-white mb-3 animated zoomIn text-uppercase">
+                        Empower Your Career With Knowledge
+                    </h1>
+                    <p class="lead text-white mb-4 animated fadeInUp">
+                        Explore courses in tech, business, design, and more.
+                    </p>
+                    <a href="#" class="btn btn-primary py-3 px-4 rounded-pill animated fadeInUp">Browse Courses</a>
                 </div>
-                <div class="carousel-item">
-                    <img class="w-100" src="/static/home_assets/img/carousel-2.jpg" alt="Image">
-                    <div class="carousel-caption">
-                        <h1 class="display-1 text-uppercase text-white mb-4 animated zoomIn">Best Metalcraft Solutions
-                        </h1>
-                        <a href="#" class="btn btn-primary py-3 px-4">Explore More</a>
-                    </div>
-                </div>
-                <div class="carousel-item">
-                    <img class="w-100" src="/static/home_assets/img/carousel-3.jpg" alt="Image">
-                    <div class="carousel-caption">
-                        <h1 class="display-1 text-uppercase text-white mb-4 animated zoomIn">Best Metalcraft Solutions
-                        </h1>
-                        <a href="#" class="btn btn-primary py-3 px-4">Explore More</a>
-                    </div>
+            </div>
+
+            <!-- Slide 3 -->
+            <div class="carousel-item">
+                <img class="w-100" src="/static/home_assets/img/home-11.png" alt="Image" 
+                     style="height: 80vh; object-fit: cover;">
+                <div class="carousel-caption d-flex flex-column align-items-center justify-content-center h-100">
+                    <h1 class="display-3 fw-bold text-white mb-3 animated zoomIn text-uppercase">
+                        Learn. Grow. Succeed.
+                    </h1>
+                    <p class="lead text-white mb-4 animated fadeInUp">
+                        Your journey to success starts with one course.
+                    </p>
+                    <a href="#" class="btn btn-primary py-3 px-4 rounded-pill animated fadeInUp">Get Started</a>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
     <!-- Carousel End -->
 
 
     <!-- About Start -->
-    <div class="container-fluid pt-6 pb-6">
-        <div class="container">
-            <div class="row g-5">
-                <div class="col-lg-6 wow fadeIn" data-wow-delay="0.1s">
-                    <div class="about-img">
-                        <img class="img-fluid w-100" src="/static/home_assets/img/about.jpg">
+   <div class="container-fluid pt-6 pb-6">
+    <div class="container">
+        <div class="row g-5">
+            <!-- Left Image -->
+            <div class="col-lg-6 wow fadeIn" data-wow-delay="0.1s">
+                <div class="about-img">
+                    <img class="img-fluid w-100 rounded-3 shadow-lg" src="/static/home_assets/img/about-3.png" alt="Why Choose SMTA">
+                </div>
+            </div>
+
+            <!-- Right Content -->
+            <div class="col-lg-6 wow fadeIn" data-wow-delay="0.5s">
+                <h1 class="display-6 text-uppercase mb-4">Why Choose <span class="text-primary">SMTA</span></h1>
+                <p class="mb-4">
+                    At <strong>SMTA</strong>, we believe learning should be accessible, engaging, and career-focused. 
+                    Our platform empowers learners to gain real-world skills through interactive courses taught by expert instructors — 
+                    helping you grow personally and professionally at your own pace.
+                </p>
+
+                <div class="row g-5 mb-4">
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 btn-xl-square bg-light me-3">
+                                <i class="fa fa-chalkboard-teacher fa-2x text-primary"></i>
+                            </div>
+                            <h5 class="lh-base text-uppercase mb-0">Expert Instructors</h5>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 btn-xl-square bg-light me-3">
+                                <i class="fa fa-laptop-code fa-2x text-primary"></i>
+                            </div>
+                            <h5 class="lh-base text-uppercase mb-0">Interactive Learning</h5>
+                        </div>
                     </div>
                 </div>
-                <div class="col-lg-6 wow fadeIn" data-wow-delay="0.5s">
-                    <h1 class="display-6 text-uppercase mb-4">Ultimate Welding and Quality Metal Solutions</h1>
-                    <p class="mb-4">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur tellus augue,
-                        iaculis id elit eget, ultrices pulvinar tortor. Quisque vel lorem porttitor, malesuada arcu
-                        quis, fringilla risus. Pellentesque eu consequat augue.</p>
-                    <div class="row g-5 mb-4">
-                        <div class="col-sm-6">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0 btn-xl-square bg-light me-3">
-                                    <i class="fa fa-users-cog fa-2x text-primary"></i>
-                                </div>
-                                <h5 class="lh-base text-uppercase mb-0">Certified Expert & Team</h5>
+
+                <div class="row g-5 mb-4">
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 btn-xl-square bg-light me-3">
+                                <i class="fa fa-certificate fa-2x text-primary"></i>
                             </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0 btn-xl-square bg-light me-3">
-                                    <i class="fa fa-tachometer-alt fa-2x text-primary"></i>
-                                </div>
-                                <h5 class="lh-base text-uppercase mb-0">Fast & Reliable Services</h5>
-                            </div>
+                            <h5 class="lh-base text-uppercase mb-0">Certified Courses</h5>
                         </div>
                     </div>
-                    <p><i class="fa fa-check-square text-primary me-3"></i>Many variations of passages of lorem ipsum
-                    </p>
-                    <p><i class="fa fa-check-square text-primary me-3"></i>Many variations of passages of lorem ipsum
-                    </p>
-                    <p><i class="fa fa-check-square text-primary me-3"></i>Many variations of passages of lorem ipsum
-                    </p>
-                    <div class="border border-5 border-primary p-4 text-center mt-4">
-                        <h4 class="lh-base text-uppercase mb-0">We’re Good in All Metal Works Using Quality Welding Tools</h4>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 btn-xl-square bg-light me-3">
+                                <i class="fa fa-clock fa-2x text-primary"></i>
+                            </div>
+                            <h5 class="lh-base text-uppercase mb-0">Learn Anytime, Anywhere</h5>
+                        </div>
                     </div>
+                </div>
+
+                <p><i class="fa fa-check-square text-primary me-3"></i>Flexible and self-paced learning options</p>
+                <p><i class="fa fa-check-square text-primary me-3"></i>Affordable courses with lifetime access</p>
+                <p><i class="fa fa-check-square text-primary me-3"></i>Personalized learning paths and progress tracking</p>
+
+                <div class="border border-5 border-primary p-4 text-center mt-4 rounded-3">
+                    <h4 class="lh-base text-uppercase mb-0">
+                        Empowering Learners to Build Skills and Achieve Their Dreams with <span class="text-primary">SMTA</span>
+                    </h4>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
     <!-- About End -->
 
 
     <!-- Features Start -->
-    <div class="container-fluid pt-6 pb-6">
-        <div class="container pt-4">
-            <div class="row g-0 feature-row wow fadeIn" data-wow-delay="0.1s">
-                <div class="col-md-6 col-lg-3 wow fadeIn" data-wow-delay="0.3s">
-                    <div class="feature-item border h-100">
-                        <div class="feature-icon btn-xxl-square bg-primary mb-4 mt-n4">
-                            <i class="fa fa-hammer fa-2x text-white"></i>
-                        </div>
-                        <div class="p-5 pt-0">
-                            <h5 class="text-uppercase mb-3">Quality Welding</h5>
-                            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur tellus augue.</p>
-                            <a class="position-relative text-body text-uppercase small d-flex justify-content-between"
-                                href="#"><b class="bg-white pe-3">Read More</b> <i
-                                    class="bi bi-arrow-right bg-white ps-3"></i></a>
-                        </div>
+   <div class="container-fluid pt-6 pb-6">
+    <div class="container pt-4">
+        <div class="row g-0 feature-row wow fadeIn" data-wow-delay="0.1s">
+
+            <!-- Feature 1 -->
+            <div class="col-md-6 col-lg-3 wow fadeIn" data-wow-delay="0.3s">
+                <div class="feature-item border h-100 text-center p-4">
+                    <div class="feature-icon btn-xxl-square bg-primary mb-4 mt-n4 mx-auto">
+                        <i class="fa fa-play-circle fa-2x text-white"></i>
                     </div>
-                </div>
-                <div class="col-md-6 col-lg-3 wow fadeIn" data-wow-delay="0.4s">
-                    <div class="feature-item border h-100">
-                        <div class="feature-icon btn-xxl-square bg-primary mb-4 mt-n4">
-                            <i class="fa fa-dollar-sign fa-2x text-white"></i>
-                        </div>
-                        <div class="p-5 pt-0">
-                            <h5 class="text-uppercase">Affordable Pricing</h5>
-                            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur tellus augue.</p>
-                            <a class="position-relative text-body text-uppercase small d-flex justify-content-between"
-                                href="#"><b class="bg-white pe-3">Read More</b> <i
-                                    class="bi bi-arrow-right bg-white ps-3"></i></a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-3 wow fadeIn" data-wow-delay="0.5s">
-                    <div class="feature-item border h-100">
-                        <div class="feature-icon btn-xxl-square bg-primary mb-4 mt-n4">
-                            <i class="fa fa-check-double fa-2x text-white"></i>
-                        </div>
-                        <div class="p-5 pt-0">
-                            <h5 class="text-uppercase">Best Welder</h5>
-                            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur tellus augue.</p>
-                            <a class="position-relative text-body text-uppercase small d-flex justify-content-between"
-                                href="#"><b class="bg-white pe-3">Read More</b> <i
-                                    class="bi bi-arrow-right bg-white ps-3"></i></a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-3 wow fadeIn" data-wow-delay="0.6s">
-                    <div class="feature-item border h-100">
-                        <div class="feature-icon btn-xxl-square bg-primary mb-4 mt-n4">
-                            <i class="fa fa-tools fa-2x text-white"></i>
-                        </div>
-                        <div class="p-5 pt-0">
-                            <h5 class="text-uppercase">Quality Tools</h5>
-                            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur tellus augue.</p>
-                            <a class="position-relative text-body text-uppercase small d-flex justify-content-between"
-                                href="#"><b class="bg-white pe-3">Read More</b> <i
-                                    class="bi bi-arrow-right bg-white ps-3"></i></a>
-                        </div>
+                    <div class="p-3 pt-0">
+                        <h5 class="text-uppercase mb-3">1000+ Online Courses</h5>
+                        <p>Learn from a wide range of subjects — from technology to personal growth — all in one place.</p>
+                        <a class="position-relative text-body text-uppercase small d-flex justify-content-between"
+                            href="#"><b class="bg-white pe-3">Explore Courses</b> 
+                            <i class="bi bi-arrow-right bg-white ps-3"></i></a>
                     </div>
                 </div>
             </div>
+
+            <!-- Feature 2 -->
+            <div class="col-md-6 col-lg-3 wow fadeIn" data-wow-delay="0.4s">
+                <div class="feature-item border h-100 text-center p-4">
+                    <div class="feature-icon btn-xxl-square bg-primary mb-4 mt-n4 mx-auto">
+                        <i class="fa fa-users fa-2x text-white"></i>
+                    </div>
+                    <div class="p-3 pt-0">
+                        <h5 class="text-uppercase mb-3">Expert Instructors</h5>
+                        <p>Learn directly from experienced professionals who bring real-world knowledge to every lesson.</p>
+                        <a class="position-relative text-body text-uppercase small d-flex justify-content-between"
+                            href="#"><b class="bg-white pe-3">Meet Experts</b> 
+                            <i class="bi bi-arrow-right bg-white ps-3"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="col-md-6 col-lg-3 wow fadeIn" data-wow-delay="0.5s">
+                <div class="feature-item border h-100 text-center p-4">
+                    <div class="feature-icon btn-xxl-square bg-primary mb-4 mt-n4 mx-auto">
+                        <i class="fa fa-clock fa-2x text-white"></i>
+                    </div>
+                    <div class="p-3 pt-0">
+                        <h5 class="text-uppercase mb-3">Flexible Learning</h5>
+                        <p>Study at your own pace with lifetime access to all enrolled courses — anytime, anywhere.</p>
+                        <a class="position-relative text-body text-uppercase small d-flex justify-content-between"
+                            href="#"><b class="bg-white pe-3">Learn More</b> 
+                            <i class="bi bi-arrow-right bg-white ps-3"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="col-md-6 col-lg-3 wow fadeIn" data-wow-delay="0.6s">
+                <div class="feature-item border h-100 text-center p-4">
+                    <div class="feature-icon btn-xxl-square bg-primary mb-4 mt-n4 mx-auto">
+                        <i class="fa fa-certificate fa-2x text-white"></i>
+                    </div>
+                    <div class="p-3 pt-0">
+                        <h5 class="text-uppercase mb-3">Certificate of Completion</h5>
+                        <p>Receive recognized certificates after course completion.</p>
+                        <a class="position-relative text-body text-uppercase small d-flex justify-content-between"
+                            href="#"><b class="bg-white pe-3">View Certificates</b> 
+                            <i class="bi bi-arrow-right bg-white ps-3"></i></a>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
+</div>
+
     <!-- Features End -->
 
 
