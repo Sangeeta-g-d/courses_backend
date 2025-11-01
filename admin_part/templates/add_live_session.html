@@ -25,11 +25,11 @@
                         <div class="invalid-feedback"></div>
                     </div>
 
-                    <!-- Google Meet URL -->
+                    <!-- Meeting URL -->
                     <div class="col-12">
-                        <label for="google_meet_url" class="form-label">Google Meet Link</label>
-                        <input type="url" class="form-control" id="google_meet_url" name="google_meet_url" 
-                               placeholder="https://meet.google.com/xyz-abcd-efg" required>
+                        <label for="meeting_url" class="form-label">Meeting Link</label>
+                        <input type="url" class="form-control" id="meeting_url" name="meeting_url" 
+                               placeholder="Enter meeting link (Zoom, Google Meet, Teams, etc.)" required>
                         <div class="invalid-feedback"></div>
                     </div>
 
@@ -76,7 +76,7 @@
 <script>
 document.getElementById('addLiveSessionForm').addEventListener('submit', function(e) {
     let valid = true;
-    const fields = ['title', 'agenda', 'google_meet_url', 'session_date', 'session_time', 'thumbnail'];
+    const fields = ['title', 'agenda', 'meeting_url', 'session_date', 'session_time', 'thumbnail'];
 
     fields.forEach(function(id) {
         const input = document.getElementById(id);
@@ -91,13 +91,13 @@ document.getElementById('addLiveSessionForm').addEventListener('submit', functio
         }
     });
 
-    // Validate Google Meet URL pattern
-    const meetInput = document.getElementById('google_meet_url');
-    const meetFeedback = meetInput.nextElementSibling;
-    const meetPattern = /^https:\/\/meet\.google\.com\/[a-z0-9\-]+$/i;
-    if (meetInput.value && !meetPattern.test(meetInput.value)) {
-        meetFeedback.innerText = 'Please enter a valid Google Meet link (e.g., https://meet.google.com/xyz-abcd-efg)';
-        meetInput.classList.add('is-invalid');
+    // General URL validation (optional)
+    const urlInput = document.getElementById('meeting_url');
+    const urlFeedback = urlInput.nextElementSibling;
+    const urlPattern = /^(https?:\/\/)?([\w\-])+\.{1}([a-zA-Z]{2,63})([\/\w\-\.\?=&%]*)*\/?$/;
+    if (urlInput.value && !urlPattern.test(urlInput.value)) {
+        urlFeedback.innerText = 'Please enter a valid URL (e.g., https://zoom.us/abc123)';
+        urlInput.classList.add('is-invalid');
         valid = false;
     }
 

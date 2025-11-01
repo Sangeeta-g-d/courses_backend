@@ -28,7 +28,11 @@ urlpatterns = [
     path('add_live_session/', views.add_live_session, name='add_live_session'),
     path('edit_live_session/<int:session_id>/', views.edit_live_session, name='edit_live_session'),
     path('delete_live_session/<int:session_id>/', views.delete_live_session, name='delete_live_session'),
-    path('test-sessions/', views.live_session_test, name='live_session_test'),
+    
 
-
+    #zoom urls
+    path('live-sessions/', views.live_session_test, name='live_session_test'),
+    path('create-live-session/', views.create_live_session, name='create_live_session'),
+    path('test-zoom-connection/', views.test_zoom_connection, name='test_zoom_connection'),
+    path('delete-session/<int:session_id>/', views.delete_live_session, name='delete_live_session'),
 ]

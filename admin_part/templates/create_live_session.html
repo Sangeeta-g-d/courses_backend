@@ -1,0 +1,153 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+<div class="container py-5">
+    <!-- Header with Test Button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">Create Live Session</h2>
+        <a href="{% url 'test_zoom_connection' %}" class="btn btn-outline-info">
+            <i class="bi bi-plug"></i> Test Zoom Connection
+        </a>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Creation Form -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-camera-video"></i> New Live Session</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Session Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   placeholder="Enter session title" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="agenda" class="form-label">Agenda *</label>
+                            <textarea class="form-control" id="agenda" name="agenda" 
+                                      rows="3" placeholder="Describe what this session will cover" required></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="session_date" class="form-label">Session Date *</label>
+                                    <input type="date" class="form-control" id="session_date" 
+                                           name="session_date" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="session_time" class="form-label">Session Time *</label>
+                                    <input type="time" class="form-control" id="session_time" 
+                                           name="session_time" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="duration" class="form-label">Duration (minutes)</label>
+                                    <input type="number" class="form-control" id="duration" 
+                                           name="duration" value="60" min="15" max="240">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="timezone" class="form-label">Timezone</label>
+                                    <select class="form-select" id="timezone" name="timezone">
+                                        {% for tz in timezones %}
+                                        <option value="{{ tz }}" {% if tz == 'UTC' %}selected{% endif %}>
+                                            {{ tz }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-camera-video"></i> Create Live Session
+                            </button>
+                            <a href="{% url 'live_session_test' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to Sessions
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Help Information -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-info-circle"></i> Setup Instructions</h6>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li>Click "Test Zoom Connection" to verify API credentials</li>
+                        <li>Fill in all required fields (*)</li>
+                        <li>Set a future date and time for the session</li>
+                        <li>Click "Create Live Session" to generate Zoom meeting</li>
+                        <li>Session will appear on the Live Sessions page</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Set minimum date to today
+document.getElementById('session_date').min = new Date().toISOString().split('T')[0];
+
+// Set time validation
+const now = new Date();
+const today = now.toISOString().split('T')[0];
+const dateInput = document.getElementById('session_date');
+const timeInput = document.getElementById('session_time');
+
+dateInput.addEventListener('change', function() {
+    if (this.value === today) {
+        // If today, set minimum time to 1 hour from now
+        const minTime = new Date(now.getTime() + 60 * 60 * 1000);
+        const minTimeString = minTime.toTimeString().substring(0, 5);
+        timeInput.min = minTimeString;
+        
+        // If current time is after min time, set to min time
+        if (timeInput.value && timeInput.value < minTimeString) {
+            timeInput.value = minTimeString;
+        }
+    } else {
+        timeInput.removeAttribute('min');
+    }
+});
+
+// Initialize time validation on page load
+if (dateInput.value === today) {
+    const minTime = new Date(now.getTime() + 60 * 60 * 1000);
+    const minTimeString = minTime.toTimeString().substring(0, 5);
+    timeInput.min = minTimeString;
+}
+</script>
+
+<!-- Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+{% endblock %}

@@ -6,6 +6,10 @@ from django.utils.text import slugify
 from django.contrib.auth import logout
 import json
 from django.http import JsonResponse
+from datetime import datetime, date, time
+import uuid
+import jwt
+import requests
 # Create your views here.
 
 
@@ -137,12 +141,14 @@ def edit_bundle(request, bundle_id):
 
 def add_course(request):
     categories = Bundle.objects.all()
+    print("hhhhhhhhhhhhhhh")
     if request.method == 'POST':
         try:
+            print("jjjjjjjjjjjjjjjjjj")
             category_id = request.POST.get('category')
             print(category_id)
             category = Bundle.objects.get(id=category_id) if category_id else None
-
+            print(category_id,category)
             title = request.POST.get('title')
             thumbnail = request.FILES.get('thumbnail')
             preview_video = request.FILES.get('preview_video')
@@ -401,7 +407,8 @@ def add_live_session(request):
     if request.method == 'POST':
         title = request.POST.get('title')
         agenda = request.POST.get('agenda')
-        meeting_url = request.POST.get('google_meet_url')
+        meeting_url = request.POST.get('meeting_url')
+
         session_date = request.POST.get('session_date')
         session_time = request.POST.get('session_time')
         thumbnail = request.FILES.get('thumbnail')
@@ -448,6 +455,179 @@ def delete_live_session(request, session_id):
     return redirect('admin_live_sessions')
 
 
+# Live session testttttt
+# views.py
+def create_zoom_meeting(topic, agenda, start_time, duration=60, timezone="UTC"):
+    """Create Zoom meeting directly in the view"""
+    try:
+        # Generate JWT Token
+        payload = {
+            'iss': settings.ZOOM_API_KEY,
+            'exp': datetime.utcnow() + timedelta(minutes=90)
+        }
+        token = jwt.encode(payload, settings.ZOOM_API_SECRET, algorithm='HS256')
+        
+        # Prepare headers
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Format time for Zoom API
+        if isinstance(start_time, datetime):
+            formatted_time = start_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+        else:
+            formatted_time = start_time
+        
+        # Meeting data
+        data = {
+            "topic": topic,
+            "agenda": agenda,
+            "type": 2,  # Scheduled meeting
+            "start_time": formatted_time,
+            "duration": duration,
+            "timezone": timezone,
+            "settings": {
+                "host_video": True,
+                "participant_video": True,
+                "join_before_host": False,
+                "mute_upon_entry": True,
+                "watermark": False,
+                "audio": "both",
+                "auto_recording": "none",
+                "waiting_room": True
+            }
+        }
+        
+        # Create meeting
+        url = "https://api.zoom.us/v2/users/me/meetings"
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        
+        if response.status_code == 201:
+            return response.json(), "Meeting created successfully"
+        else:
+            return None, f"Zoom API Error: {response.status_code} - {response.text}"
+            
+    except Exception as e:
+        return None, f"Error creating meeting: {str(e)}"
+
+def test_zoom_connection(request):
+    """Test Zoom API connection"""
+    try:
+        # Generate JWT Token
+        payload = {
+            'iss': settings.ZOOM_API_KEY,
+            'exp': datetime.utcnow() + timedelta(minutes=90)
+        }
+        token = jwt.encode(payload, settings.ZOOM_API_SECRET, algorithm='HS256')
+        
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Test API call
+        url = "https://api.zoom.us/v2/users/me"
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            messages.success(request, '✅ Zoom connection successful! API credentials are working.')
+        else:
+            messages.error(request, f'❌ Zoom connection failed: {response.status_code} - {response.text}')
+            
+    except Exception as e:
+        messages.error(request, f'❌ Zoom connection error: {str(e)}')
+    
+    return redirect('create_live_session')
+
+def create_live_session(request):
+    """View to create live session with Zoom integration"""
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        agenda = request.POST.get('agenda')
+        session_date = request.POST.get('session_date')
+        session_time = request.POST.get('session_time')
+        duration = request.POST.get('duration', 60)
+        timezone = request.POST.get('timezone', 'UTC')
+        
+        # Validate required fields
+        if not all([title, agenda, session_date, session_time]):
+            messages.error(request, 'All fields are required.')
+            return render(request, 'create_live_session.html')
+        
+        # Combine date and time
+        try:
+            start_datetime_str = f"{session_date} {session_time}"
+            start_datetime = datetime.strptime(start_datetime_str, '%Y-%m-%d %H:%M')
+            
+            # Ensure the session is in the future
+            if start_datetime <= datetime.now():
+                messages.error(request, 'Session must be scheduled for a future time.')
+                return render(request, 'create_live_session.html')
+                
+        except ValueError as e:
+            messages.error(request, 'Invalid date or time format.')
+            return render(request, 'create_live_session.html')
+        
+        # Create Zoom meeting
+        zoom_meeting, message = create_zoom_meeting(
+            topic=title,
+            agenda=agenda,
+            start_time=start_datetime,
+            duration=int(duration),
+            timezone=timezone
+        )
+        
+        if zoom_meeting:
+            # Create LiveSession object
+            LiveSession.objects.create(
+                title=title,
+                agenda=agenda,
+                session_date=session_date,
+                session_time=session_time,
+                meeting_url=zoom_meeting['join_url'],
+                meeting_id=zoom_meeting['id'],
+                start_url=zoom_meeting.get('start_url', ''),
+                duration=duration,
+                timezone=timezone,
+                is_active=False
+            )
+            messages.success(request, '✅ Live session created successfully!')
+            return redirect('live_session_test')
+        else:
+            messages.error(request, f'❌ Failed to create Zoom meeting: {message}')
+    
+    # Timezone options
+    timezones = [
+        'UTC', 'America/New_York', 'America/Los_Angeles', 'Europe/London',
+        'Europe/Paris', 'Asia/Kolkata', 'Asia/Tokyo', 'Australia/Sydney'
+    ]
+    
+    return render(request, 'create_live_session.html', {
+        'timezones': timezones
+    })
+
 def live_session_test(request):
+    """Display all live sessions"""
     sessions = LiveSession.objects.all().order_by('-session_date', '-session_time')
+    
+    # Check if sessions are active based on current time
+    current_datetime = datetime.now()
+    for session in sessions:
+        session_datetime = datetime.combine(session.session_date, session.session_time)
+        # Consider session active if it's within 30 minutes of start time
+        time_difference = (session_datetime - current_datetime).total_seconds()
+        session.is_active = time_difference <= 1800  # 30 minutes before start
+    
     return render(request, 'live_session_test.html', {'sessions': sessions})
+
+def delete_live_session(request, session_id):
+    """Delete a live session"""
+    try:
+        session = LiveSession.objects.get(id=session_id)
+        session.delete()
+        messages.success(request, 'Session deleted successfully!')
+    except LiveSession.DoesNotExist:
+        messages.error(request, 'Session not found!')
+    
+    return redirect('live_session_test')
