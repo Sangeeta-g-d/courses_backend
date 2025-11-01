@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404, redirect,reverse
 from admin_part.models import Course, CourseSection, Lecture,Bundle
 from auth_app.models import CustomUser, UserProfile
 from django.contrib.auth import login
@@ -9,6 +9,8 @@ from django.core.files.storage import FileSystemStorage
 from django.utils import timezone
 from django.contrib.auth import authenticate, login, logout
 import random
+
+
 def home(request):
     # Your existing course code
     qs = Course.objects.order_by('-created_at')
@@ -25,6 +27,7 @@ def home(request):
             detail_url = '#'
 
         courses.append({
+            'id': c.id,
             'title': c.title,
             'thumbnail_url': thumb,
             'level': c.level,
@@ -173,3 +176,8 @@ def bundle_courses(request, bundle_id):
     bundle = get_object_or_404(Bundle, id=bundle_id)
     courses = bundle.courses.all()  # ✅ Fetch queryset
     return render(request, 'bundle_courses.html', {'bundle': bundle, 'courses': courses})
+
+def logout_view(request):
+    logout(request)
+    messages.info(request, "You have successfully logged out.")
+    return redirect('/user/')

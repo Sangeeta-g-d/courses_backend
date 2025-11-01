@@ -77,6 +77,12 @@
                 <span>Live Session</span>
             </a>
         </li>
+        <li class="sidebar-item {% if request.path == '/user_list/' %}active{% endif %}">
+            <a href="/user_list/" class="sidebar-link">
+                <i class="bi bi-grid-1x2-fill"></i>
+                <span>User List</span>
+            </a>
+        </li>
                     </ul>
                 </div>
                 <button class="sidebar-toggler btn x"><i data-feather="x"></i></button>

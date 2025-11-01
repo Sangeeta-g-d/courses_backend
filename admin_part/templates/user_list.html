@@ -1,0 +1,135 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="page-heading d-flex justify-content-between align-items-center">
+    <h3>Registered User List</h3>
+    <div class="btn-group">
+        <button type="button" class="btn btn-primary" onclick="exportToExcel()">
+            <i class="bi bi-download"></i> Export
+        </button>
+    </div>
+</div>
+
+<div class="page-content">
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="usersTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Profile</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Qualification</th>
+                            <th>City</th>
+                            <th>Status</th>
+                            <th>Date Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                {% if user.profile_image %}
+                                    <img src="{{ user.profile_image.url }}" alt="Profile" class="rounded-circle" width="40" height="40">
+                                {% else %}
+                                    <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center bg-secondary text-white" style="width: 40px; height: 40px;">
+                                        {{ user.full_name|default:user.email|first|upper }}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ user.full_name|default:"Not Provided" }}</strong></td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.phone_number|default:"-" }}</td>
+                            <td>
+                                {% if user.profile.highest_qualification %}
+                                    {{ user.profile.get_highest_qualification_display }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ user.profile.city|default:"-" }}</td>
+                            <td>
+                                <span class="badge {% if user.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if user.is_active %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </td>
+                            <td>{{ user.date_joined|date:"M d, Y" }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" 
+                                            onclick="viewUser({{ user.id }})" 
+                                            title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-warning" 
+                                            onclick="editUser({{ user.id }})"
+                                            title="Edit User">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-{% if user.is_active %}danger{% else %}success{% endif %}" 
+                                            onclick="toggleUserStatus({{ user.id }}, {{ user.is_active|yesno:'true,false' }})"
+                                            title="{% if user.is_active %}Deactivate{% else %}Activate{% endif %} User">
+                                        <i class="bi {% if user.is_active %}bi-person-x{% else %}bi-person-check{% endif %}"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="11" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="bi bi-people fs-3 mb-2"></i>
+                                    <p>No users found</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Details Modal -->
+<div class="modal fade" id="userModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">User Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="userDetails">
+                <!-- User details will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-placeholder {
+    font-weight: bold;
+    font-size: 16px;
+}
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+.btn-group .btn {
+    border-radius: 4px;
+    margin-right: 2px;
+}
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %}

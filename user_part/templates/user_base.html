@@ -76,37 +76,52 @@
     <!-- Navbar Start -->
     <div class="container-fluid bg-white sticky-top wow fadeIn" data-wow-delay="0.1s">
         <div class="container">
-            <nav class="navbar navbar-expand-lg bg-white navbar-light p-lg-0">
-                <a href="/user/" class="navbar-brand d-lg-none" style="display: flex; align-items: center; text-decoration: none;">
-                     <img src="/static/assets/images/logo/smta-final-logo.png" width="50" height="50" alt="">
-                    <h1 class="fw-bold m-0">SMTA</h1>
-                </a>
-                <button type="button" class="navbar-toggler me-0" data-bs-toggle="collapse"
-                    data-bs-target="#navbarCollapse">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarCollapse">
-                    <div class="navbar-nav">
-                        <a href="/user/" class="nav-item nav-link active">Home</a>
-                        <a href="about.html" class="nav-item nav-link">About</a>
-                        <a href="service.html" class="nav-item nav-link">Services</a>
-                        <div class="nav-item dropdown">
-                            <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Pages</a>
-                            <div class="dropdown-menu bg-light rounded-0 rounded-bottom m-0">
-                                <a href="feature.html" class="dropdown-item">Features</a>
-                                <a href="team.html" class="dropdown-item">Our Team</a>
-                                <a href="testimonial.html" class="dropdown-item">Testimonial</a>
-                                <a href="appoinment.html" class="dropdown-item">Appoinment</a>
-                                <a href="404.html" class="dropdown-item">404 Page</a>
-                            </div>
-                        </div>
-                        <a href="contact.html" class="nav-item nav-link">Contact</a>
-                    </div>
-                    <div class="ms-auto d-none d-lg-block">
-                        <a href="/login/" class="btn btn-primary py-2 px-3">Login</a>
-                    </div>
-                </div>
-            </nav>
+           <nav class="navbar navbar-expand-lg bg-white navbar-light p-lg-0">
+  <a href="/user/" class="navbar-brand d-lg-none" style="display: flex; align-items: center; text-decoration: none;">
+    <img src="/static/assets/images/logo/smta-final-logo.png" width="50" height="50" alt="">
+    <h1 class="fw-bold m-0 ms-2">SMTA</h1>
+  </a>
+
+  <button type="button" class="navbar-toggler me-0" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <div class="collapse navbar-collapse" id="navbarCollapse">
+    <div class="navbar-nav">
+      <a href="/user/" class="nav-item nav-link active">Home</a>
+      <a href="about.html" class="nav-item nav-link">About</a>
+      <a href="service.html" class="nav-item nav-link">Services</a>
+
+      <a href="contact.html" class="nav-item nav-link">Contact</a>
+    </div>
+
+    <div class="ms-auto d-none d-lg-flex align-items-center">
+      {% if request.user.is_authenticated %}
+        <!-- ✅ User Profile Dropdown -->
+        <div class="dropdown">
+          <a href="#" class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+            {% if request.user.profile_image %}
+              <img src="{{ request.user.profile_image.url }}" alt="Profile" width="35" height="35" class="rounded-circle me-2">
+            {% else %}
+              <img src="/static/home_assets/img/simple-user-default-icon-free-png.webp" alt="Profile" width="35" height="35" class="rounded-circle me-2">
+            {% endif %}
+            <span>{{ request.user.full_name|default:request.user.email }}</span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end shadow-sm mt-2">
+            <li><a class="dropdown-item" href="/user/profile/">My Profile</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="/user/logout/">Logout</a></li>
+          </ul>
+        </div>
+      {% else %}
+        <!-- ✅ Login / Register Buttons -->
+        <a href="/user/login/" class="btn btn-outline-primary py-2 px-3 me-2">Login</a>
+        <a href="/user/register/" class="btn btn-primary py-2 px-3">Register</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
         </div>
     </div>
     <!-- Navbar End -->
@@ -165,7 +180,8 @@
 <!-- Footer End -->
 
 
-  
+  {% include 'notify.html' %}
+
 
 
     <!-- Back to Top -->

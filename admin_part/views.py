@@ -10,6 +10,7 @@ from datetime import datetime, date, time
 import uuid
 import jwt
 import requests
+from auth_app.models import CustomUser
 # Create your views here.
 
 
@@ -631,3 +632,8 @@ def delete_live_session(request, session_id):
         messages.error(request, 'Session not found!')
     
     return redirect('live_session_test')
+
+
+def user_list(request):
+    users = CustomUser.objects.filter(is_superuser=False).select_related('profile').order_by('-date_joined')
+    return render(request, 'user_list.html', {'users': users})
