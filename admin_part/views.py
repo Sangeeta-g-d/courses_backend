@@ -146,6 +146,7 @@ def add_course(request):
         try:
             print("jjjjjjjjjjjjjjjjjj")
             category_id = request.POST.get('category')
+            print(category_id)
             category = Bundle.objects.get(id=category_id) if category_id else None
             print(category_id,category)
             title = request.POST.get('title')
