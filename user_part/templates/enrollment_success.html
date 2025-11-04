@@ -1,0 +1,63 @@
+{% extends 'user_base.html' %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 text-center">
+            <div class="card border-0 shadow-lg">
+                <div class="card-body py-5">
+                    <!-- Success Icon -->
+                    <div class="text-success mb-4">
+                        <i class="bi bi-check-circle-fill" style="font-size: 4rem;"></i>
+                    </div>
+                    
+                    <!-- Success Message -->
+                    <h2 class="text-success mb-3">Successfully Enrolled!</h2>
+                    <p class="text-muted mb-4">
+                        You have been successfully enrolled in the bundle. 
+                        You can now access all the courses and start learning immediately.
+                    </p>
+                    
+                    <!-- Bundle Info (if available) -->
+                    {% if enrollment %}
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-journals me-2"></i>
+                        <strong>{{ enrollment.bundle.name }}</strong> - You now have access to all courses in this bundle.
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-center">
+                        <a href="/user/profile/" class="btn btn-primary btn-lg">
+                            <i class="bi bi-play-circle me-2"></i>Start Learning
+                        </a>
+                        <a href="/user" class="btn btn-outline-primary btn-lg">
+                            <i class="bi bi-house me-2"></i>Go to Dashboard
+                        </a>
+                    </div>
+                    
+                    <!-- Quick Links -->
+                    <div class="mt-4 pt-4 border-top">
+                        <h6 class="text-muted mb-3">What's Next?</h6>
+                        <div class="row text-start">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled small">
+                                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Access all course materials</li>
+                                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Download resources</li>
+                                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Join discussions</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled small">
+                                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Complete assignments</li>
+                                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Track your progress</li>
+                                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Learn at your own pace</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

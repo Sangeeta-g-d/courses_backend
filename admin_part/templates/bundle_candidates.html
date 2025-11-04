@@ -1,0 +1,121 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+<div class="page-heading">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h3>Candidates for: {{ bundle.name }}</h3>
+            <p class="text-muted mb-0">Total {{ enrollments.count }} enrolled candidate{{ enrollments.count|pluralize }}</p>
+        </div>
+        <a href="{% url 'total_enrollments' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Back to Bundles
+        </a>
+    </div>
+</div>
+
+<div class="page-content">
+    <div class="card">
+        <div class="card-body">
+            <!-- Bundle Info -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center">
+                        {% if bundle.thumbnail %}
+                            <img src="{{ bundle.thumbnail.url }}" alt="{{ bundle.name }}" 
+                                 class="rounded me-4" width="80" height="80" style="object-fit: cover;">
+                        {% else %}
+                            <div class="bg-light rounded me-4 d-flex align-items-center justify-content-center" 
+                                 width="80" height="80">
+                                <i class="bi bi-journals text-muted" style="font-size: 2rem;"></i>
+                            </div>
+                        {% endif %}
+                        <div>
+                            <h5 class="mb-1">{{ bundle.name }}</h5>
+                            <p class="text-muted mb-2">{{ bundle.short_description|default:"No description" }}</p>
+                            <div class="d-flex gap-2">
+                                {% if bundle.is_free %}
+                                    <span class="badge bg-success">Free Bundle</span>
+                                {% else %}
+                                    <span class="badge bg-primary">₹{{ bundle.get_discounted_price }}</span>
+                                    {% if bundle.discount > 0 %}
+                                        <span class="badge bg-danger">{{ bundle.discount }}% OFF</span>
+                                    {% endif %}
+                                {% endif %}
+                                <span class="badge bg-secondary">{{ bundle.courses.count }} Courses</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Candidates Table -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>User</th>
+                         
+                            <th>Enrollment Date</th>
+                            <th>Payment Status</th>
+                            <th>Amount Paid</th>
+                           
+                            <th>Last Accessed</th>
+                          
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for enrollment in enrollments %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if enrollment.user.profile_image %}
+                                                <img src="{{ enrollment.user.profile_image.url }}" 
+                                                     alt="{{ enrollment.user.email }}" 
+                                                     class="rounded-circle me-2" width="32" height="32" style="object-fit: cover;">
+                                            {% else %}
+                                                <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                                     width="32" height="32">
+                                                    <i class="bi bi-person text-white" style="font-size: 0.8rem;"></i>
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <h6 class="mb-0 small">
+                                                    {% if enrollment.user.full_name %}
+                                                        {{ enrollment.user.full_name }}
+                                                    {% else %}
+                                                        {{ enrollment.user.email }}
+                                                    {% endif %}
+                                                </h6>
+                                                <small class="text-muted">{{ enrollment.user.email }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                           
+                            <td>{{ enrollment.enrolled_at|date:"M d, Y" }}</td>
+                            <td>
+                                <span class="badge {% if enrollment.payment_status == 'completed' %}bg-success{% elif enrollment.payment_status == 'pending' %}bg-warning{% elif enrollment.payment_status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                    {{ enrollment.payment_status|title }}
+                                </span>
+                            </td>
+                            <td>₹{{ enrollment.amount_paid }}</td>
+                           
+                            <td>{{ enrollment.last_accessed|date:"M d, Y"|default:"Never" }}</td>
+                           
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-4">
+                                <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+                                <h5 class="mt-2">No Candidates Found</h5>
+                                <p class="text-muted">No users have enrolled in this bundle yet.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

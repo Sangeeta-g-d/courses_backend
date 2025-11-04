@@ -1,0 +1,77 @@
+{% extends 'user_base.html' %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 text-center">
+            <div class="card border-0 shadow-lg">
+                <div class="card-body py-5">
+                    <!-- Success Icon -->
+                    <div class="text-success mb-4">
+                        <i class="bi bi-check-circle-fill" style="font-size: 4rem;"></i>
+                    </div>
+                    
+                    <!-- Success Message -->
+                    <h2 class="text-success mb-3">Payment Successful!</h2>
+                    <p class="text-muted mb-4">
+                        Thank you for your payment. You have been successfully enrolled in the bundle. 
+                        You can now access all the courses and start learning immediately.
+                    </p>
+                    
+                    <!-- Payment Details (if available) -->
+                    {% if enrollment %}
+                    <div class="alert alert-info mb-4">
+                        <div class="row">
+                            <div class="col-6">
+                                <small class="text-muted">Bundle:</small>
+                                <div class="fw-bold">{{ enrollment.bundle.name }}</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Amount Paid:</small>
+                                <div class="fw-bold">₹{{ enrollment.amount_paid }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Additional Info -->
+                    <div class="alert alert-success mb-4">
+                        <i class="bi bi-envelope-check me-2"></i>
+                        You will receive a payment confirmation email shortly with all the details.
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-center">
+                        <a href="/user/profile/" class="btn btn-primary btn-lg">
+                            <i class="bi bi-play-circle me-2"></i>Start Learning
+                        </a>
+                        <a href="/user" class="btn btn-outline-primary btn-lg">
+                            <i class="bi bi-house me-2"></i>Go to Dashboard
+                        </a>
+                    </div>
+                    
+                    <!-- Quick Links -->
+                    <div class="mt-4 pt-4 border-top">
+                        <h6 class="text-muted mb-3">What's Next?</h6>
+                        <div class="row text-start">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled small">
+                                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Access all course materials</li>
+                                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Download resources</li>
+                                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Join discussions</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled small">
+                                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Complete assignments</li>
+                                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Get certificates</li>
+                                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Track your progress</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

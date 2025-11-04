@@ -206,3 +206,169 @@ class LiveSession(models.Model):
 
     def __str__(self):
         return self.title
+    
+
+# ---------------------------------------------------------
+# PAYMENT MODELS
+# ---------------------------------------------------------
+class Enrollment(models.Model):
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('free', 'Free'),
+        ('refunded', 'Refunded'),
+    ]
+    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='enrollments')
+    bundle = models.ForeignKey('Bundle', on_delete=models.CASCADE, related_name='enrollments')
+    enrolled_at = models.DateTimeField(auto_now_add=True)
+    
+    # Payment Information
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    # Progress Tracking
+    progress_percentage = models.PositiveIntegerField(default=0)
+    last_accessed = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+    
+    # Razorpay Details
+    razorpay_order_id = models.CharField(max_length=255, blank=True, null=True)
+    razorpay_payment_id = models.CharField(max_length=255, blank=True, null=True)
+    razorpay_signature = models.CharField(max_length=255, blank=True, null=True)
+    
+    # Additional Fields
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('user', 'bundle')
+        ordering = ['-enrolled_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.bundle.name}"
+
+    def save(self, *args, **kwargs):
+        # Set completed_at when progress reaches 100%
+        if self.progress_percentage == 100 and not self.completed_at:
+            self.completed_at = timezone.now()
+        super().save(*args, **kwargs)
+
+    def update_progress(self):
+        """Method to update progress percentage"""
+        # Your progress calculation logic here
+        total_lectures = 0
+        completed_lectures = 0
+        
+        courses = self.bundle.courses.all()
+        for course in courses:
+            course_lectures = Lecture.objects.filter(section__course=course).count()
+            total_lectures += course_lectures
+            # Add your completion logic here
+        
+        if total_lectures > 0:
+            self.progress_percentage = int((completed_lectures / total_lectures) * 100)
+            self.save()
+
+class PaymentTransaction(models.Model):
+    TRANSACTION_STATUS_CHOICES = [
+        ('created', 'Created'),
+        ('attempted', 'Attempted'),
+        ('paid', 'Paid'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+    ]
+    
+    # User and Bundle Info
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payment_transactions')
+    bundle = models.ForeignKey('Bundle', on_delete=models.CASCADE, related_name='payment_transactions')
+    
+    # Razorpay Order Details
+    razorpay_order_id = models.CharField(max_length=255, unique=True)
+    order_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=10, default='INR')
+    
+    # Payment Details
+    razorpay_payment_id = models.CharField(max_length=255, blank=True, null=True)
+    payment_status = models.CharField(max_length=20, choices=TRANSACTION_STATUS_CHOICES, default='created')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    payment_date = models.DateTimeField(blank=True, null=True)
+    
+    # Additional Info
+    error_message = models.TextField(blank=True, null=True)
+    metadata = models.JSONField(default=dict, blank=True)  # Store additional payment data
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['razorpay_order_id']),
+            models.Index(fields=['user', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.bundle.name} - {self.razorpay_order_id}"
+
+    def mark_as_paid(self, payment_id, payment_date=None):
+        self.razorpay_payment_id = payment_id
+        self.payment_status = 'paid'
+        self.payment_date = payment_date or timezone.now()
+        self.save()
+
+    def mark_as_failed(self, error_message):
+        self.payment_status = 'failed'
+        self.error_message = error_message
+        self.save()
+
+
+class Refund(models.Model):
+    REFUND_STATUS_CHOICES = [
+        ('requested', 'Requested'),
+        ('processed', 'Processed'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    
+    enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='refunds')
+    razorpay_refund_id = models.CharField(max_length=255, blank=True, null=True)
+    refund_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    refund_status = models.CharField(max_length=20, choices=REFUND_STATUS_CHOICES, default='requested')
+    reason = models.TextField()
+    
+    # Timestamps
+    requested_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(blank=True, null=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+    
+    error_message = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-requested_at']
+
+    def __str__(self):
+        return f"Refund for {self.enrollment} - {self.refund_amount}"
+    
+
+class UserProgress(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='progress')
+    lecture = models.ForeignKey(Lecture, on_delete=models.CASCADE, related_name='user_progress')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='user_progress')
+    completed = models.BooleanField(default=False)
+    watched_duration = models.PositiveIntegerField(default=0)  # in seconds
+    total_duration = models.PositiveIntegerField(default=0)    # in seconds
+    last_watched = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('user', 'lecture')
+        verbose_name_plural = "User Progress"
+
+    def __str__(self):
+        return f"{self.user.email} - {self.lecture.title} - {'Completed' if self.completed else 'In Progress'}"
+
+    def save(self, *args, **kwargs):
+        if self.completed and not self.completed_at:
+            self.completed_at = timezone.now()
+        super().save(*args, **kwargs)

@@ -1,14 +1,362 @@
 {% extends 'admin_base.html' %}
 {% block content %}
-<div class="page-heading d-flex justify-content-between align-items-center">
-    <h3>dashboard</h3>
-
+<div class="page-heading">
+    <h3>Bundle Enrollment Statistics</h3>
 </div>
 
 <div class="page-content">
-    <!-- your dashboard content here -->
+    <!-- Overall Statistics Cards -->
+    <div class="row">
+        <div class="col-6 col-lg-3 col-md-6">
+            <div class="card">
+                <div class="card-body px-3 py-4-5">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="stats-icon purple">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h6 class="text-muted font-semibold">Total Enrollments</h6>
+                            <h6 class="font-extrabold mb-0">{{ total_enrollments }}</h6>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3 col-md-6">
+            <div class="card">
+                <div class="card-body px-3 py-4-5">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="stats-icon blue">
+                                <i class="bi bi-currency-rupee"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h6 class="text-muted font-semibold">Paid Enrollments</h6>
+                            <h6 class="font-extrabold mb-0">{{ total_paid_enrollments }}</h6>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3 col-md-6">
+            <div class="card">
+                <div class="card-body px-3 py-4-5">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="stats-icon green">
+                                <i class="bi bi-gift-fill"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h6 class="text-muted font-semibold">Free Enrollments</h6>
+                            <h6 class="font-extrabold mb-0">{{ total_free_enrollments }}</h6>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3 col-md-6">
+            <div class="card">
+                <div class="card-body px-3 py-4-5">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="stats-icon red">
+                                <i class="bi bi-award-fill"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h6 class="text-muted font-semibold">Completed</h6>
+                            <h6 class="font-extrabold mb-0">{{ total_completed_enrollments }}</h6>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bundle-wise Enrollment Statistics -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Bundle Enrollment Statistics</h4>
+                </div>
+                <div class="card-body">
+                    {% if bundle_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="bundleTable">
+                            <thead>
+                                <tr>
+                                    <th>Bundle Name</th>
+                                    <th>Price</th>
+                                    <th>Total Enrollments</th>
+                                    <th>Paid</th>
+                                    <th>Free</th>
+                                    <th>Completed</th>
+                                    <th>Completion Rate</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bundle in bundle_stats %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if bundle.thumbnail %}
+                                                <img src="{{ bundle.thumbnail.url }}" alt="{{ bundle.name }}" 
+                                                     class="rounded me-3" width="40" height="40" style="object-fit: cover;">
+                                            {% else %}
+                                                <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" 
+                                                     width="40" height="40">
+                                                    <i class="bi bi-journals text-muted"></i>
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <h6 class="mb-0">{{ bundle.name }}</h6>
+                                                <small class="text-muted">
+                                                    {{ bundle.courses.count }} courses
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if bundle.is_free %}
+                                            <span class="badge bg-success">Free</span>
+                                        {% else %}
+                                            ₹{{ bundle.get_discounted_price }}
+                                            {% if bundle.discount > 0 %}
+                                                <small class="text-muted d-block">
+                                                    <s>₹{{ bundle.price }}</s>
+                                                    <span class="text-danger">{{ bundle.discount }}% off</span>
+                                                </small>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold">{{ bundle.total_enrollments }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-primary fw-bold">{{ bundle.paid_enrollments }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-bold">{{ bundle.free_enrollments }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-warning fw-bold">{{ bundle.completed_enrollments }}</span>
+                                    </td>
+                                    <td>
+                                        {% if bundle.total_enrollments > 0 %}
+                                            {% widthratio bundle.completed_enrollments bundle.total_enrollments 100 as completion_rate %}
+                                            <div class="progress" style="height: 8px; width: 100px;">
+                                                <div class="progress-bar bg-success" role="progressbar" 
+                                                     style="width: {{ completion_rate }}%" 
+                                                     aria-valuenow="{{ completion_rate }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100"></div>
+                                            </div>
+                                            <small class="text-muted">{{ completion_rate }}%</small>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'bundle_enrollment_details' bundle.id %}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye-fill"></i> View Details
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-journals display-4 text-muted"></i>
+                        <h5 class="mt-3 text-muted">No Bundles Found</h5>
+                        <p class="text-muted">There are no bundles available yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Enrollments -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Recent Enrollments (Last 7 Days)</h4>
+                </div>
+                <div class="card-body">
+                    {% if recent_enrollments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Bundle</th>
+                                    <th>Enrollment Date</th>
+                                    <th>Payment Status</th>
+                                    <th>Amount Paid</th>
+                                    <th>Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for enrollment in recent_enrollments %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if enrollment.user.profile_image %}
+                                                <img src="{{ enrollment.user.profile_image.url }}" 
+                                                     alt="{{ enrollment.user.email }}" 
+                                                     class="rounded-circle me-2" width="32" height="32" style="object-fit: cover;">
+                                            {% else %}
+                                                <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                                     width="32" height="32">
+                                                    <i class="bi bi-person text-white" style="font-size: 0.8rem;"></i>
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <h6 class="mb-0 small">
+                                                    {% if enrollment.user.full_name %}
+                                                        {{ enrollment.user.full_name }}
+                                                    {% else %}
+                                                        {{ enrollment.user.email }}
+                                                    {% endif %}
+                                                </h6>
+                                                <small class="text-muted">{{ enrollment.user.email }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong>{{ enrollment.bundle.name }}</strong>
+                                    </td>
+                                    <td>
+                                        <small>{{ enrollment.enrolled_at|date:"M d, Y" }}</small>
+                                        <br>
+                                        <small class="text-muted">{{ enrollment.enrolled_at|date:"h:i A" }}</small>
+                                    </td>
+                                    <td>
+                                        {% if enrollment.payment_status == 'completed' %}
+                                            <span class="badge bg-success">Paid</span>
+                                        {% elif enrollment.payment_status == 'free' %}
+                                            <span class="badge bg-info">Free</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">{{ enrollment.payment_status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if enrollment.payment_status == 'completed' %}
+                                            ₹{{ enrollment.amount_paid }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress me-2" style="height: 6px; width: 80px;">
+                                                <div class="progress-bar bg-primary" role="progressbar" 
+                                                     style="width: {{ enrollment.progress_percentage }}%" 
+                                                     aria-valuenow="{{ enrollment.progress_percentage }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100"></div>
+                                            </div>
+                                            <small class="text-muted">{{ enrollment.progress_percentage }}%</small>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-people display-4 text-muted"></i>
+                        <h5 class="mt-3 text-muted">No Recent Enrollments</h5>
+                        <p class="text-muted">No enrollments in the last 7 days.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
+<!-- Add some custom CSS -->
+<style>
+.stats-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.5rem;
+    background-color: var(--bs-primary);
+    float: left;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-{% include 'notify.html' %}
+.stats-icon.purple {
+    background-color: #6f42c1;
+}
+
+.stats-icon.blue {
+    background-color: #0d6efd;
+}
+
+.stats-icon.green {
+    background-color: #198754;
+}
+
+.stats-icon.red {
+    background-color: #dc3545;
+}
+
+.stats-icon i {
+    color: white;
+    font-size: 1.5rem;
+}
+
+.progress {
+    background-color: #e9ecef;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #6c757d;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+</style>
+
+<!-- Add DataTables for better table functionality -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Simple table sorting (you can replace with DataTables if needed)
+    const table = document.getElementById('bundleTable');
+    if (table) {
+        const headers = table.querySelectorAll('th');
+        headers.forEach((header, index) => {
+            header.style.cursor = 'pointer';
+            header.addEventListener('click', () => {
+                sortTable(index);
+            });
+        });
+    }
+    
+    function sortTable(column) {
+        // Simple sorting implementation
+        // You can enhance this or use DataTables library
+        console.log('Sorting column:', column);
+    }
+});
+</script>
 {% endblock %}
