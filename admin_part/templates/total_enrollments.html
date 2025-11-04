@@ -1,0 +1,70 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+<div class="page-heading">
+    <h3>All Bundles</h3>
+    <p class="text-muted">Total {{ enrollments.count }} enrollments across all bundles</p>
+</div>
+
+<div class="page-content">
+    <div class="row">
+        {% for enrollment in enrollments %}
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="row g-0">
+                    <div class="col-md-3">
+                        {% if enrollment.bundle.thumbnail %}
+                        <img src="{{ enrollment.bundle.thumbnail.url }}" class="img-fluid rounded-start" alt="{{ enrollment.bundle.name }}" style="height: 200px; width: 100%; object-fit: cover;">
+                        {% else %}
+                        <div class="bg-light d-flex align-items-center justify-content-center h-100" style="height: 200px;">
+                            <i class="bi bi-journals text-muted" style="font-size: 3rem;"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-9">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h5 class="card-title">{{ enrollment.bundle.name }}</h5>
+                                <div>
+                                    <span class="badge {% if enrollment.payment_status == 'completed' %}bg-success{% elif enrollment.payment_status == 'pending' %}bg-warning{% elif enrollment.payment_status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                        {{ enrollment.payment_status|title }}
+                                    </span>
+                                    {% if enrollment.bundle.is_free %}
+                                    <span class="badge bg-info">Free</span>
+                                    {% else %}
+                                    <span class="badge bg-primary">₹{{ enrollment.amount_paid }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <p class="card-text text-muted">{{ enrollment.bundle.short_description|default:"No description available" }}</p>
+                            <div class="mt-3 d-flex justify-content-between align-items-center">
+                              <div class="d-flex gap-2">
+    <span class="badge bg-light text-dark border">
+        <i class="bi bi-journals me-1"></i>
+        {{ enrollment.bundle.courses.count }} Course{{ enrollment.bundle.courses.count|pluralize }}
+    </span>
+    <span class="badge bg-light text-dark border">
+        <i class="bi bi-people-fill me-1"></i>
+        {{ enrollment.bundle.enrollments.count }} Enrolled
+    </span>
+</div>
+                                <a href="{% url 'view_bundle_candidates' enrollment.bundle.id %}" class="btn btn-outline-primary btn-sm">
+    View Candidates
+</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="bi bi-journals text-muted" style="font-size: 4rem;"></i>
+                <h4 class="mt-3">No Enrollments Found</h4>
+                <p class="text-muted">No bundle enrollments found in the system.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends 'user_base.html' %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 text-center">
+            <div class="card border-0 shadow-lg">
+                <div class="card-body py-5">
+                    <!-- Error Icon -->
+                    <div class="text-danger mb-4">
+                        <i class="bi bi-x-circle-fill" style="font-size: 4rem;"></i>
+                    </div>
+                    
+                    <!-- Error Message -->
+                    <h2 class="text-danger mb-3">Payment Failed</h2>
+                    <p class="text-muted mb-4">
+                        We're sorry, but your payment could not be processed. This could be due to various reasons such as:
+                    </p>
+                    
+                    <!-- Reasons List -->
+                    <div class="alert alert-warning text-start mb-4">
+                        <ul class="mb-0">
+                            <li>Insufficient funds in your account</li>
+                            <li>Bank transaction declined</li>
+                            <li>Network connectivity issues</li>
+                            <li>Payment timeout</li>
+                            <li>Technical error</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-center">
+                        {% if bundle_id %}
+                            <a href="{% url 'enroll' bundle_id %}" class="btn btn-primary btn-lg">
+                                <i class="bi bi-arrow-repeat me-2"></i>Try Again
+                            </a>
+                        {% else %}
+                            <a href="" class="btn btn-primary btn-lg">
+                                <i class="bi bi-arrow-repeat me-2"></i>Browse Courses
+                            </a>
+                        {% endif %}
+                        <a href="" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-house me-2"></i>Return to Dashboard
+                        </a>
+                    </div>
+                    
+                    <!-- Support Information -->
+                    <div class="mt-4 pt-4 border-top">
+                        <p class="text-muted small mb-2">
+                            If you continue to experience issues, please contact our support team.
+                        </p>
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="mailto:support@yourplatform.com" class="btn btn-outline-danger btn-sm">
+                                <i class="bi bi-envelope me-1"></i>Email Support
+                            </a>
+                            <a href="tel:+911234567890" class="btn btn-outline-danger btn-sm">
+                                <i class="bi bi-telephone me-1"></i>Call Support
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

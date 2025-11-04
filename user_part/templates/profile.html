@@ -1,0 +1,525 @@
+{% extends 'user_base.html' %}
+{% load static %}
+{% block content %}
+<style>
+    .profile-card {
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    .profile-card:hover {
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    .profile-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px 15px 0 0;
+    }
+    .profile-pic {
+        width: 120px;
+        height: 120px;
+        border: 5px solid white;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        object-fit: cover;
+    }
+    .stats-card {
+        background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border-radius: 10px;
+    }
+    .nav-pills .nav-link.active {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border-radius: 8px;
+    }
+    .course-progress {
+        height: 8px;
+        border-radius: 4px;
+    }
+    .badge-premium {
+        background: linear-gradient(45deg, #FFD700, #FFA500);
+        color: black;
+    }
+
+    .hover-shadow:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    background: #f8f9fa !important;
+}
+
+.courses-list a:hover {
+    text-decoration: none !important;
+}
+
+/* Custom scrollbar for courses list */
+.courses-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.courses-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.courses-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 10px;
+}
+
+.courses-list::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+</style>
+
+<div class="container py-4">
+    <div class="row">
+        <!-- Left Sidebar - Profile Info -->
+        <div class="col-lg-4 mb-4">
+            <div class="card profile-card border-0">
+                <div class="profile-header text-center text-white p-4">
+                    <div class="position-relative d-inline-block">
+                        {% if user.profile_image %}
+                            <img src="{{ user.profile_image.url }}" class="profile-pic rounded-circle" alt="Profile Picture">
+                        {% else %}
+                            <div class="profile-pic rounded-circle bg-white d-flex align-items-center justify-content-center mx-auto">
+                                <i class="bi bi-person-fill text-muted" style="font-size: 3rem;"></i>
+                            </div>
+                        {% endif %}
+                        {% if user.profile_image %}
+                        <button class="btn btn-light btn-sm position-absolute bottom-0 end-0 rounded-circle" 
+                                style="width: 35px; height: 35px;" data-bs-toggle="modal" data-bs-target="#profilePictureModal">
+                            <i class="bi bi-camera"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                    <h4 class="mt-3 mb-1">
+                        {% if user.full_name %}
+                            {{ user.full_name }}
+                        {% else %}
+                            {{ user.email }}
+                        {% endif %}
+                    </h4>
+                    <p class="mb-2">{{ user.email }}</p>
+                    {% if user.is_premium %}
+                        <span class="badge badge-premium">Premium Member</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Member</span>
+                    {% endif %}
+                </div>
+                
+                <div class="card-body">
+                    <!-- Quick Stats -->
+                    <div class="row text-center mb-4">
+                        <div class="col-4">
+                            <h5 class="mb-1 fw-bold text-primary">{{ enrolled_courses_count }}</h5>
+                            <small class="text-muted">Courses</small>
+                        </div>
+                        <div class="col-4">
+                            <h5 class="mb-1 fw-bold text-success">{{ completed_courses_count }}</h5>
+                            <small class="text-muted">Completed</small>
+                        </div>
+                        <div class="col-4">
+                            <h5 class="mb-1 fw-bold text-warning">{{ wishlist_count }}</h5>
+                            <small class="text-muted">Wishlist</small>
+                        </div>
+                    </div>
+
+                    <!-- Profile Completion -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <small class="text-muted">Profile Completion</small>
+                            <small class="text-primary">{{ profile_completion }}%</small>
+                        </div>
+                        <div class="progress course-progress">
+                            <div class="progress-bar bg-primary" role="progressbar" 
+                                 style="width: {{ profile_completion }}%" 
+                                 aria-valuenow="{{ profile_completion }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                            <i class="bi bi-pencil me-2"></i>Edit Profile
+                        </button>
+                        <a href="#pills-courses" class="btn btn-outline-success my-courses-btn">
+                            <i class="bi bi-play-circle me-2"></i>My Courses
+                        </a>
+                        <a href="{% url 'change_password' %}" class="btn btn-outline-warning">
+                            <i class="bi bi-shield-lock me-2"></i>Change Password
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Stats Card -->
+            <div class="card profile-card border-0 mt-4 stats-card">
+                <div class="card-body text-center text-white">
+                    <h6 class="mb-3">Learning Stats</h6>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <i class="bi bi-clock-history display-6"></i>
+                            <h6 class="mt-2">{{ total_learning_hours }}h</h6>
+                            <small>Learning Time</small>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <i class="bi bi-trophy display-6"></i>
+                            <h6 class="mt-2">{{ certificates_count }}</h6>
+                            <small>Certificates</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Content Area -->
+        <div class="col-lg-8">
+            <!-- Navigation Tabs -->
+            <div class="card profile-card border-0 mb-4">
+                <div class="card-header bg-transparent border-0">
+                    <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pills-courses-tab" data-bs-toggle="pill" 
+                                    data-bs-target="#pills-courses" type="button" role="tab">
+                                <i class="bi bi-play-circle me-2"></i>My Courses
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-activity-tab" data-bs-toggle="pill" 
+                                    data-bs-target="#pills-activity" type="button" role="tab">
+                                <i class="bi bi-graph-up me-2"></i>Activity
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-settings-tab" data-bs-toggle="pill" 
+                                    data-bs-target="#pills-settings" type="button" role="tab">
+                                <i class="bi bi-gear me-2"></i>Settings
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card-body">
+                    <div class="tab-content" id="pills-tabContent">
+                        <!-- My Courses Tab -->
+                   <div class="tab-pane fade show active" id="pills-courses" role="tabpanel">
+    <h5 class="mb-4">My Learning Journey</h5>
+    {% if enrolled_courses %}
+        <div class="row">
+            {% for enrollment in enrolled_courses %}
+            <div class="col-md-6 mb-4">
+                <div class="card border-0 shadow-sm h-100">
+                    {% if enrollment.bundle.thumbnail %}
+                        <img src="{{ enrollment.bundle.thumbnail.url }}" class="card-img-top" alt="{{ enrollment.bundle.name }}" style="height: 150px; object-fit: cover;">
+                    {% else %}
+                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                            <i class="bi bi-journals text-muted" style="font-size: 3rem;"></i>
+                        </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h6 class="card-title">{{ enrollment.bundle.name }}</h6>
+                        
+                        <!-- Bundle Info -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted">Enrolled: {{ enrollment.enrolled_at|date:"M d, Y" }}</small>
+                            <span class="badge {% if enrollment.payment_status == 'completed' %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ enrollment.payment_status|title }}
+                            </span>
+                        </div>
+                        
+                        <!-- Progress -->
+                        <div class="progress course-progress mb-3">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ enrollment.progress_percentage }}%" 
+                                 aria-valuenow="{{ enrollment.progress_percentage }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted">{{ enrollment.progress_percentage }}% Complete</small>
+                        
+                        <!-- Courses in this Bundle - Larger and Clickable -->
+                        <div class="mt-4">
+                            <h6 class="text-muted mb-3">Courses in this bundle:</h6>
+                            <div class="courses-list" style="max-height: 200px; overflow-y: auto;">
+                                {% for course in enrollment.current_bundle_courses %}
+                                    <a href="{% url 'course_details' course.id %}" class="text-decoration-none">
+                                        <div class="d-flex align-items-center mb-3 p-3 bg-light rounded hover-shadow" 
+                                             style="transition: all 0.3s ease; cursor: pointer;">
+                                            {% if course.thumbnail %}
+                                                <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" 
+                                                     class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                            {% else %}
+                                                <div class="bg-secondary rounded me-3 d-flex align-items-center justify-content-center" 
+                                                     style="width: 50px; height: 50px;">
+                                                    <i class="bi bi-play-circle text-white" style="font-size: 1.2rem;"></i>
+                                                </div>
+                                            {% endif %}
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1 text-dark fw-medium">{{ course.title }}</h6>
+                                                <div class="d-flex align-items-center">
+                                                    <small class="text-muted">
+                                                        {% if course in enrollment.completed_courses %}
+                                                            <span class="text-success">
+                                                                <i class="bi bi-check-circle-fill me-1"></i>Completed
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="text-primary">
+                                                                <i class="bi bi-play-circle me-1"></i>Start Learning
+                                                            </span>
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <i class="bi bi-chevron-right text-muted"></i>
+                                        </div>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        {% if enrollment.completed_at %}
+                            <div class="mt-3">
+                                <span class="badge bg-success">Completed on {{ enrollment.completed_at|date:"M d, Y" }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-journals display-1 text-muted"></i>
+            <h5 class="mt-3 text-muted">No Courses Yet</h5>
+            <p class="text-muted">Start your learning journey by enrolling in courses.</p>
+            <a href="/user/" class="btn btn-primary">Browse Courses</a>
+        </div>
+    {% endif %}
+</div>
+                        <!-- Activity Tab -->
+                        <div class="tab-pane fade" id="pills-activity" role="tabpanel">
+                            <h5 class="mb-4">Recent Activity</h5>
+                            {% if recent_activity %}
+                                <div class="list-group list-group-flush">
+                                    {% for activity in recent_activity %}
+                                    <div class="list-group-item border-0 px-0">
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-shrink-0">
+                                                <i class="bi bi-{{ activity.icon }} text-{{ activity.color }} fs-4"></i>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <p class="mb-1">{{ activity.message }}</p>
+                                                <small class="text-muted">{{ activity.timestamp|timesince }} ago</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="bi bi-activity display-1 text-muted"></i>
+                                    <p class="text-muted mt-3">No recent activity</p>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Settings Tab -->
+                        <div class="tab-pane fade" id="pills-settings" role="tabpanel">
+                            <h5 class="mb-4">Account Settings</h5>
+                            <form method="post" action="{% url 'update_profile' %}" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" class="form-control" name="full_name" 
+                                           value="{{ user.full_name|default:'' }}" placeholder="Enter your full name">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" value="{{ user.email }}" readonly>
+                                    <small class="text-muted">Contact support to change email</small>
+                                </div>
+                                
+                                {% if user.phone %}
+                                <div class="mb-3">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" name="phone" 
+                                           value="{{ user.phone|default:'' }}">
+                                </div>
+                                {% endif %}
+                                
+                                {% if user.bio %}
+                                <div class="mb-3">
+                                    <label class="form-label">Bio</label>
+                                    <textarea class="form-control" name="bio" rows="3" 
+                                              placeholder="Tell us about yourself...">{{ user.bio|default:'' }}</textarea>
+                                </div>
+                                {% endif %}
+                                
+                                <button type="submit" class="btn btn-primary">Update Profile</button>
+                            </form>
+
+                            <hr class="my-4">
+
+                            <!-- Profile Picture Update -->
+                            {% if user.profile_image %}
+                            <h6 class="mb-3">Profile Picture</h6>
+                            <form method="post" action="{% url 'update_profile_picture' %}" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <input type="file" class="form-control" name="profile_image" accept="image/*">
+                                </div>
+                                <button type="submit" class="btn btn-outline-primary">Update Picture</button>
+                            </form>
+                            {% endif %}
+
+                            <hr class="my-4">
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6>Account Actions</h6>
+                                    <p class="text-muted small">Manage your account preferences</p>
+                                </div>
+                                <div>
+                                    <a href="{% url 'change_password' %}" class="btn btn-outline-primary me-2">
+                                        Change Password
+                                    </a>
+                                    <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                                        Delete Account
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'update_profile' %}">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-control" name="full_name" 
+                               value="{{ user.full_name|default:'' }}" placeholder="Enter your full name">
+                    </div>
+                    
+                    {% if user.phone %}
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control" name="phone" 
+                               value="{{ user.phone|default:'' }}">
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.bio %}
+                    <div class="mb-3">
+                        <label class="form-label">Bio</label>
+                        <textarea class="form-control" name="bio" rows="3" 
+                                  placeholder="Tell us about yourself...">{{ user.bio|default:'' }}</textarea>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Picture Modal -->
+<div class="modal fade" id="profilePictureModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Profile Picture</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'update_profile_picture' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Choose New Profile Picture</label>
+                        <input type="file" class="form-control" name="profile_image" accept="image/*">
+                        <div class="form-text">Supported formats: JPG, PNG, GIF. Max size: 5MB.</div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Update Picture</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">Delete Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center text-danger mb-3">
+                    <i class="bi bi-exclamation-triangle display-4"></i>
+                </div>
+                <p class="text-center">Are you sure you want to delete your account? This action cannot be undone.</p>
+                <p class="text-muted small text-center">All your data, including course progress and certificates, will be permanently deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'delete_account' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Yes, Delete My Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchToCoursesTab() {
+    const coursesTab = document.getElementById('pills-courses-tab');
+    const coursesPane = document.getElementById('pills-courses');
+    
+    // Check if elements exist before manipulating them
+    if (coursesTab && coursesPane) {
+        // Remove active class from all tabs and panes
+        document.querySelectorAll('.nav-link').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('show', 'active'));
+        
+        // Add active class to courses tab and pane
+        coursesTab.classList.add('active');
+        coursesPane.classList.add('show', 'active');
+    }
+}
+
+// Add proper event listeners when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click event listener to "My Courses" button
+    const myCoursesBtn = document.querySelector('.my-courses-btn');
+    if (myCoursesBtn) {
+        myCoursesBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            switchToCoursesTab();
+        });
+    }
+});
+</script>
+{% endblock %}

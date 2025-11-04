@@ -36,4 +36,10 @@ urlpatterns = [
     path('create-live-session/', views.create_live_session, name='create_live_session'),
     path('test-zoom-connection/', views.test_zoom_connection, name='test_zoom_connection'),
     path('delete-session/<int:session_id>/', views.delete_live_session, name='delete_live_session'),
+
+
+    path('bundle-enrollments/<int:bundle_id>/', views.bundle_enrollment_details, name='bundle_enrollment_details'),
+    path('total_enrollments/', views.total_enrollments, name='total_enrollments'),
+    path('bundle_candidates/<int:bundle_id>/', views.view_bundle_candidates, name='view_bundle_candidates'),
+    
 ]

@@ -1,0 +1,300 @@
+{% extends 'user_base.html' %}
+{% load static %}
+{% block content %}
+<style>
+    .enrollment-card {
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    .enrollment-card:hover {
+        box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    .course-item {
+        border-left: 3px solid #0d6efd;
+        padding-left: 15px;
+        margin-bottom: 15px;
+    }
+    .price-highlight {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    .already-enrolled {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        color: white;
+    }
+</style>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            {% if is_enrolled %}
+            <!-- Already Enrolled Message -->
+            <div class="card enrollment-card border-0 mb-4 already-enrolled">
+                <div class="card-body text-center p-5">
+                    <div class="mb-4">
+                        <i class="bi bi-check-circle-fill display-1"></i>
+                    </div>
+                    <h2 class="mb-3">You're Already Enrolled!</h2>
+                    <p class="mb-4">You have successfully enrolled in this bundle. You can start learning right away.</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="" class="btn btn-light btn-lg">Go to My Courses</a>
+                        <a href="" class="btn btn-outline-light btn-lg">Dashboard</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Bundle Details Card -->
+            <div class="card enrollment-card border-0 mb-4">
+                <div class="card-header bg-primary text-white py-3">
+                    <h2 class="h4 mb-0">{{ bundle.name }}</h2>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted mb-4">
+                        {{ bundle.full_description|default:bundle.short_description }}
+                    </p>
+                    
+                    <!-- Pricing Information -->
+                    <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded">
+                        <div>
+                            {% if bundle.is_free %}
+                                <span class="price-highlight text-success">Free</span>
+                            {% elif bundle.discount > 0 %}
+                                <div>
+                                    <span class="text-decoration-line-through text-muted me-2">₹{{ bundle.price }}</span>
+                                    <span class="price-highlight text-primary">₹{{ bundle.get_discounted_price|floatformat:2 }}</span>
+                                </div>
+                                <span class="badge bg-warning text-dark">{{ bundle.discount }}% Off</span>
+                            {% else %}
+                                <span class="price-highlight text-primary">₹{{ bundle.price|floatformat:2 }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Enroll Button -->
+                        <div>
+                            {% if not is_enrolled %}
+                                {% if bundle.is_free %}
+                                    <form method="post" action="{% url 'free_enroll' bundle.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-success btn-lg px-4">Enroll for Free</button>
+                                    </form>
+                                {% else %}
+                                    <button type="button" class="btn btn-primary btn-lg px-4" id="pay-now-btn">Pay Now</button>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-success fs-6 p-2">Already Enrolled</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Courses in this Bundle -->
+            <div class="card enrollment-card border-0">
+                <div class="card-header bg-light py-3">
+                    <h3 class="h5 mb-0">Courses Included in this Bundle</h3>
+                </div>
+                <div class="card-body p-4">
+                    {% if courses %}
+                        <div class="list-group list-group-flush">
+                            {% for course in courses %}
+                                <div class="list-group-item border-0 px-0 py-3">
+                                    <div class="course-item">
+                                        <h5 class="mb-1">{{ course.title }}</h5>
+                                        <p class="text-muted mb-2 small">{{ course.short_description|truncatewords:20 }}</p>
+                                        
+                                        <div class="d-flex flex-wrap">
+                                            <span class="badge bg-secondary me-2 mb-1">{{ course.level }}</span>
+                                            <span class="badge bg-light text-dark me-2 mb-1">
+                                                <i class="bi bi-globe me-1"></i>{{ course.language }}
+                                            </span>
+                                        </div>
+                                        
+                                        {% if course.course_includes %}
+                                            <div class="mt-2">
+                                                <small class="text-muted">Includes:</small>
+                                                <ul class="small text-muted mb-0 ps-3">
+                                                    {% for item in course.get_course_includes_list|slice:":2" %}
+                                                        <li>{{ item }}</li>
+                                                    {% endfor %}
+                                                    {% if course.get_course_includes_list|length > 2 %}
+                                                        <li>and more...</li>
+                                                    {% endif %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if not forloop.last %}
+                                    <hr class="my-2">
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-3">No courses found for this bundle.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Razorpay Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentModalLabel">Complete Your Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <h6 class="mb-3">{{ bundle.name }}</h6>
+                {% if bundle.discount > 0 %}
+                    <p class="mb-2">
+                        <span class="text-decoration-line-through text-muted me-2">₹{{ bundle.price }}</span>
+                        <span class="text-primary fw-bold">₹{{ bundle.get_discounted_price|floatformat:2 }}</span>
+                    </p>
+                {% else %}
+                    <p class="text-primary fw-bold mb-2">₹{{ bundle.price|floatformat:2 }}</p>
+                {% endif %}
+                <button type="button" class="btn btn-primary mt-3" id="proceed-payment">Proceed to Payment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Load Razorpay Checkout -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const payNowBtn = document.getElementById('pay-now-btn');
+    const proceedPaymentBtn = document.getElementById('proceed-payment');
+    const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+
+    // Show payment modal when Pay Now is clicked
+    if (payNowBtn) {
+        payNowBtn.addEventListener('click', function() {
+            paymentModal.show();
+        });
+    }
+
+    // Handle payment when Proceed to Payment is clicked
+    if (proceedPaymentBtn) {
+        proceedPaymentBtn.addEventListener('click', function() {
+            // Show loading state
+            proceedPaymentBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+            proceedPaymentBtn.disabled = true;
+
+            // Create payment order via AJAX
+            fetch('{% url "create_payment_order" bundle.id %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.free_enrollment) {
+                        window.location.href = data.redirect_url;
+                        return;
+                    }
+
+                    let userName = "{{ request.user.get_full_name }}";
+                    if (!userName || userName.trim() === '') {
+                        userName = "{{ request.user.email }}".split('@')[0];
+                    }
+
+                    const options = {
+                        key: data.razorpay_key_id,
+                        amount: data.amount,
+                        currency: data.currency,
+                        name: "Your Learning Platform",
+                        description: "Bundle Enrollment: {{ bundle.name }}",
+                        order_id: data.order_id,
+                        handler: function(response) {
+                            handlePaymentSuccess(response);
+                        },
+                        prefill: {
+                            name: userName,
+                            email: "{{ request.user.email }}",
+                        },
+                        theme: {
+                            color: "#2d86ff"
+                        },
+                        modal: {
+                            ondismiss: function() {
+                                proceedPaymentBtn.innerHTML = 'Proceed to Payment';
+                                proceedPaymentBtn.disabled = false;
+                            }
+                        }
+                    };
+
+                    const rzp = new Razorpay(options);
+                    rzp.open();
+                    paymentModal.hide();
+                } else {
+                    alert('Error: ' + data.error);
+                    proceedPaymentBtn.innerHTML = 'Proceed to Payment';
+                    proceedPaymentBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing your payment.');
+                proceedPaymentBtn.innerHTML = 'Proceed to Payment';
+                proceedPaymentBtn.disabled = false;
+            });
+        });
+    } // This was the missing closing brace
+
+    function handlePaymentSuccess(response) {
+        console.log('Payment successful, verifying...', response);
+        
+        // Show loading state
+        if (proceedPaymentBtn) {
+            proceedPaymentBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
+            proceedPaymentBtn.disabled = true;
+        }
+
+        // Verify payment and enroll user
+        fetch('{% url "verify_payment" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                bundle_id: {{ bundle.id }}
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Verification response:', data);
+            if (data.success) {
+                // Clear the stored bundle ID
+                localStorage.removeItem('last_attempted_bundle');
+                window.location.href = data.redirect_url;
+            } else {
+                console.error('Payment verification failed:', data.error);
+                window.location.href = '{% url "payment_failed" %}?bundle_id={{ bundle.id }}';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            window.location.href = '{% url "payment_failed" %}?bundle_id={{ bundle.id }}';
+        });
+    }
+
+    // Store bundle ID in session storage for payment failed page
+    localStorage.setItem('last_attempted_bundle', '{{ bundle.id }}');
+});
+</script>
+{% endblock %}

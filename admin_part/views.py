@@ -11,6 +11,9 @@ import uuid
 import jwt
 import requests
 from auth_app.models import CustomUser
+from django.db.models import Count, Q
+from django.utils import timezone
+from datetime import timedelta
 # Create your views here.
 
 
@@ -18,8 +21,37 @@ def index(request):
     return render(request, 'index.html')
 
 
+
 def admin_dashboard(request):
-    return render(request, 'admin_dashboard.html')
+    # Bundle enrollment statistics
+    bundle_stats = Bundle.objects.annotate(
+        total_enrollments=Count('enrollments', filter=Q(enrollments__is_active=True)),
+        paid_enrollments=Count('enrollments', filter=Q(enrollments__payment_status='completed')),
+        free_enrollments=Count('enrollments', filter=Q(enrollments__payment_status='free')),
+        completed_enrollments=Count('enrollments', filter=Q(enrollments__progress_percentage=100))
+    ).order_by('-total_enrollments')
+    
+    # Overall statistics
+    total_enrollments = Enrollment.objects.filter(is_active=True).count()
+    total_paid_enrollments = Enrollment.objects.filter(payment_status='completed', is_active=True).count()
+    total_free_enrollments = Enrollment.objects.filter(payment_status='free', is_active=True).count()
+    total_completed_enrollments = Enrollment.objects.filter(progress_percentage=100, is_active=True).count()
+    
+    # Recent enrollments (last 7 days)
+    recent_enrollments = Enrollment.objects.filter(
+        enrolled_at__gte=timezone.now() - timedelta(days=7)
+    ).select_related('user', 'bundle').order_by('-enrolled_at')[:10]
+    
+    context = {
+        'bundle_stats': bundle_stats,
+        'total_enrollments': total_enrollments,
+        'total_paid_enrollments': total_paid_enrollments,
+        'total_free_enrollments': total_free_enrollments,
+        'total_completed_enrollments': total_completed_enrollments,
+        'recent_enrollments': recent_enrollments,
+    }
+    
+    return render(request, 'admin_dashboard.html', context)
 
 def admin_logout(request):
     logout(request)
@@ -637,3 +669,58 @@ def delete_live_session(request, session_id):
 def user_list(request):
     users = CustomUser.objects.filter(is_superuser=False).select_related('profile').order_by('-date_joined')
     return render(request, 'user_list.html', {'users': users})
+
+def bundle_enrollment_details(request, bundle_id):
+    bundle = get_object_or_404(Bundle, id=bundle_id)
+    
+    # Get all enrollments for this bundle
+    enrollments = Enrollment.objects.filter(
+        bundle=bundle, 
+        is_active=True
+    ).select_related('user').order_by('-enrolled_at')
+    
+    # Enrollment statistics
+    total_enrollments = enrollments.count()
+    paid_enrollments = enrollments.filter(payment_status='completed').count()
+    free_enrollments = enrollments.filter(payment_status='free').count()
+    completed_enrollments = enrollments.filter(progress_percentage=100).count()
+    
+    # Progress distribution - use underscore instead of hyphen
+    progress_distribution = {
+        'progress_0_25': enrollments.filter(progress_percentage__range=(0, 25)).count(),
+        'progress_26_50': enrollments.filter(progress_percentage__range=(26, 50)).count(),
+        'progress_51_75': enrollments.filter(progress_percentage__range=(51, 75)).count(),
+        'progress_76_99': enrollments.filter(progress_percentage__range=(76, 99)).count(),
+        'progress_100': completed_enrollments
+    }
+    
+    context = {
+        'bundle': bundle,
+        'enrollments': enrollments,
+        'total_enrollments': total_enrollments,
+        'paid_enrollments': paid_enrollments,
+        'free_enrollments': free_enrollments,
+        'completed_enrollments': completed_enrollments,
+        'progress_distribution': progress_distribution,
+    }
+    
+    return render(request, 'bundle_enrollment_details.html', context)
+
+def total_enrollments(request):
+    # Get all enrollments for admin view with optimized query
+    all_enrollments = Enrollment.objects.all().select_related('bundle', 'user').prefetch_related('bundle__courses', 'bundle__enrollments')
+    
+    context = {
+        'enrollments': all_enrollments
+    }
+    return render(request, 'total_enrollments.html', context)
+
+def view_bundle_candidates(request, bundle_id):
+    bundle = get_object_or_404(Bundle, id=bundle_id)
+    enrollments = Enrollment.objects.filter(bundle=bundle).select_related('user')
+    
+    context = {
+        'bundle': bundle,
+        'enrollments': enrollments
+    }
+    return render(request, 'bundle_candidates.html', context)

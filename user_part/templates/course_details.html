@@ -15,6 +15,9 @@
             {% endif %}
             <span class="badge bg-secondary">{{ course.level }}</span>
             <span class="badge bg-info text-dark">{{ course.language }}</span>
+            {% if is_enrolled %}
+                <span class="badge bg-success">Enrolled</span>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -23,20 +26,52 @@
 <div class="container py-6">
     <div class="row">
         <div class="col-lg-8">
-            <!-- Preview Video Section -->
-            {% if course.preview_video %}
-            <div class="card border-0 shadow-sm rounded-4 mb-4">
-                <div class="card-body p-4">
-                    <h5 class="fw-bold text-dark mb-3">Course Preview</h5>
-                    <div class="ratio ratio-16x9">
-                        <video controls class="rounded-3" poster="{% if course.thumbnail %}{{ course.thumbnail.url }}{% else %}/static/home_assets/img/default-course.jpg{% endif %}">
-                            <source src="{{ course.preview_video.url }}" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+            <!-- Video Player Section -->
+        <!-- Video Player Section -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+        <h5 class="fw-bold text-dark mb-3" id="video-section-title">
+            {% if is_enrolled %}Course Video{% else %}Course Preview{% endif %}
+        </h5>
+        <div class="ratio ratio-16x9 position-relative" id="video-container">
+            <video id="main-video-player" 
+                   controls 
+                   class="rounded-3" 
+                   poster="{% if course.thumbnail %}{{ course.thumbnail.url }}{% else %}/static/home_assets/img/default-course.jpg{% endif %}"
+                   {% if is_enrolled %}
+                   controlsList="nodownload noremoteplayback" 
+                   disablePictureInPicture
+                   {% endif %}
+                   oncontextmenu="return false;"
+                   style="background-color: #000;">
+                {% if course.preview_video %}
+                    <source src="{{ course.preview_video.url }}" type="video/mp4">
+                {% endif %}
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        <div id="video-info" class="mt-3">
+            <h6 id="video-title" class="fw-bold mb-2">
+                {% if course.preview_video %}
+                    {% if not user_is_authenticated %}
+                        Login to Watch Preview
+                    {% else %}
+                        Preview Video
+                    {% endif %}
+                {% endif %}
+            </h6>
+            <p id="video-description" class="text-muted small mb-0">
+                {% if course.preview_video %}
+                    {% if not user_is_authenticated %}
+                        Please login to watch the course preview video.
+                    {% else %}
+                        Watch this preview to get a glimpse of the course content.
+                    {% endif %}
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</div>
 
             <!-- Curriculum Section -->
             <div class="card border-0 shadow-sm rounded-4 mb-4">
@@ -63,7 +98,13 @@
                                 <div class="accordion-body p-0">
                                     <ul class="list-group list-group-flush">
                                         {% for lecture in section.lectures.all %}
-                                        <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 lecture-item {% if is_enrolled or lecture.is_preview %}clickable-lecture{% endif %}" 
+                                            data-lecture-id="{{ lecture.id }}"
+                                            data-video-url="{% if lecture.video %}{{ lecture.video.url }}{% endif %}"
+                                            data-lecture-title="{{ lecture.title }}"
+                                            data-is-preview="{{ lecture.is_preview }}"
+                                            data-is-enrolled="{{ is_enrolled|yesno:'true,false' }}"
+                                            data-is-authenticated="{{ user_is_authenticated|yesno:'true,false' }}">
                                             <div class="d-flex align-items-center">
                                                 <i class="fas fa-play-circle text-muted me-3"></i>
                                                 <span class="fw-medium">{{ lecture.title }}</span>
@@ -73,10 +114,10 @@
                                             </div>
                                             <div class="d-flex align-items-center">
                                                 <small class="text-muted me-3">{{ lecture.duration }}</small>
-                                                {% if lecture.is_preview %}
-                                                <i class="fas fa-unlock text-success"></i>
+                                                {% if is_enrolled or lecture.is_preview %}
+                                                    <i class="fas fa-unlock text-success" title="Click to play"></i>
                                                 {% else %}
-                                                <i class="fas fa-lock text-muted"></i>
+                                                    <i class="fas fa-lock text-muted" title="Enroll to access"></i>
                                                 {% endif %}
                                             </div>
                                         </li>
@@ -221,9 +262,30 @@
                     </div>
                     {% endif %}
 
-                    <a href="#" class="btn btn-primary w-100 mt-3 py-2 fw-semibold">
-                        {% if course.bundle and course.bundle.is_free %}Enroll for Free{% else %}Enroll Now{% endif %}
-                    </a>
+                    <!-- Enrollment Button - Updated for non-logged-in users -->
+                    {% if not is_enrolled %}
+                        {% if user_is_authenticated %}
+                            <!-- User is logged in but not enrolled -->
+                            <a href="/user/enroll/{{ course.bundle.id}}/" class="btn btn-primary w-100 mt-3 py-2 fw-semibold">
+                                {% if course.bundle and course.bundle.is_free %}Enroll for Free{% else %}Enroll Now{% endif %}
+                            </a>
+                        {% else %}
+                            <!-- User is not logged in -->
+                            <a href="/user/login/?next={{ request.path }}" class="btn btn-primary w-100 mt-3 py-2 fw-semibold">
+                                Login to Enroll
+                            </a>
+                            <div class="text-center mt-2">
+                                <small class="text-muted">Don't have an account? 
+                                    <a href="/user/register/?next={{ request.path }}" class="text-primary">Sign up</a>
+                                </small>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <!-- User is enrolled -->
+                        <button class="btn btn-success w-100 mt-3 py-2 fw-semibold" disabled>
+                            <i class="fas fa-check me-2"></i>Already Enrolled
+                        </button>
+                    {% endif %}
                     
                     <!-- Course Features -->
                     <div class="mt-4">
@@ -276,6 +338,162 @@
     .sticky-top {
         z-index: 1;
     }
+    .clickable-lecture {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    .clickable-lecture:hover {
+        background-color: #f0f8ff !important;
+    }
+    .lecture-playing {
+        background-color: #e7f3ff !important;
+        border-left: 3px solid #007bff !important;
+    }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const videoPlayer = document.getElementById('main-video-player');
+    const videoTitle = document.getElementById('video-title');
+    const videoDescription = document.getElementById('video-description');
+    const videoSectionTitle = document.getElementById('video-section-title');
+    
+    // Get all clickable lecture items
+    const lectureItems = document.querySelectorAll('.clickable-lecture');
+    
+    lectureItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const videoUrl = this.getAttribute('data-video-url');
+            const lectureTitle = this.getAttribute('data-lecture-title');
+            const isPreview = this.getAttribute('data-is-preview') === 'true';
+            const isEnrolled = this.getAttribute('data-is-enrolled') === 'true';
+            const isAuthenticated = this.getAttribute('data-is-authenticated') === 'true';
+            
+            // Check if user is authenticated
+            if (!isAuthenticated) {
+                alert('Please login to access course videos.');
+                window.location.href = "/user/login/?next={{ request.path }}";
+                return;
+            }
+            
+            // Check if user can access this video
+            if (!isEnrolled && !isPreview) {
+                alert('Please enroll in the course to access this video.');
+                return;
+            }
+            
+            if (videoUrl) {
+                // Update video source
+                videoPlayer.innerHTML = '';
+                const source = document.createElement('source');
+                source.src = videoUrl;
+                source.type = 'video/mp4';
+                videoPlayer.appendChild(source);
+                
+                // Update video information
+                videoTitle.textContent = lectureTitle;
+                videoDescription.textContent = isPreview ? 'Preview Video - ' + lectureTitle : lectureTitle;
+                videoSectionTitle.textContent = 'Now Playing: ' + lectureTitle;
+                
+                // Load and play the video
+                videoPlayer.load();
+                videoPlayer.play().catch(e => {
+                    console.log('Autoplay prevented:', e);
+                });
+                
+                // Highlight the playing lecture
+                lectureItems.forEach(lecture => lecture.classList.remove('lecture-playing'));
+                this.classList.add('lecture-playing');
+                
+                // Scroll to video section if not in view
+                document.querySelector('.card-body.p-4').scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            } else {
+                alert('Video not available for this lecture.');
+            }
+        });
+    });
+    
+    // Initialize with preview video for non-enrolled users
+    {% if not is_enrolled and course.preview_video %}
+        videoTitle.textContent = 'Preview Video';
+        videoDescription.textContent = 'Watch this preview to get a glimpse of the course content.';
+    {% elif is_enrolled %}
+        videoSectionTitle.textContent = 'Course Video';
+        videoTitle.textContent = 'Select a lecture to start watching';
+        videoDescription.textContent = 'Click on any lecture from the curriculum to play the video.';
+    {% endif %}
+});
+
+// Video progress tracking
+document.addEventListener('DOMContentLoaded', function() {
+    const videoPlayer = document.getElementById('main-video-player');
+    
+    if (videoPlayer) {
+        let progressUpdateInterval;
+        
+        videoPlayer.addEventListener('play', function() {
+            // Start tracking progress every 10 seconds
+            progressUpdateInterval = setInterval(updateVideoProgress, 10000);
+        });
+        
+        videoPlayer.addEventListener('pause', function() {
+            clearInterval(progressUpdateInterval);
+            updateVideoProgress();
+        });
+        
+        videoPlayer.addEventListener('ended', function() {
+            clearInterval(progressUpdateInterval);
+            markLectureCompleted();
+        });
+        
+        function updateVideoProgress() {
+            if (videoPlayer.currentTime > 0) {
+                const formData = new FormData();
+                formData.append('watched_duration', Math.floor(videoPlayer.currentTime));
+                formData.append('total_duration', Math.floor(videoPlayer.duration));
+                
+                fetch(`/user/update-lecture-progress/${currentLectureId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                    body: formData
+                });
+            }
+        }
+        
+        function markLectureCompleted() {
+            fetch(`/user/mark-lecture-completed/${currentLectureId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Lecture marked as completed');
+                    // Update UI if needed
+                }
+            });
+        }
+    }
+    
+    // Set current lecture ID when a lecture is clicked
+    const lectureItems = document.querySelectorAll('.clickable-lecture');
+    let currentLectureId = null;
+    
+    lectureItems.forEach(item => {
+        item.addEventListener('click', function() {
+            currentLectureId = this.getAttribute('data-lecture-id');
+            // ... rest of your existing click handling code
+        });
+    });
+});
+</script>
 
 {% endblock %}
