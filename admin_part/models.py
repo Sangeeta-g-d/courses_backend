@@ -110,7 +110,6 @@ class CourseSection(models.Model):
     def __str__(self):
         return f"{self.course.title} - {self.title}"
 
-
 class Lecture(models.Model):
     section = models.ForeignKey(CourseSection, on_delete=models.CASCADE, related_name='lectures')
     title = models.CharField(max_length=500)
@@ -118,7 +117,6 @@ class Lecture(models.Model):
     video = models.FileField(upload_to='lectures/videos/', blank=True, null=True)
     is_preview = models.BooleanField(default=False)
     resource = models.FileField(upload_to='lectures/resources/', blank=True, null=True)
-
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -127,6 +125,15 @@ class Lecture(models.Model):
     def __str__(self):
         return f"{self.section.title} - {self.title}"
 
+    def get_next_lecture(self):
+        """Get the next lecture in the same section"""
+        try:
+            return Lecture.objects.filter(
+                section=self.section,
+                order__gt=self.order
+            ).order_by('order').first()
+        except Exception:
+            return None
 
 # ---------------------------------------------------------
 # ENROLLMENT MODEL (student course enrollment)

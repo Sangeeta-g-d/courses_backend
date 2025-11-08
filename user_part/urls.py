@@ -29,5 +29,6 @@ urlpatterns = [
     path('profile/delete-account/', views.delete_account, name='delete_account'),
 
 
-    
+    path('user/update-lecture-progress/<int:lecture_id>/', views.update_lecture_progress, name='update_lecture_progress'),
+    path('user/mark-lecture-completed/<int:lecture_id>/', views.mark_lecture_completed, name='mark_lecture_completed'),
 ]

@@ -33,11 +33,10 @@ RAZORPAY_KEY_ID = 'rzp_test_RaWcxIqhOgXCx2'
 RAZORPAY_KEY_SECRET = 'YPteJpM01RX1caw0R3xoVDcS'
 RAZORPAY_WEBHOOK_SECRET = 'your_webhook_secret_here'  # Optional but recommended
 
-# Application definition
-# settings.py
-# Zoom Integration Settings
-ZOOM_API_KEY = 'jh9wuo8Qu6cSSsB4CXqBA'
-ZOOM_API_SECRET = 'Jo4Kr7R0rTzx8Cdb1XHFDSufNz1SVd4F'
+import os
+
+ZOOM_SDK_KEY = os.environ.get('ZOOM_SDK_KEY', '<PUT_YOUR_SDK_KEY_HERE>')
+ZOOM_SDK_SECRET = os.environ.get('ZOOM_SDK_SECRET', '<PUT_YOUR_SDK_SECRET_HERE>')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
