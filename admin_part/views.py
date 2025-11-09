@@ -14,6 +14,11 @@ from auth_app.models import CustomUser
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
+import re
+import time
+import jwt  # PyJWT
+from django.conf import settings
+from django.http import JsonResponse, HttpResponseBadRequest
 # Create your views here.
 
 
@@ -479,7 +484,6 @@ def edit_live_session(request, session_id):
 
     return render(request, 'edit_live_session.html', {'session': session})
 
-
 # Admin: Delete session
 def delete_live_session(request, session_id):
     session = get_object_or_404(LiveSession, id=session_id)
@@ -488,157 +492,80 @@ def delete_live_session(request, session_id):
     return redirect('admin_live_sessions')
 
 
-# Live session testttttt
-# views.py
-def create_zoom_meeting(topic, agenda, start_time, duration=60, timezone="UTC"):
-    """Create Zoom meeting directly in the view"""
-    try:
-        # Generate JWT Token
-        payload = {
-            'iss': settings.ZOOM_API_KEY,
-            'exp': datetime.utcnow() + timedelta(minutes=90)
-        }
-        token = jwt.encode(payload, settings.ZOOM_API_SECRET, algorithm='HS256')
-        
-        # Prepare headers
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json'
-        }
-        
-        # Format time for Zoom API
-        if isinstance(start_time, datetime):
-            formatted_time = start_time.strftime('%Y-%m-%dT%H:%M:%SZ')
-        else:
-            formatted_time = start_time
-        
-        # Meeting data
-        data = {
-            "topic": topic,
-            "agenda": agenda,
-            "type": 2,  # Scheduled meeting
-            "start_time": formatted_time,
-            "duration": duration,
-            "timezone": timezone,
-            "settings": {
-                "host_video": True,
-                "participant_video": True,
-                "join_before_host": False,
-                "mute_upon_entry": True,
-                "watermark": False,
-                "audio": "both",
-                "auto_recording": "none",
-                "waiting_room": True
-            }
-        }
-        
-        # Create meeting
-        url = "https://api.zoom.us/v2/users/me/meetings"
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        
-        if response.status_code == 201:
-            return response.json(), "Meeting created successfully"
-        else:
-            return None, f"Zoom API Error: {response.status_code} - {response.text}"
-            
-    except Exception as e:
-        return None, f"Error creating meeting: {str(e)}"
-
-def test_zoom_connection(request):
-    """Test Zoom API connection"""
-    try:
-        # Generate JWT Token
-        payload = {
-            'iss': settings.ZOOM_API_KEY,
-            'exp': datetime.utcnow() + timedelta(minutes=90)
-        }
-        token = jwt.encode(payload, settings.ZOOM_API_SECRET, algorithm='HS256')
-        
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json'
-        }
-        
-        # Test API call
-        url = "https://api.zoom.us/v2/users/me"
-        response = requests.get(url, headers=headers)
-        
-        if response.status_code == 200:
-            messages.success(request, '✅ Zoom connection successful! API credentials are working.')
-        else:
-            messages.error(request, f'❌ Zoom connection failed: {response.status_code} - {response.text}')
-            
-    except Exception as e:
-        messages.error(request, f'❌ Zoom connection error: {str(e)}')
-    
-    return redirect('create_live_session')
-
-def create_live_session(request):
-    """View to create live session with Zoom integration"""
-    if request.method == 'POST':
-        title = request.POST.get('title')
-        agenda = request.POST.get('agenda')
-        session_date = request.POST.get('session_date')
-        session_time = request.POST.get('session_time')
-        duration = request.POST.get('duration', 60)
-        timezone = request.POST.get('timezone', 'UTC')
-        
-        # Validate required fields
-        if not all([title, agenda, session_date, session_time]):
-            messages.error(request, 'All fields are required.')
-            return render(request, 'create_live_session.html')
-        
-        # Combine date and time
-        try:
-            start_datetime_str = f"{session_date} {session_time}"
-            start_datetime = datetime.strptime(start_datetime_str, '%Y-%m-%d %H:%M')
-            
-            # Ensure the session is in the future
-            if start_datetime <= datetime.now():
-                messages.error(request, 'Session must be scheduled for a future time.')
-                return render(request, 'create_live_session.html')
-                
-        except ValueError as e:
-            messages.error(request, 'Invalid date or time format.')
-            return render(request, 'create_live_session.html')
-        
-        # Create Zoom meeting
-        zoom_meeting, message = create_zoom_meeting(
-            topic=title,
-            agenda=agenda,
-            start_time=start_datetime,
-            duration=int(duration),
-            timezone=timezone
-        )
-        
-        if zoom_meeting:
-            # Create LiveSession object
-            LiveSession.objects.create(
-                title=title,
-                agenda=agenda,
-                session_date=session_date,
-                session_time=session_time,
-                meeting_url=zoom_meeting['join_url'],
-                meeting_id=zoom_meeting['id'],
-                start_url=zoom_meeting.get('start_url', ''),
-                duration=duration,
-                timezone=timezone,
-                is_active=False
-            )
-            messages.success(request, '✅ Live session created successfully!')
-            return redirect('live_session_test')
-        else:
-            messages.error(request, f'❌ Failed to create Zoom meeting: {message}')
-    
-    # Timezone options
-    timezones = [
-        'UTC', 'America/New_York', 'America/Los_Angeles', 'Europe/London',
-        'Europe/Paris', 'Asia/Kolkata', 'Asia/Tokyo', 'Australia/Sydney'
+def _extract_meeting_number_from_join_url(join_url):
+    """
+    Extract Zoom meeting number from typical join_url patterns:
+    e.g. https://us05web.zoom.us/j/86175242117?pwd=...  -> 86175242117
+    Also supports /s/ style and other common variants.
+    """
+    if not join_url:
+        return None
+    patterns = [
+        r'/j/(\d+)',   # /j/86175242117
+        r'/s/(\d+)',   # /s/86175242117
+        r'meeting\/(\d+)',  # possibly other formats
     ]
-    
-    return render(request, 'create_live_session.html', {
-        'timezones': timezones
-    })
+    for p in patterns:
+        m = re.search(p, join_url)
+        if m:
+            return m.group(1)
+    # fallback: find any 9-12 digit sequence
+    m = re.search(r'(\d{9,12})', join_url)
+    if m:
+        return m.group(1)
+    return None
+
+def get_zoom_signature(request):
+    """
+    Endpoint that returns a JSON object: { signature: "...." }
+    Expects GET params:
+      - meetingNumber (optional) OR session_id (optional)
+      - role (optional) 0 = participant / 1 = host (default 0)
+    Example:
+      /zoom/get_signature/?meetingNumber=86175242117&role=0
+    """
+    meeting_number = request.GET.get('meetingNumber')
+    session_id = request.GET.get('session_id')
+    role = int(request.GET.get('role') or 0)
+
+    if session_id and not meeting_number:
+        # if you prefer passing session id (DB) instead of meetingNumber:
+        session = get_object_or_404(LiveSession, id=session_id)
+        meeting_number = _extract_meeting_number_from_join_url(session.meeting_url)
+
+    if not meeting_number:
+        return HttpResponseBadRequest("Missing meetingNumber or invalid session_id/meeting_url.")
+
+    try:
+        sdk_key = settings.ZOOM_SDK_KEY
+        sdk_secret = settings.ZOOM_SDK_SECRET
+    except Exception:
+        return HttpResponseBadRequest("Zoom SDK key/secret not configured on server.")
+
+    # Build JWT payload according to Meeting SDK expectations
+    iat = int(time.time())
+    exp = iat + 120  # token valid for 2 minutes
+    payload = {
+        "sdkKey": sdk_key,
+        "mn": str(meeting_number),
+        "role": role,
+        "iat": iat,
+        "exp": exp,
+        # appKey/appKey - sometimes samples include these fields; including them for compatibility:
+        "appKey": sdk_key,
+        "tokenExp": exp
+    }
+
+    # Create JWT using SDK secret (HS256)
+    token = jwt.encode(payload, sdk_secret, algorithm="HS256")
+    # PyJWT returns bytes in some versions; ensure string
+    if isinstance(token, bytes):
+        token = token.decode('utf-8')
+
+    return JsonResponse({"signature": token})
+
+
+
 
 def live_session_test(request):
     """Display all live sessions"""
@@ -654,16 +581,7 @@ def live_session_test(request):
     
     return render(request, 'live_session_test.html', {'sessions': sessions})
 
-def delete_live_session(request, session_id):
-    """Delete a live session"""
-    try:
-        session = LiveSession.objects.get(id=session_id)
-        session.delete()
-        messages.success(request, 'Session deleted successfully!')
-    except LiveSession.DoesNotExist:
-        messages.error(request, 'Session not found!')
-    
-    return redirect('live_session_test')
+
 
 
 def user_list(request):

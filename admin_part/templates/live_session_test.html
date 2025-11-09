@@ -1,125 +1,147 @@
+{# live_session_test.html #}
 {% extends 'admin_base.html' %}
 {% block content %}
 <div class="container py-5">
-    <!-- Header with Create Button -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold mb-0">Live Sessions</h2>
-        <div>
-            <a href="{% url 'test_zoom_connection' %}" class="btn btn-outline-info me-2">
-                <i class="bi bi-plug"></i> Test Connection
-            </a>
-            <a href="{% url 'create_live_session' %}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Create New Session
-            </a>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">Live Sessions</h2>
+    <a href="{% url 'add_live_session' %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Create New Session
+    </a>
+  </div>
+
+  <div class="row g-4">
+    {% for session in sessions %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 text-truncate">{{ session.title }}</h6>
         </div>
-    </div>
-
-    <!-- Messages -->
-    {% if messages %}
-    <div class="mb-4">
-        {% for message in messages %}
-        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- Sessions Grid -->
-    <div class="row g-4">
-        {% for session in sessions %}
-        <div class="col-md-6 col-lg-4">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0 text-truncate">{{ session.title }}</h6>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted small mb-2">{{ session.agenda|truncatewords:20 }}</p>
-                    
-                    <div class="session-info small mb-3">
-                        <div class="mb-1">
-                            <i class="bi bi-calendar-event text-primary"></i>
-                            {{ session.session_date }} at {{ session.session_time }}
-                        </div>
-                        <div class="mb-1">
-                            <i class="bi bi-clock text-primary"></i>
-                            {{ session.duration }} minutes
-                        </div>
-                        <div>
-                            <i class="bi bi-globe text-primary"></i>
-                            {{ session.timezone }}
-                        </div>
-                    </div>
-
-                    {% if session.is_active %}
-                    <button class="btn btn-success w-100 join-session mb-2"
-                            data-url="{{ session.meeting_url }}">
-                        <i class="bi bi-camera-video"></i> Join Session
-                    </button>
-                    {% else %}
-                    <button class="btn btn-secondary w-100 mb-2" disabled>
-                        <i class="bi bi-hourglass-split"></i> Not Yet Started
-                    </button>
-                    {% endif %}
-                    
-                    <div class="d-flex gap-2">
-                        <a href="{{ session.meeting_url }}" target="_blank" 
-                           class="btn btn-outline-primary btn-sm flex-fill">
-                            <i class="bi bi-link"></i> Copy Link
-                        </a>
-                        <a href="{% url 'delete_live_session' session.id %}" 
-                           class="btn btn-outline-danger btn-sm" 
-                           onclick="return confirm('Are you sure you want to delete this session?')">
-                            <i class="bi bi-trash"></i>
-                        </a>
-                    </div>
-                </div>
+        <div class="card-body">
+          <p class="text-muted small mb-2">{{ session.agenda|truncatewords:20 }}</p>
+          <div class="session-info small mb-3">
+            <div class="mb-1">
+              <i class="bi bi-calendar-event text-primary"></i>
+              {{ session.session_date }} at {{ session.session_time }}
             </div>
+          </div>
+
+          {% if session.is_active %}
+          <button class="btn btn-success w-100 join-session mb-2"
+                  data-session-id="{{ session.id }}"
+                  data-meeting-url="{{ session.meeting_url }}">
+            <i class="bi bi-camera-video"></i> Join Session
+          </button>
+          {% else %}
+          <button class="btn btn-secondary w-100 mb-2" disabled>
+            <i class="bi bi-hourglass-split"></i> Not Yet Started
+          </button>
+          {% endif %}
         </div>
-        {% empty %}
-        <div class="col-12">
-            <div class="text-center py-5">
-                <i class="bi bi-camera-video-off display-1 text-muted"></i>
-                <h4 class="mt-3 text-muted">No Live Sessions Available</h4>
-                <p class="text-muted">Create your first live session to get started.</p>
-                <a href="{% url 'create_live_session' %}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Create First Session
-                </a>
-            </div>
-        </div>
-        {% endfor %}
+      </div>
     </div>
+    {% endfor %}
+  </div>
 </div>
 
-<!-- Bootstrap Icons -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+<!-- Modal or container for Zoom -->
+<div id="zoomModal" class="modal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:1200px;">
+    <div class="modal-content" style="height: 80vh;">
+      <div class="modal-header">
+        <h5 class="modal-title">Live Session</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="closeZoomModal"></button>
+      </div>
+      <div class="modal-body p-0" style="height: calc(80vh - 56px);">
+        <!-- Zoom app will mount here -->
+        <div id="zoom-root" style="width: 100%; height: 100%;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Include Zoom Meeting SDK (CDN) -->
+<!-- NOTE: confirm version from Zoom docs and update as necessary -->
+<script src="https://source.zoom.us/2.14.0/zoom-meeting-embedded-2.14.0.min.js"></script>
 
 <script>
-// Open meeting link in a centered popup window
 document.querySelectorAll('.join-session').forEach(btn => {
-    btn.addEventListener('click', function () {
-        const url = this.getAttribute('data-url');
-        const width = 1000;
-        const height = 700;
-        const left = (screen.width / 2) - (width / 2);
-        const top = (screen.height / 2) - (height / 2);
+  btn.addEventListener('click', async function () {
+    const sessionId = this.getAttribute('data-session-id');
+    const meetingUrl = this.getAttribute('data-meeting-url');
 
-        window.open(
-            url,
-            "Live Session",
-            `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes,status=yes`
-        );
+    // Extract meetingNumber from meetingUrl client-side (fallback)
+    function extractMeetingNumber(url) {
+      const re = /\/j\/(\d+)|\/s\/(\d+)/;
+      const m = url.match(re);
+      if (!m) {
+        const fallback = url.match(/(\d{9,12})/);
+        return fallback ? fallback[1] : null;
+      }
+      return m[1] || m[2];
+    }
+
+    const meetingNumber = extractMeetingNumber(meetingUrl);
+    if (!meetingNumber) {
+      alert('Cannot extract meeting id from stored meeting URL. Please provide meeting id in the session record.');
+      return;
+    }
+
+    // Ask backend for a short-lived signature
+    const role = 0; // participant (0) or host (1). If admin is host, set 1.
+    const sigResp = await fetch(`/zoom/get_signature/?session_id=${sessionId}&role=${role}`);
+    if (!sigResp.ok) {
+      const txt = await sigResp.text();
+      alert('Unable to get signature: ' + txt);
+      return;
+    }
+    const data = await sigResp.json();
+    const signature = data.signature;
+    if (!signature) {
+      alert('Invalid signature returned from server.');
+      return;
+    }
+
+    // configure the SDK client
+    // ZoomMtgEmbedded is provided by the SDK script
+    const client = ZoomMtgEmbedded.createClient();
+
+    // mount point
+    const zoomRoot = document.getElementById('zoom-root');
+    zoomRoot.innerHTML = ''; // clear previous
+
+    // Initialize client
+    client.init({
+      debug: false,
+      zoomAppRoot: zoomRoot,
+      language: 'en-US'
+      // You can add additional config: customize UI, show/hide controls etc.
     });
+
+    // Determine meeting password (if any) — this example does not use password
+    const meetingPassword = ''; // if you have password saved, pass here
+
+    // join the meeting
+    client.join({
+      sdkKey: "{{ ZOOM_SDK_KEY|default:'' }}", // optional to fill server-side if you render it. Alternatively fetch from server if needed.
+      signature: signature,
+      meetingNumber: meetingNumber.toString(),
+      password: meetingPassword,
+      userName: "Vidya",
+      // optional: userEmail, tk (ticket) if required
+    });
+
+    // Show modal
+    var zoomModal = new bootstrap.Modal(document.getElementById('zoomModal'));
+    zoomModal.show();
+
+    // Close handling — destroy the client instance to cleanup
+    document.getElementById('closeZoomModal').addEventListener('click', function () {
+      try {
+        client.leave();
+      } catch (e) { /* ignore */ }
+      zoomRoot.innerHTML = '';
+    }, { once: true });
+  });
 });
-
-// Auto-dismiss alerts after 5 seconds
-setTimeout(() => {
-    const alerts = document.querySelectorAll('.alert');
-    alerts.forEach(alert => {
-        const bsAlert = new bootstrap.Alert(alert);
-        bsAlert.close();
-    });
-}, 5000);
 </script>
 {% endblock %}

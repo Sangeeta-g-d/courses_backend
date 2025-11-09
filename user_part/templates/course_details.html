@@ -27,7 +27,6 @@
     <div class="row">
         <div class="col-lg-8">
             <!-- Video Player Section -->
-        <!-- Video Player Section -->
 <div class="card border-0 shadow-sm rounded-4 mb-4">
     <div class="card-body p-4">
         <h5 class="fw-bold text-dark mb-3" id="video-section-title">
@@ -79,7 +78,7 @@
                     <h5 class="fw-bold text-dark mb-3">Course Curriculum</h5>
                     
                     <div class="accordion" id="courseCurriculum">
-                        {% for section in course.course_sections.all %}
+                        {% for section in curriculum %}
                         <div class="accordion-item border-0 mb-2">
                             <h2 class="accordion-header" id="heading{{ section.id }}">
                                 <button class="accordion-button collapsed bg-light text-dark fw-semibold py-3" type="button" 
@@ -88,7 +87,7 @@
                                     <div class="d-flex justify-content-between align-items-center w-100 me-3">
                                         <span>{{ section.title }}</span>
                                         <small class="text-muted">
-                                            {{ section.lectures.count }} lectures • {{ section.total_duration }}
+                                            {{ section.total_lectures }} lectures • {{ section.total_duration }}
                                         </small>
                                     </div>
                                 </button>
@@ -97,31 +96,37 @@
                                  aria-labelledby="heading{{ section.id }}" data-bs-parent="#courseCurriculum">
                                 <div class="accordion-body p-0">
                                     <ul class="list-group list-group-flush">
-                                        {% for lecture in section.lectures.all %}
-                                        <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 lecture-item {% if is_enrolled or lecture.is_preview %}clickable-lecture{% endif %}" 
-                                            data-lecture-id="{{ lecture.id }}"
-                                            data-video-url="{% if lecture.video %}{{ lecture.video.url }}{% endif %}"
-                                            data-lecture-title="{{ lecture.title }}"
-                                            data-is-preview="{{ lecture.is_preview }}"
-                                            data-is-enrolled="{{ is_enrolled|yesno:'true,false' }}"
-                                            data-is-authenticated="{{ user_is_authenticated|yesno:'true,false' }}">
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-play-circle text-muted me-3"></i>
-                                                <span class="fw-medium">{{ lecture.title }}</span>
-                                                {% if lecture.is_preview %}
-                                                <span class="badge bg-warning text-dark ms-2">Preview</span>
-                                                {% endif %}
-                                            </div>
-                                            <div class="d-flex align-items-center">
-                                                <small class="text-muted me-3">{{ lecture.duration }}</small>
-                                                {% if is_enrolled or lecture.is_preview %}
-                                                    <i class="fas fa-unlock text-success" title="Click to play"></i>
-                                                {% else %}
-                                                    <i class="fas fa-lock text-muted" title="Enroll to access"></i>
-                                                {% endif %}
-                                            </div>
-                                        </li>
-                                        {% endfor %}
+                                      {% for lecture in section.lectures %}
+<li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 lecture-item {% if lecture.accessible %}clickable-lecture{% endif %}" 
+    data-lecture-id="{{ lecture.id }}"
+    data-video-url="{{ lecture.video_url }}"
+    data-lecture-title="{{ lecture.title }}"
+    data-is-preview="{{ lecture.is_preview|yesno:'true,false' }}"
+    data-is-enrolled="{{ is_enrolled|yesno:'true,false' }}"
+    data-is-authenticated="{{ user_is_authenticated|yesno:'true,false' }}"
+    data-is-accessible="{{ lecture.accessible|yesno:'true,false' }}"
+    data-is-completed="{{ lecture.completed|yesno:'true,false' }}">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-play-circle text-muted me-3"></i>
+        <span class="fw-medium">{{ lecture.title }}</span>
+        {% if lecture.is_preview %}
+        <span class="badge bg-warning text-dark ms-2">Preview</span>
+        {% endif %}
+    </div>
+    <div class="d-flex align-items-center">
+        <small class="text-muted me-3">{{ lecture.duration }}</small>
+        {% if lecture.accessible %}
+            {% if lecture.completed %}
+                <i class="fas fa-check-circle text-success" title="Completed"></i>
+            {% else %}
+                <i class="fas fa-unlock text-success" title="Click to play"></i>
+            {% endif %}
+        {% else %}
+            <i class="fas fa-lock text-muted" title="Complete previous lectures to unlock"></i>
+        {% endif %}
+    </div>
+</li>
+{% endfor %}
                                     </ul>
                                 </div>
                             </div>
@@ -357,143 +362,400 @@ document.addEventListener('DOMContentLoaded', function() {
     const videoTitle = document.getElementById('video-title');
     const videoDescription = document.getElementById('video-description');
     const videoSectionTitle = document.getElementById('video-section-title');
-    
-    // Get all clickable lecture items
-    const lectureItems = document.querySelectorAll('.clickable-lecture');
-    
-    lectureItems.forEach(item => {
-        item.addEventListener('click', function() {
-            const videoUrl = this.getAttribute('data-video-url');
-            const lectureTitle = this.getAttribute('data-lecture-title');
-            const isPreview = this.getAttribute('data-is-preview') === 'true';
-            const isEnrolled = this.getAttribute('data-is-enrolled') === 'true';
-            const isAuthenticated = this.getAttribute('data-is-authenticated') === 'true';
-            
-            // Check if user is authenticated
+
+    let currentLectureId = null;
+    let progressUpdateInterval = null;
+    const csrftoken = '{{ csrf_token }}';
+
+    // server-initial values (may be empty)
+    const initialLectureId = {% if initial_lecture_id %} "{{ initial_lecture_id }}" {% else %} null {% endif %};
+    const initialVideoUrl = {% if initial_video_url %} "{{ initial_video_url }}" {% else %} null {% endif %};
+
+    function findLectureElement(lectureId) {
+        return document.querySelector('.lecture-item[data-lecture-id="' + lectureId + '"]');
+    }
+
+    function findLectureByVideoUrl(videoUrl) {
+        if (!videoUrl) return null;
+        const normalized = videoUrl.split('?')[0];
+        const nodes = document.querySelectorAll('.lecture-item');
+        for (const n of nodes) {
+            const url = n.getAttribute('data-video-url') || '';
+            if (!url) continue;
+            if (url.split('?')[0] === normalized || url.endsWith(normalized) || normalized.endsWith(url)) {
+                return n;
+            }
+        }
+        return null;
+    }
+
+    function attachLectureClick(li) {
+        if (!li || li._clickAttached) return;
+        li._clickAttached = true;
+        li.addEventListener('click', function() {
+            if (li.getAttribute('data-is-accessible') !== 'true') {
+                console.log('Clicked locked lecture', li.getAttribute('data-lecture-id'));
+                return;
+            }
+            const videoUrl = li.getAttribute('data-video-url');
+            const lectureTitle = li.getAttribute('data-lecture-title');
+            const isPreview = li.getAttribute('data-is-preview') === 'true';
+            const isEnrolled = li.getAttribute('data-is-enrolled') === 'true';
+            const isAuthenticated = li.getAttribute('data-is-authenticated') === 'true';
+            const lectureId = li.getAttribute('data-lecture-id');
+
             if (!isAuthenticated) {
                 alert('Please login to access course videos.');
                 window.location.href = "/user/login/?next={{ request.path }}";
                 return;
             }
-            
-            // Check if user can access this video
             if (!isEnrolled && !isPreview) {
                 alert('Please enroll in the course to access this video.');
                 return;
             }
-            
+
             if (videoUrl) {
-                // Update video source
+                // set video source
                 videoPlayer.innerHTML = '';
                 const source = document.createElement('source');
                 source.src = videoUrl;
                 source.type = 'video/mp4';
                 videoPlayer.appendChild(source);
-                
-                // Update video information
+
+                // update UI
                 videoTitle.textContent = lectureTitle;
-                videoDescription.textContent = isPreview ? 'Preview Video - ' + lectureTitle : lectureTitle;
+                videoDescription.textContent = isPreview ? ('Preview Video - ' + lectureTitle) : lectureTitle;
                 videoSectionTitle.textContent = 'Now Playing: ' + lectureTitle;
-                
-                // Load and play the video
+
                 videoPlayer.load();
-                videoPlayer.play().catch(e => {
-                    console.log('Autoplay prevented:', e);
-                });
-                
-                // Highlight the playing lecture
-                lectureItems.forEach(lecture => lecture.classList.remove('lecture-playing'));
-                this.classList.add('lecture-playing');
-                
-                // Scroll to video section if not in view
-                document.querySelector('.card-body.p-4').scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
+                videoPlayer.play().catch(e => console.log('Autoplay prevented:', e));
+
+                document.querySelectorAll('.lecture-item').forEach(l => l.classList.remove('lecture-playing'));
+                li.classList.add('lecture-playing');
+
+                currentLectureId = lectureId;
+                console.log('currentLectureId set ->', currentLectureId);
+
+                // scroll to video
+                const videoCard = document.querySelector('.card-body.p-4');
+                if (videoCard) videoCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
                 alert('Video not available for this lecture.');
             }
         });
-    });
-    
-    // Initialize with preview video for non-enrolled users
-    {% if not is_enrolled and course.preview_video %}
-        videoTitle.textContent = 'Preview Video';
-        videoDescription.textContent = 'Watch this preview to get a glimpse of the course content.';
-    {% elif is_enrolled %}
-        videoSectionTitle.textContent = 'Course Video';
-        videoTitle.textContent = 'Select a lecture to start watching';
-        videoDescription.textContent = 'Click on any lecture from the curriculum to play the video.';
-    {% endif %}
-});
+    }
 
-// Video progress tracking
-document.addEventListener('DOMContentLoaded', function() {
-    const videoPlayer = document.getElementById('main-video-player');
-    
-    if (videoPlayer) {
-        let progressUpdateInterval;
-        
-        videoPlayer.addEventListener('play', function() {
-            // Start tracking progress every 10 seconds
-            progressUpdateInterval = setInterval(updateVideoProgress, 10000);
-        });
-        
-        videoPlayer.addEventListener('pause', function() {
-            clearInterval(progressUpdateInterval);
-            updateVideoProgress();
-        });
-        
-        videoPlayer.addEventListener('ended', function() {
-            clearInterval(progressUpdateInterval);
-            markLectureCompleted();
-        });
-        
-        function updateVideoProgress() {
-            if (videoPlayer.currentTime > 0) {
-                const formData = new FormData();
-                formData.append('watched_duration', Math.floor(videoPlayer.currentTime));
-                formData.append('total_duration', Math.floor(videoPlayer.duration));
-                
-                fetch(`/user/update-lecture-progress/${currentLectureId}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                    },
-                    body: formData
-                });
+    // Attach handlers to lecture items
+    document.querySelectorAll('.lecture-item').forEach(li => {
+        if (li.getAttribute('data-is-accessible') === 'true') li.classList.add('clickable-lecture');
+        attachLectureClick(li);
+    });
+
+    // Initialization from server-provided initialLectureId / initialVideoUrl
+    (function initializePlayerFromServer() {
+        try {
+            if (initialVideoUrl) {
+                // set source to initialVideoUrl
+                videoPlayer.innerHTML = '';
+                const source = document.createElement('source');
+                source.src = initialVideoUrl;
+                source.type = 'video/mp4';
+                videoPlayer.appendChild(source);
+                videoPlayer.load();
+
+                // If a lecture element matches this URL, highlight it and set currentLectureId
+                const matched = findLectureByVideoUrl(initialVideoUrl);
+                if (matched) {
+                    currentLectureId = matched.getAttribute('data-lecture-id');
+                    matched.classList.add('lecture-playing');
+                    // ensure accessible flag for the matched lecture (so UI shows playable)
+                    matched.setAttribute('data-is-accessible', 'true');
+                    matched.classList.add('clickable-lecture');
+                    attachLectureClick(matched);
+                    // update titles shown
+                    const lectureTitle = matched.getAttribute('data-lecture-title') || '';
+                    videoTitle.textContent = lectureTitle || 'Selected Lecture';
+                    videoDescription.textContent = lectureTitle || '';
+                    videoSectionTitle.textContent = 'Continue: ' + (lectureTitle || '');
+                    console.log('Initialized player from server: lecture', currentLectureId);
+                } else if (initialLectureId) {
+                    // fallback: find by ID
+                    const el = findLectureElement(initialLectureId);
+                    if (el) {
+                        const url = el.getAttribute('data-video-url');
+                        if (url) {
+                            videoPlayer.innerHTML = '';
+                            const source2 = document.createElement('source');
+                            source2.src = url;
+                            source2.type = 'video/mp4';
+                            videoPlayer.appendChild(source2);
+                            videoPlayer.load();
+                            currentLectureId = initialLectureId;
+                            el.classList.add('lecture-playing');
+                            el.setAttribute('data-is-accessible', 'true');
+                            el.classList.add('clickable-lecture');
+                            attachLectureClick(el);
+                        }
+                    }
+                }
+            } else if (initialLectureId) {
+                // initial id only (no video url) -> try to set source by finding the lecture element's data-video-url
+                const el = findLectureElement(initialLectureId);
+                if (el) {
+                    const url = el.getAttribute('data-video-url');
+                    if (url) {
+                        videoPlayer.innerHTML = '';
+                        const source = document.createElement('source');
+                        source.src = url;
+                        source.type = 'video/mp4';
+                        videoPlayer.appendChild(source);
+                        videoPlayer.load();
+                        currentLectureId = initialLectureId;
+                        el.classList.add('lecture-playing');
+                        el.setAttribute('data-is-accessible', 'true');
+                        el.classList.add('clickable-lecture');
+                        attachLectureClick(el);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Initialization from server failed', e);
+        }
+    })();
+
+    // If a source is already in the video tag (preview), try to set currentLectureId accordingly
+    (function setCurrentFromExistingSource(){
+        try {
+            const srcEl = videoPlayer.querySelector('source');
+            if (srcEl && srcEl.src && !currentLectureId) {
+                const existing = findLectureByVideoUrl(srcEl.src);
+                if (existing) {
+                    currentLectureId = existing.getAttribute('data-lecture-id');
+                    existing.classList.add('lecture-playing');
+                    console.log('Initial currentLectureId set from existing video source ->', currentLectureId);
+                }
+            }
+        } catch (e) {
+            console.log('Error reading initial video source', e);
+        }
+    })();
+
+    // MutationObserver to detect when frontend changes source (so currentLectureId can be established)
+    const mo = new MutationObserver(function(mutations) {
+        for (const m of mutations) {
+            if (m.type === 'childList' && m.addedNodes.length) {
+                const src = videoPlayer.querySelector('source');
+                if (src && src.src) {
+                    const matched = findLectureByVideoUrl(src.src);
+                    if (matched) {
+                        const id = matched.getAttribute('data-lecture-id');
+                        if (!currentLectureId) {
+                            currentLectureId = id;
+                            matched.classList.add('lecture-playing');
+                            console.log('currentLectureId set from MutationObserver ->', currentLectureId);
+                        }
+                    }
+                }
             }
         }
-        
-        function markLectureCompleted() {
-            fetch(`/user/mark-lecture-completed/${currentLectureId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('Lecture marked as completed');
-                    // Update UI if needed
-                }
-            });
-        }
-    }
-    
-    // Set current lecture ID when a lecture is clicked
-    const lectureItems = document.querySelectorAll('.clickable-lecture');
-    let currentLectureId = null;
-    
-    lectureItems.forEach(item => {
-        item.addEventListener('click', function() {
-            currentLectureId = this.getAttribute('data-lecture-id');
-            // ... rest of your existing click handling code
-        });
     });
+    try { mo.observe(videoPlayer, { childList: true, subtree: true }); } catch(e){}
+
+    // Video events
+    if (videoPlayer) {
+        videoPlayer.addEventListener('play', function() {
+            if (progressUpdateInterval) clearInterval(progressUpdateInterval);
+            progressUpdateInterval = setInterval(updateVideoProgress, 10000);
+            console.log('Started progress interval for', currentLectureId);
+        });
+
+        videoPlayer.addEventListener('pause', function() {
+            if (progressUpdateInterval) clearInterval(progressUpdateInterval);
+            updateVideoProgress();
+            console.log('Paused video — progress sent for', currentLectureId);
+        });
+
+        videoPlayer.addEventListener('ended', function() {
+            if (progressUpdateInterval) clearInterval(progressUpdateInterval);
+            console.log('Video ended for', currentLectureId);
+            if (currentLectureId) markLectureCompleted(currentLectureId);
+            else console.warn('No currentLectureId at ended event — nothing will be marked completed.');
+        });
+
+        window.addEventListener('beforeunload', function() {
+            if (progressUpdateInterval) clearInterval(progressUpdateInterval);
+            updateVideoProgressSync();
+        });
+    }
+
+    function updateVideoProgress() {
+        if (!currentLectureId) return;
+        if (!videoPlayer || videoPlayer.currentTime <= 0) return;
+        const watched = Math.floor(videoPlayer.currentTime);
+        const total = Math.floor(videoPlayer.duration) || 0;
+
+        const formData = new FormData();
+        formData.append('watched_duration', watched);
+        formData.append('total_duration', total);
+
+        console.log('Sending progress', { lecture: currentLectureId, watched, total });
+        fetch(`/user/update-lecture-progress/${currentLectureId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData,
+        }).then(r => {
+            if (!r.ok) console.warn('Progress update returned', r.status);
+        }).catch(err => console.error('Error sending progress', err));
+    }
+
+    function updateVideoProgressSync() {
+        if (!currentLectureId) return;
+        if (!videoPlayer || videoPlayer.currentTime <= 0) return;
+        try {
+            const watched = Math.floor(videoPlayer.currentTime);
+            const total = Math.floor(videoPlayer.duration) || 0;
+            if (navigator.sendBeacon) {
+                const url = `/user/update-lecture-progress/${currentLectureId}/`;
+                const payload = JSON.stringify({ watched_duration: watched, total_duration: total });
+                const blob = new Blob([payload], { type: 'application/json' });
+                navigator.sendBeacon(url, blob);
+                console.log('sendBeacon progress', { lecture: currentLectureId, watched, total });
+            }
+        } catch (e) { console.warn('sendBeacon failed', e); }
+    }
+
+    function computeClientNextLectureId(currentId) {
+        const currentLi = findLectureElement(currentId);
+        if (!currentLi) return null;
+        const ul = currentLi.closest('ul');
+        if (!ul) return null;
+        const allLecturesInSection = Array.from(ul.querySelectorAll('.lecture-item'));
+        const currentIndex = allLecturesInSection.findIndex(li => li.getAttribute('data-lecture-id') === currentId);
+        if (currentIndex === -1) return null;
+        if (currentIndex + 1 < allLecturesInSection.length) {
+            const nextLecture = allLecturesInSection[currentIndex + 1];
+            return nextLecture.getAttribute('data-lecture-id');
+        }
+        const accordionItem = ul.closest('.accordion-item');
+        if (!accordionItem) return null;
+        let nextSection = accordionItem.nextElementSibling;
+        while (nextSection) {
+            if (nextSection.classList.contains('accordion-item')) {
+                const firstLecture = nextSection.querySelector('.lecture-item');
+                if (firstLecture) return firstLecture.getAttribute('data-lecture-id');
+            }
+            nextSection = nextSection.nextElementSibling;
+        }
+        return null;
+    }
+
+    function markLectureCompleted(lectureId) {
+        if (!lectureId) { 
+            console.warn('markLectureCompleted called without id'); 
+            return; 
+        }
+
+        console.log('Starting markLectureCompleted for lecture:', lectureId);
+
+        const watched = Math.floor(videoPlayer.currentTime) || 0;
+        const total = Math.floor(videoPlayer.duration) || 0;
+        const formData = new FormData();
+        formData.append('watched_duration', watched);
+        formData.append('total_duration', total);
+
+        fetch(`/user/mark-lecture-completed/${lectureId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData,
+        })
+        .then(resp => {
+            console.log('Response status:', resp.status);
+            return resp.json().then(json => ({ status: resp.status, ok: resp.ok, json }));
+        })
+        .then(({ status, ok, json }) => {
+            console.log('mark_lecture_completed response:', json);
+
+            if (!ok) {
+                console.warn('Server returned non-OK for mark_lecture_completed', status);
+                return;
+            }
+
+            if (json && json.success) {
+                const curLi = findLectureElement(lectureId);
+                if (curLi) {
+                    curLi.setAttribute('data-is-completed', 'true');
+                    const icon = curLi.querySelector('.fa-unlock, .fa-lock, .fa-check-circle');
+                    if (icon) icon.className = 'fas fa-check-circle text-success';
+                    console.log('Marked lecture as completed in UI:', lectureId);
+                }
+
+                let nextId = json.next_lecture_id || null;
+                console.log('Server returned next_lecture_id:', nextId);
+
+                if (!nextId) {
+                    nextId = computeClientNextLectureId(lectureId);
+                    console.log('Client computed next_lecture_id:', nextId);
+                }
+
+                if (nextId) {
+                    const nextLi = findLectureElement(nextId);
+                    if (nextLi) {
+                        nextLi.setAttribute('data-is-accessible', 'true');
+                        nextLi.classList.add('clickable-lecture');
+
+                        // update icons
+                        const rightDiv = nextLi.querySelector('div.d-flex.align-items-center:last-child');
+                        if (rightDiv) {
+                            const existingIcons = rightDiv.querySelectorAll('.fa-lock, .fa-unlock, .fa-check-circle');
+                            existingIcons.forEach(icon => icon.remove());
+                            const unlockIcon = document.createElement('i');
+                            unlockIcon.className = 'fas fa-unlock text-success';
+                            unlockIcon.title = 'Click to play';
+                            rightDiv.appendChild(unlockIcon);
+                        }
+
+                        attachLectureClick(nextLi);
+                        console.log('Successfully unlocked next lecture:', nextId);
+                    } else {
+                        console.log('Next lecture id exists but no matching element found in DOM:', nextId);
+                    }
+                } else {
+                    console.log('No next lecture to unlock (end of section/course)');
+                }
+            } else {
+                console.error('mark_lecture_completed failed with:', json);
+            }
+        })
+        .catch(err => {
+            console.error('Network error marking lecture completed:', err);
+            // Fallback client-side unlock
+            const fallbackNext = computeClientNextLectureId(lectureId);
+            if (fallbackNext) {
+                const nextLi = findLectureElement(fallbackNext);
+                if (nextLi) {
+                    nextLi.setAttribute('data-is-accessible', 'true');
+                    nextLi.classList.add('clickable-lecture');
+
+                    const rightDiv = nextLi.querySelector('div.d-flex.align-items-center:last-child');
+                    if (rightDiv) {
+                        const existingIcons = rightDiv.querySelectorAll('.fa-lock, .fa-unlock, .fa-check-circle');
+                        existingIcons.forEach(icon => icon.remove());
+
+                        const unlockIcon = document.createElement('i');
+                        unlockIcon.className = 'fas fa-unlock text-success';
+                        unlockIcon.title = 'Click to play';
+                        rightDiv.appendChild(unlockIcon);
+                    }
+
+                    attachLectureClick(nextLi);
+                    console.log('Fallback unlocked next lecture client-side:', fallbackNext);
+                }
+            }
+        });
+    }
 });
 </script>
+
+
 
 {% endblock %}

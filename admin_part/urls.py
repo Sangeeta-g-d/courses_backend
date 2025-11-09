@@ -32,11 +32,9 @@ urlpatterns = [
     
 
     #zoom urls
-    path('live-sessions/', views.live_session_test, name='live_session_test'),
-    path('create-live-session/', views.create_live_session, name='create_live_session'),
-    path('test-zoom-connection/', views.test_zoom_connection, name='test_zoom_connection'),
-    path('delete-session/<int:session_id>/', views.delete_live_session, name='delete_live_session'),
-
+    path('zoom/get_signature/', views.get_zoom_signature, name='get_zoom_signature'),
+    path('live-sessions/', views.live_session_test, name='live_session_test'),  
+    
 
     path('bundle-enrollments/<int:bundle_id>/', views.bundle_enrollment_details, name='bundle_enrollment_details'),
     path('total_enrollments/', views.total_enrollments, name='total_enrollments'),
