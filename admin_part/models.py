@@ -191,29 +191,28 @@ class LiveSession(models.Model):
     title = models.CharField(max_length=255)
     agenda = models.TextField()
     thumbnail = models.ImageField(upload_to='live_sessions/thumbnails/')
-    meeting_url = models.URLField()
+    meeting_number = models.CharField(max_length=20, blank=True, null=True)
     session_date = models.DateField()
     session_time = models.TimeField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_active(self):
         """
-        Returns True if current time (IST) is within 5 minutes before or after session start.
+        Returns True if the current IST time is within ±5 minutes of the session start time.
         """
         ist = ZoneInfo("Asia/Kolkata")
 
-        # Combine date and time and make timezone-aware
+        # Combine session date & time into one datetime
         session_datetime = datetime.combine(self.session_date, self.session_time).replace(tzinfo=ist)
 
         # Current time in IST
         now_ist = timezone.now().astimezone(ist)
 
-        # Allow join 5 minutes before start
-        return now_ist >= (session_datetime - timedelta(minutes=5))
+        # Check if current time is within 5 minutes before and after the session start
+        return (session_datetime - timedelta(minutes=5)) <= now_ist <= (session_datetime + timedelta(minutes=60))
 
     def __str__(self):
         return self.title
-    
 
 # ---------------------------------------------------------
 # PAYMENT MODELS

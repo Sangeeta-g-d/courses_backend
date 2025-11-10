@@ -1,0 +1,430 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ session.title }} - Live Session</title>
+    
+    <!-- Zoom Web SDK CSS -->
+    <link type="text/css" rel="stylesheet" href="https://source.zoom.us/2.18.2/css/bootstrap.css" />
+    <link type="text/css" rel="stylesheet" href="https://source.zoom.us/2.18.2/css/react-select.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        
+        #zmmtg-root {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .loading-content {
+            text-align: center;
+            color: white;
+            max-width: 500px;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 30px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            display: none;
+        }
+        
+        .error-content {
+            text-align: center;
+            color: white;
+            max-width: 500px;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .debug-info {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 12px;
+            text-align: left;
+        }
+        
+        .retry-btn {
+            background: white;
+            color: #ee5a24;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .retry-btn:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h3 id="loading-text">Joining Meeting...</h3>
+            <p id="loading-subtext">Please wait while we connect you</p>
+            
+            <div class="session-info">
+                <h4>{{ session.title }}</h4>
+                <p>{{ session.agenda }}</p>
+                <p><small>Meeting ID: {{ session.meeting_number }}</small></p>
+            </div>
+            
+            <div class="debug-info" id="debug-info">
+                <strong>Debug Info:</strong><br>
+                Status: <span id="debug-status">Initializing...</span><br>
+                Step: <span id="debug-step">Loading SDK</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="error-screen" class="error-screen">
+        <div class="error-content">
+            <h3 id="error-title">Unable to Join Meeting</h3>
+            <p id="error-message"></p>
+            <div class="debug-info" id="error-debug"></div>
+            <button class="retry-btn" onclick="retryJoin()">Try Again</button>
+            <button class="retry-btn" onclick="goBack()" style="background: transparent; color: white; border: 1px solid white; margin-left: 10px;">Go Back</button>
+        </div>
+    </div>
+
+    <!-- Zoom will render here -->
+    <div id="zmmtg-root"></div>
+    <div id="aria-notify-area"></div>
+
+    <!-- Zoom SDK Scripts -->
+    <script src="https://source.zoom.us/2.18.2/lib/vendor/react.min.js"></script>
+    <script src="https://source.zoom.us/2.18.2/lib/vendor/react-dom.min.js"></script>
+    <script src="https://source.zoom.us/2.18.2/lib/vendor/redux.min.js"></script>
+    <script src="https://source.zoom.us/2.18.2/lib/vendor/redux-thunk.min.js"></script>
+    <script src="https://source.zoom.us/2.18.2/lib/vendor/lodash.min.js"></script>
+    <script src="https://source.zoom.us/2.18.2/zoom-meeting-2.18.2.min.js"></script>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            meetingNumber: "{{ session.meeting_number }}".replace(/\s/g, ''),
+            userName: "{{ request.user.get_full_name|default:request.user.username|default:'Guest User' }}",
+            userEmail: "{{ request.user.email|default:'' }}",
+            role: 0,
+            leaveUrl: "{% url 'admin_live_sessions' %}",
+            signatureEndpoint: "{% url 'zoom_signature' %}",
+            passWord: "",
+            sdkKey: "{{ ZOOM_SDK_KEY }}"
+        };
+
+        console.log('🔵 Meeting Config:', CONFIG);
+
+        let zoomInitialized = false;
+
+        function updateDebugInfo(status, step) {
+            document.getElementById('debug-status').textContent = status;
+            document.getElementById('debug-step').textContent = step;
+            console.log(`🔍 ${step}: ${status}`);
+        }
+
+        function updateLoadingText(text, subtext = '') {
+            document.getElementById('loading-text').textContent = text;
+            document.getElementById('loading-subtext').textContent = subtext;
+        }
+
+        function showError(title, message, debugInfo = '') {
+            document.getElementById('error-title').textContent = title;
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('error-debug').textContent = debugInfo;
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('error-screen').style.display = 'flex';
+            console.error('❌', title + ':', message, debugInfo);
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-screen').style.display = 'none';
+        }
+
+        function showLoading() {
+            document.getElementById('loading-screen').style.display = 'flex';
+            document.getElementById('error-screen').style.display = 'none';
+        }
+
+        function retryJoin() {
+            showLoading();
+            setTimeout(startMeeting, 1000);
+        }
+
+        function goBack() {
+            window.location.href = CONFIG.leaveUrl;
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        async function getSignature() {
+            try {
+                updateDebugInfo('Requesting signature...', 'Authentication');
+                const csrfToken = getCookie('csrftoken');
+                
+                const response = await fetch(CONFIG.signatureEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken || ''
+                    },
+                    body: JSON.stringify({
+                        meetingNumber: CONFIG.meetingNumber,
+                        role: CONFIG.role
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('📦 Signature response:', data);
+                
+                if (!data.signature) {
+                    throw new Error('No signature in response');
+                }
+
+                updateDebugInfo('Signature received', 'Authentication');
+                return data;
+            } catch (error) {
+                console.error('❌ Signature error:', error);
+                throw new Error(`Failed to get signature: ${error.message}`);
+            }
+        }
+
+        function initializeZoomSDK() {
+            return new Promise((resolve, reject) => {
+                if (zoomInitialized) {
+                    resolve();
+                    return;
+                }
+
+                try {
+                    updateDebugInfo('Configuring SDK...', 'Initialization');
+                    
+                    // Configure Zoom SDK
+                    ZoomMtg.setZoomJSLib('https://source.zoom.us/2.18.2/lib', '/av');
+                    ZoomMtg.preLoadWasm();
+                    ZoomMtg.prepareWebSDK();
+                    
+                    updateDebugInfo('Initializing SDK...', 'Initialization');
+                    
+                    // Initialize with enhanced options
+                    ZoomMtg.init({
+                        leaveUrl: CONFIG.leaveUrl,
+                        success: function(initResult) {
+                            console.log('✅ Zoom SDK initialized successfully', initResult);
+                            zoomInitialized = true;
+                            updateDebugInfo('SDK ready', 'Initialization');
+                            resolve(initResult);
+                        },
+                        error: function(initError) {
+                            console.error('❌ Zoom SDK initialization failed:', initError);
+                            updateDebugInfo('SDK init failed', 'Initialization');
+                            reject(new Error(`SDK initialization failed: ${initError.message || 'Unknown error'}`));
+                        }
+                    });
+                } catch (error) {
+                    updateDebugInfo('SDK setup failed', 'Initialization');
+                    reject(new Error(`SDK setup failed: ${error.message}`));
+                }
+            });
+        }
+
+        function joinMeeting(signatureData) {
+            return new Promise((resolve, reject) => {
+                updateDebugInfo('Attempting to join...', 'Connection');
+                
+                console.log('🎯 Join parameters:', {
+                    meetingNumber: CONFIG.meetingNumber,
+                    userName: CONFIG.userName,
+                    sdkKey: signatureData.sdkKey,
+                    signatureLength: signatureData.signature.length
+                });
+
+                ZoomMtg.join({
+                    signature: signatureData.signature,
+                    sdkKey: signatureData.sdkKey,
+                    meetingNumber: CONFIG.meetingNumber,
+                    userName: CONFIG.userName,
+                    userEmail: CONFIG.userEmail,
+                    passWord: CONFIG.passWord,
+                    success: function(joinResult) {
+                        console.log('✅✅✅ JOIN SUCCESS!', joinResult);
+                        updateDebugInfo('Connected successfully', 'Connection');
+                        resolve(joinResult);
+                    },
+                    error: function(joinError) {
+                        console.error('❌ Join failed:', joinError);
+                        updateDebugInfo('Join failed', 'Connection');
+                        
+                        let errorMessage = 'Unable to join meeting';
+                        let debugInfo = '';
+                        
+                        if (joinError) {
+                            debugInfo = `Error Code: ${joinError.errorCode}, Message: ${joinError.errorMessage}`;
+                            
+                            switch(joinError.errorCode) {
+                                case 1:
+                                    errorMessage = `Meeting ID ${CONFIG.meetingNumber} does not exist.`;
+                                    break;
+                                case 3:
+                                    errorMessage = 'Meeting has not started yet. Wait for host.';
+                                    break;
+                                case 4:
+                                    errorMessage = 'Meeting has ended.';
+                                    break;
+                                case 5:
+                                    errorMessage = 'Password required or incorrect.';
+                                    break;
+                                case 131:
+                                    errorMessage = 'Network connection error.';
+                                    break;
+                                case 3001:
+                                    errorMessage = 'Invalid signature or credentials.';
+                                    break;
+                                default:
+                                    errorMessage = `Error ${joinError.errorCode}: ${joinError.errorMessage || 'Unknown error'}`;
+                            }
+                        }
+                        reject(new Error(errorMessage, debugInfo));
+                    }
+                });
+            });
+        }
+
+        async function startMeeting() {
+            try {
+                console.log('🟢 Starting meeting join process...');
+                updateLoadingText('Initializing...', 'Loading Zoom SDK');
+                updateDebugInfo('Starting process', 'Initialization');
+
+                // Step 1: Initialize Zoom SDK
+                await initializeZoomSDK();
+                updateLoadingText('Authenticating...', 'Getting meeting access');
+
+                // Step 2: Get signature
+                const signatureData = await getSignature();
+                updateLoadingText('Connecting...', 'Joining meeting room');
+
+                // Step 3: Join meeting with timeout
+                const joinPromise = joinMeeting(signatureData);
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Join timeout after 30 seconds')), 30000)
+                );
+
+                await Promise.race([joinPromise, timeoutPromise]);
+                
+                // Step 4: Hide loading screen after successful join
+                updateLoadingText('Connected!', 'You have joined the meeting');
+                setTimeout(hideLoading, 2000);
+                
+            } catch (error) {
+                console.error('❌ Meeting join failed:', error);
+                showError('Join Failed', error.message, error.debugInfo || '');
+            }
+        }
+
+        // Start the process when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if meeting number is provided
+            if (!CONFIG.meetingNumber) {
+                showError('Configuration Error', 'Meeting number is missing');
+                return;
+            }
+
+            console.log('🔵 Starting Zoom meeting...');
+            setTimeout(startMeeting, 1000);
+        });
+
+        // Handle page unload
+        window.addEventListener('beforeunload', function() {
+            if (typeof ZoomMtg !== 'undefined') {
+                try {
+                    ZoomMtg.leaveMeeting();
+                    ZoomMtg.endMeeting({});
+                } catch(e) {
+                    console.log('Cleanup completed');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

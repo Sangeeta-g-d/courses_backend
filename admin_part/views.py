@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from .models import *
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.text import slugify
 from django.contrib.auth import logout
 import json
@@ -445,8 +446,7 @@ def add_live_session(request):
     if request.method == 'POST':
         title = request.POST.get('title')
         agenda = request.POST.get('agenda')
-        meeting_url = request.POST.get('meeting_url')
-
+        meeting_number = request.POST.get('meeting_number')
         session_date = request.POST.get('session_date')
         session_time = request.POST.get('session_time')
         thumbnail = request.FILES.get('thumbnail')
@@ -454,7 +454,7 @@ def add_live_session(request):
         LiveSession.objects.create(
             title=title,
             agenda=agenda,
-            meeting_url=meeting_url,
+            meeting_number=meeting_number,
             session_date=session_date,
             session_time=session_time,
             thumbnail=thumbnail
@@ -463,7 +463,6 @@ def add_live_session(request):
         return redirect('admin_live_sessions')
 
     return render(request, 'add_live_session.html')
-
 
 # Admin: Edit session
 def edit_live_session(request, session_id):
@@ -642,3 +641,18 @@ def view_bundle_candidates(request, bundle_id):
         'enrollments': enrollments
     }
     return render(request, 'bundle_candidates.html', context)
+
+
+@ensure_csrf_cookie
+def join_live_session(request, pk):
+    session = get_object_or_404(LiveSession, pk=pk)
+    
+    # Check if session is active (optional)
+    if not session.is_active():
+        return render(request, "session_not_active.html", {"session": session})
+    
+    context = {
+        "session": session,
+        "ZOOM_SDK_KEY": settings.ZOOM_SDK_KEY
+    }
+    return render(request, "join_session.html", context)
