@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'admin_part',
     'auth_app',
     'user_part',
+    'rest_framework'
 ]
 AUTH_USER_MODEL = 'auth_app.CustomUser'
 MIDDLEWARE = [
@@ -95,6 +96,9 @@ DATABASES = {
     }
 }
 
+ZOOM_SDK_KEY = config("ZOOM_SDK_KEY")
+ZOOM_SDK_SECRET = config("ZOOM_SDK_SECRET")
+ZOOM_WEBHOOK_TOKEN = config("ZOOM_WEBHOOK_TOKEN", default="")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

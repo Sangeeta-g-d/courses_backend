@@ -31,6 +31,16 @@
           <p class="text-muted small flex-grow-1">{{ s.agenda|truncatewords:10 }}</p>
 
           <div class="d-flex justify-content-between mt-2">
+            {% if s.is_active %}
+              <a href="{% url 'join_live_session' s.id %}" class="btn btn-sm btn-success">
+                <i class="bi bi-camera-video"></i> Join Now
+              </a>
+            {% else %}
+              <button class="btn btn-sm btn-outline-secondary" disabled>
+                <i class="bi bi-clock"></i> Not Live
+              </button>
+            {% endif %}
+
             <a href="{% url 'edit_live_session' s.id %}" class="btn btn-sm btn-outline-warning">
               <i class="bi bi-pencil-square"></i> Edit
             </a>
