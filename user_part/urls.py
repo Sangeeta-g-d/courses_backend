@@ -31,4 +31,11 @@ urlpatterns = [
     # progress url
     path('update-lecture-progress/<int:lecture_id>/', views.update_lecture_progress, name='update_lecture_progress'),
     path('mark-lecture-completed/<int:lecture_id>/', views.mark_lecture_completed, name='mark_lecture_completed'),
+
+    # path('user/update-lecture-progress/<int:lecture_id>/', views.update_lecture_progress, name='update_lecture_progress'),
+    # path('user/mark-lecture-completed/<int:lecture_id>/', views.mark_lecture_completed, name='mark_lecture_completed'),
+
+    path('meetings/', views.meetings, name='meetings'),
+    path('join_live_session_user/<int:session_id>/', views.join_live_session_user, name='join_live_session_user'),
+    path('zoom_signature/', views.zoom_sdk_signature, name='zoom_sdk_signature'),
 ]

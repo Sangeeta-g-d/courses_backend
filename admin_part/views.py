@@ -21,6 +21,11 @@ import jwt  # PyJWT
 from django.conf import settings
 from django.http import JsonResponse, HttpResponseBadRequest
 from .utils import get_video_duration,convert_to_hls 
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views import View
+import json
+from django.views.decorators.http import require_GET
 # Create your views here.
 
 
@@ -102,12 +107,10 @@ def add_bundle(request):
         is_published = bool(request.POST.get('is_published'))
 
         thumbnail = request.FILES.get('thumbnail')
-
         # ✅ Validation
         if not name:
             messages.error(request, "Name is required.")
             return redirect('add_category')
-
         # ✅ Create and save bundle
         category = Bundle(
             name=name,
@@ -122,10 +125,8 @@ def add_bundle(request):
             created_at=timezone.now()
         )
         category.save()
-
         messages.success(request, f'Bundle "{category.name}" added successfully!')
         return redirect('bundles')
-
     return render(request, 'add_bundle.html')
 
 
@@ -151,7 +152,6 @@ def edit_bundle(request, bundle_id):
         full_description = request.POST.get('full_description', '').strip()
         is_published = bool(request.POST.get('is_published'))
         thumbnail = request.FILES.get('thumbnail')
-
         # Update fields
         bundle.name = name
         bundle.slug = slugify(name)
@@ -165,14 +165,12 @@ def edit_bundle(request, bundle_id):
         # Replace thumbnail only if new file uploaded
         if thumbnail:
             bundle.thumbnail = thumbnail
-
         try:
             bundle.save()
             messages.success(request, "Bundle updated successfully!")
             return redirect('bundles')  # Adjust to your listing URL name
         except Exception as e:
             messages.error(request, f"Error updating bundle: {str(e)}")
-
     context = {
         'bundle': bundle
     }
@@ -181,14 +179,10 @@ def edit_bundle(request, bundle_id):
 
 def add_course(request):
     categories = Bundle.objects.all()
-    print("hhhhhhhhhhhhhhh")
     if request.method == 'POST':
         try:
-            print("jjjjjjjjjjjjjjjjjj")
             category_id = request.POST.get('category')
-            print(category_id)
             category = Bundle.objects.get(id=category_id) if category_id else None
-            print(category_id,category)
             title = request.POST.get('title')
             thumbnail = request.FILES.get('thumbnail')
             preview_video = request.FILES.get('preview_video')
@@ -225,20 +219,18 @@ def add_course(request):
 def view_courses(request):
     bundles = Bundle.objects.all()
     bundle_id = request.GET.get('bundle_id')
-
     courses = Course.objects.select_related("bundle").all()
     if bundle_id:
         courses = courses.filter(bundle_id=bundle_id)
-
     return render(request, "view_course.html", {
         "bundles": bundles,
         "courses": courses,
     })
 
+
 def edit_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     categories = Bundle.objects.all()
-
     if request.method == "POST":
         try:
             course.title = request.POST.get('title')
@@ -262,7 +254,6 @@ def edit_course(request, course_id):
             return redirect('/view_courses/')  # your course list view
         except Exception as e:
             messages.error(request, f"Error updating course: {str(e)}")
-
     return render(request, 'edit_course.html', {'course': course, 'categories': categories})
 
 
@@ -277,17 +268,16 @@ def course_detail(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     return render(request, 'course_detail.html', {'course': course})
 
+
 def add_section(request, course_id):
     if request.method == "POST":
         course = get_object_or_404(Course, id=course_id)
         title = request.POST.get('title', '').strip()
         order = request.POST.get('order', '').strip()
-
         # Backend Validation
         if not title:
             messages.error(request, "Section title is required.")
             return redirect('course_detail', course_id=course.id)
-
         if not order:
             order = course.course_sections.count() + 1
         else:
@@ -296,7 +286,6 @@ def add_section(request, course_id):
             except ValueError:
                 messages.error(request, "Order must be a number.")
                 return redirect('course_detail', course_id=course.id)
-
         # Create the section
         try:
             section = CourseSection.objects.create(
@@ -307,23 +296,19 @@ def add_section(request, course_id):
             messages.success(request, f"Section '{section.title}' added successfully!")
         except Exception as e:
             messages.error(request, f"Error adding section: {str(e)}")
-
     return redirect('course_detail', course_id=course_id)
 
 
 def edit_section(request, section_id):
     section = get_object_or_404(CourseSection, id=section_id)
     course_id = section.course.id
-
     if request.method == "POST":
         title = request.POST.get('title', '').strip()
         order = request.POST.get('order', '').strip()
-
         # Validation
         if not title:
             messages.error(request, "Section title is required.")
             return redirect('course_detail', course_id=course_id)
-
         if order:
             try:
                 order = int(order)
@@ -331,27 +316,23 @@ def edit_section(request, section_id):
             except ValueError:
                 messages.error(request, "Order must be a number.")
                 return redirect('course_detail', course_id=course_id)
-
         section.title = title
-
         try:
             section.save()
             messages.success(request, f"Section '{section.title}' updated successfully!")
         except Exception as e:
             messages.error(request, f"Error updating section: {str(e)}")
-
     return redirect('course_detail', course_id=course_id)
+
 
 def delete_section(request, section_id):
     section = get_object_or_404(CourseSection, id=section_id)
     course_id = section.course.id  # to redirect back
-
     try:
         section.delete()
         messages.success(request, f"Section '{section.title}' deleted successfully!")
     except Exception as e:
         messages.error(request, f"Error deleting section: {str(e)}")
-
     return redirect('course_detail', course_id=course_id)
 
 import os
@@ -368,7 +349,6 @@ def add_lecture(request, section_id):
         if not title:
             messages.error(request, "Lecture title is required.")
             return redirect('course_detail', course_id=section.course.id)
-
         try:
             lecture = Lecture.objects.create(
                 section=section,
@@ -412,18 +392,15 @@ def add_lecture(request, section_id):
 
 def edit_lecture(request, lecture_id):
     lecture = get_object_or_404(Lecture, id=lecture_id)
-    
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
         is_preview = request.POST.get("is_preview") == "on"
         order = request.POST.get("order") or 0
         video = request.FILES.get("video")
         resource = request.FILES.get("resource")
-
         if not title:
             messages.error(request, "Lecture title is required.")
             return redirect('course_detail', course_id=lecture.section.course.id)
-
         try:
             lecture.title = title
             lecture.is_preview = is_preview
@@ -478,154 +455,6 @@ def delete_lecture(request, lecture_id):
     except Exception as e:
         messages.error(request, f"Error deleting lecture: {str(e)}")
     return redirect('course_detail', course_id=course_id)
-
-
-
-
-# add session
-def admin_live_sessions(request):
-    sessions = LiveSession.objects.all().order_by('-session_date', '-session_time')
-    return render(request, 'live_sessions_list.html', {'sessions': sessions})
-
-
-# Admin: Add session
-def add_live_session(request):
-    if request.method == 'POST':
-        title = request.POST.get('title')
-        agenda = request.POST.get('agenda')
-        meeting_number = request.POST.get('meeting_number')
-        session_date = request.POST.get('session_date')
-        session_time = request.POST.get('session_time')
-        thumbnail = request.FILES.get('thumbnail')
-
-        LiveSession.objects.create(
-            title=title,
-            agenda=agenda,
-            meeting_number=meeting_number,
-            session_date=session_date,
-            session_time=session_time,
-            thumbnail=thumbnail
-        )
-        messages.success(request, "Live session added successfully.")
-        return redirect('admin_live_sessions')
-
-    return render(request, 'add_live_session.html')
-
-# Admin: Edit session
-def edit_live_session(request, session_id):
-    session = get_object_or_404(LiveSession, id=session_id)
-    if request.method == 'POST':
-        session.title = request.POST.get('title')
-        session.agenda = request.POST.get('agenda')
-        session.zoom_meeting_url = request.POST.get('zoom_meeting_url')
-        session.session_date = request.POST.get('session_date')
-        session.session_time = request.POST.get('session_time')
-
-        if request.FILES.get('thumbnail'):
-            session.thumbnail = request.FILES.get('thumbnail')
-
-        session.save()
-        messages.success(request, "Live session updated successfully.")
-        return redirect('admin_live_sessions')
-
-    return render(request, 'edit_live_session.html', {'session': session})
-
-# Admin: Delete session
-def delete_live_session(request, session_id):
-    session = get_object_or_404(LiveSession, id=session_id)
-    session.delete()
-    messages.success(request, "Live session deleted successfully.")
-    return redirect('admin_live_sessions')
-
-
-def _extract_meeting_number_from_join_url(join_url):
-    """
-    Extract Zoom meeting number from typical join_url patterns:
-    e.g. https://us05web.zoom.us/j/86175242117?pwd=...  -> 86175242117
-    Also supports /s/ style and other common variants.
-    """
-    if not join_url:
-        return None
-    patterns = [
-        r'/j/(\d+)',   # /j/86175242117
-        r'/s/(\d+)',   # /s/86175242117
-        r'meeting\/(\d+)',  # possibly other formats
-    ]
-    for p in patterns:
-        m = re.search(p, join_url)
-        if m:
-            return m.group(1)
-    # fallback: find any 9-12 digit sequence
-    m = re.search(r'(\d{9,12})', join_url)
-    if m:
-        return m.group(1)
-    return None
-
-def get_zoom_signature(request):
-    """
-    Endpoint that returns a JSON object: { signature: "...." }
-    Expects GET params:
-      - meetingNumber (optional) OR session_id (optional)
-      - role (optional) 0 = participant / 1 = host (default 0)
-    Example:
-      /zoom/get_signature/?meetingNumber=86175242117&role=0
-    """
-    meeting_number = request.GET.get('meetingNumber')
-    session_id = request.GET.get('session_id')
-    role = int(request.GET.get('role') or 0)
-
-    if session_id and not meeting_number:
-        # if you prefer passing session id (DB) instead of meetingNumber:
-        session = get_object_or_404(LiveSession, id=session_id)
-        meeting_number = _extract_meeting_number_from_join_url(session.meeting_url)
-
-    if not meeting_number:
-        return HttpResponseBadRequest("Missing meetingNumber or invalid session_id/meeting_url.")
-
-    try:
-        sdk_key = settings.ZOOM_SDK_KEY
-        sdk_secret = settings.ZOOM_SDK_SECRET
-    except Exception:
-        return HttpResponseBadRequest("Zoom SDK key/secret not configured on server.")
-
-    # Build JWT payload according to Meeting SDK expectations
-    iat = int(time.time())
-    exp = iat + 120  # token valid for 2 minutes
-    payload = {
-        "sdkKey": sdk_key,
-        "mn": str(meeting_number),
-        "role": role,
-        "iat": iat,
-        "exp": exp,
-        # appKey/appKey - sometimes samples include these fields; including them for compatibility:
-        "appKey": sdk_key,
-        "tokenExp": exp
-    }
-
-    # Create JWT using SDK secret (HS256)
-    token = jwt.encode(payload, sdk_secret, algorithm="HS256")
-    # PyJWT returns bytes in some versions; ensure string
-    if isinstance(token, bytes):
-        token = token.decode('utf-8')
-
-    return JsonResponse({"signature": token})
-
-
-
-
-def live_session_test(request):
-    """Display all live sessions"""
-    sessions = LiveSession.objects.all().order_by('-session_date', '-session_time')
-    
-    # Check if sessions are active based on current time
-    current_datetime = datetime.now()
-    for session in sessions:
-        session_datetime = datetime.combine(session.session_date, session.session_time)
-        # Consider session active if it's within 30 minutes of start time
-        time_difference = (session_datetime - current_datetime).total_seconds()
-        session.is_active = time_difference <= 1800  # 30 minutes before start
-    
-    return render(request, 'live_session_test.html', {'sessions': sessions})
 
 
 
@@ -690,16 +519,115 @@ def view_bundle_candidates(request, bundle_id):
     return render(request, 'bundle_candidates.html', context)
 
 
-@ensure_csrf_cookie
-def join_live_session(request, pk):
-    session = get_object_or_404(LiveSession, pk=pk)
-    
-    # Check if session is active (optional)
-    if not session.is_active():
-        return render(request, "session_not_active.html", {"session": session})
-    
-    context = {
-        "session": session,
-        "ZOOM_SDK_KEY": settings.ZOOM_SDK_KEY
+
+def admin_live_sessions(request):
+    sessions = LiveSession.objects.all().order_by('-session_date', '-session_time')
+    return render(request, 'live_sessions_list.html', {'sessions': sessions})
+
+
+# Admin: Add session
+def add_live_session(request):
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        agenda = request.POST.get('agenda')
+        meeting_number = request.POST.get('meeting_number')
+        passcode = request.POST.get('Passcode')
+        meeting_url = request.POST.get('meeting_url')  # Optional field
+        session_date = request.POST.get('session_date')
+        session_time = request.POST.get('session_time')
+        thumbnail = request.FILES.get('thumbnail')
+
+        LiveSession.objects.create(
+            title=title,
+            agenda=agenda,
+            meeting_number=meeting_number,
+            Passcode=passcode,
+            meeting_url=meeting_url,
+            session_date=session_date,
+            session_time=session_time,
+            thumbnail=thumbnail
+        )
+        messages.success(request, "Live session added successfully.")
+        return redirect('admin_live_sessions')
+
+    return render(request, 'add_live_session.html')
+
+
+def edit_live_session(request, session_id):
+    session = get_object_or_404(LiveSession, id=session_id)
+
+    if request.method == 'POST':
+        session.title = request.POST.get('title')
+        session.agenda = request.POST.get('agenda')
+        session.meeting_number = request.POST.get('meeting_id')
+        session.Passcode = request.POST.get('passcode')
+        session.session_date = request.POST.get('session_date')
+        session.session_time = request.POST.get('session_time')
+
+        if request.FILES.get('thumbnail'):
+            session.thumbnail = request.FILES.get('thumbnail')
+
+        session.save()
+        messages.success(request, "Live session updated successfully.")
+        return redirect('admin_live_sessions')
+
+    return render(request, 'edit_live_session.html', {'session': session})
+
+
+# Admin: Delete session
+def delete_live_session(request, session_id):
+    session = get_object_or_404(LiveSession, id=session_id)
+    session.delete()
+    messages.success(request, "Live session deleted successfully.")
+    return redirect('admin_live_sessions')
+
+
+
+
+
+def join_live_session(request, session_id):
+    session = get_object_or_404(LiveSession, id=session_id)
+    return render(request, 'join_zoom_meeting.html', {'session': session})
+
+
+@require_GET
+@csrf_exempt
+def zoom_sdk_signature(request):
+    """Generate JWT signature for Zoom SDK"""
+    meeting_number = request.GET.get("meetingNumber")
+    role = request.GET.get("role", "0")
+
+    if not meeting_number:
+        return HttpResponseBadRequest("meetingNumber parameter is required")
+
+    try:
+        role = int(role)
+    except ValueError:
+        return HttpResponseBadRequest("role must be 0 or 1")
+
+    sdk_key = settings.ZOOM_SDK_KEY
+    sdk_secret = settings.ZOOM_SDK_SECRET
+
+    if not sdk_key or not sdk_secret:
+        return JsonResponse({"error": "Zoom SDK credentials missing"}, status=500)
+
+    iat = int(time.time())
+    exp = iat + 60 * 60 * 2  # 2 hours
+
+    payload = {
+        "appKey": sdk_key,
+        "sdkKey": sdk_key,
+        "mn": meeting_number,
+        "role": role,
+        "iat": iat,
+        "exp": exp,
+        "tokenExp": exp
     }
-    return render(request, "join_session.html", context)
+
+    try:
+        signature = jwt.encode(payload, sdk_secret, algorithm="HS256")
+        if isinstance(signature, bytes):
+            signature = signature.decode("utf-8")
+        return JsonResponse({"signature": signature, "meetingNumber": meeting_number})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

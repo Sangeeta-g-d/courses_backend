@@ -1,0 +1,79 @@
+{% extends 'user_base.html' %} {% load static %} {% block content %} <div class="container py-4"> <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2 mb-3">Live Sessions</h1>
+            <p class="text-muted">Join our interactive live sessions and enhance your learning experience</p>
+        </div>
+    </div> <!-- Upcoming Sessions -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h3 class="h4 mb-4">Upcoming Sessions</h3> {% if upcoming_sessions %} <div class="row"> {% for session in
+                upcoming_sessions %} <div class="col-lg-6 col-xl-4 mb-4">
+                    <div class="card h-100 shadow-sm"> <!-- Thumbnail --> {% if session.thumbnail %} <img
+                            src="{{ session.thumbnail.url }}" class="card-img-top" alt="{{ session.title }}"
+                            style="height: 200px; object-fit: cover;"> {% else %} <div
+                            class="card-img-top bg-light d-flex align-items-center justify-content-center"
+                            style="height: 200px;"> <i class="fas fa-video fa-3x text-muted"></i> </div> {% endif %}
+                        <div class="card-body"> <!-- Session Status Badge -->
+                            <div class="mb-3"> {% if session.is_active %} <span class="badge bg-success">Live Now</span>
+                                {% elif session.can_join_early %} <span class="badge bg-warning text-dark">Starting
+                                    Soon</span> {% else %} <span class="badge bg-primary">Upcoming</span> {% endif %}
+                            </div> <!-- Session Details -->
+                            <h5 class="card-title">{{ session.title }}</h5>
+                            <p class="card-text text-muted small mb-3">{{ session.agenda|truncatewords:15 }}</p>
+                            <!-- Session Date & Time -->
+                            <div class="mb-3"> <small class="text-muted d-block"> <i
+                                        class="fas fa-calendar-alt me-2"></i> {{ session.session_date|date:"F j, Y" }}
+                                </small> <small class="text-muted"> <i class="fas fa-clock me-2"></i> {{
+                                    session.session_time|time:"g:i A" }} IST </small> </div>
+                            <!-- Action Buttons (always link to internal join page) --> {% if session.is_active or
+                            session.can_join_early %} <a href="{% url 'join_live_session_user' session.id %}"
+                                class="btn btn-danger btn-sm w-100"> <i class="fas fa-play-circle me-2"></i> Join Live
+                                Session </a> {% else %} <button class="btn btn-outline-secondary btn-sm w-100" disabled>
+                                <i class="fas fa-clock me-2"></i> Session Not Started </button> {% endif %}
+                        </div>
+                    </div>
+                </div> {% endfor %} </div> {% else %} <div class="text-center py-5"> <i
+                    class="fas fa-video-slash fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No Upcoming Sessions</h5>
+                <p class="text-muted">Check back later for new live sessions.</p>
+            </div> {% endif %}
+        </div>
+    </div> <!-- Past Sessions -->
+    <div class="row">
+        <div class="col-12">
+            <h3 class="h4 mb-4">Past Sessions</h3> {% if past_sessions %} <div class="list-group"> {% for session in
+                past_sessions %} <div class="list-group-item">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="mb-1">{{ session.title }}</h6> <small class="text-muted"> <i
+                                    class="fas fa-calendar-alt me-1"></i> {{ session.session_date|date:"F j, Y" }} at {{
+                                session.session_time|time:"g:i A" }} IST </small>
+                        </div>
+                        <div class="col-md-4 text-md-end"> <span class="badge bg-secondary">Completed</span> </div>
+                    </div>
+                </div> {% endfor %} </div> {% else %} <div class="text-center py-4">
+                <p class="text-muted">No past sessions available.</p>
+            </div> {% endif %}
+        </div>
+    </div>
+</div> <!-- Add Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    .card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .badge {
+        font-size: 0.75em;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+    }
+</style> {% endblock %}

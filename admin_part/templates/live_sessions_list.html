@@ -11,44 +11,64 @@
   {% if sessions %}
   <div class="row g-4">
     {% for s in sessions %}
-    <div class="col-md-4 col-lg-3">
-      <div class="card shadow-sm border-0 h-100">
+    <div class="col-md-6 col-lg-4">
+      <div class="card session-card h-100 shadow-sm border-0">
         <div class="position-relative">
-          <img src="{{ s.thumbnail.url }}" class="card-img-top" alt="{{ s.title }}" style="height:180px; object-fit:cover;">
-          {% if s.is_active %}
-          <span class="badge bg-success position-absolute top-0 end-0 m-2 px-3 py-2 rounded-pill shadow">Active</span>
+          {% if s.thumbnail %}
+            <img src="{{ s.thumbnail.url }}" class="card-img-top" alt="{{ s.title }}" style="height:200px; object-fit:cover;">
           {% else %}
-          <span class="badge bg-secondary position-absolute top-0 end-0 m-2 px-3 py-2 rounded-pill shadow">Upcoming</span>
+            <div class="placeholder-img" style="height:200px; display:flex;align-items:center;justify-content:center;background:#f5f7fb;">
+              <i class="bi bi-camera-video" style="font-size:36px; color:#c7d3ea;"></i>
+            </div>
+          {% endif %}
+
+          {% if s.is_active %}
+            <span class="badge badge-status active">Active</span>
+          {% else %}
+            <span class="badge badge-status upcoming">Upcoming</span>
           {% endif %}
         </div>
 
         <div class="card-body d-flex flex-column">
-          <h5 class="card-title mb-2">{{ s.title }}</h5>
-          <p class="text-muted small mb-2">
-            <i class="bi bi-calendar-event me-1"></i> {{ s.session_date }} <br>
-            <i class="bi bi-clock me-1"></i> {{ s.session_time }}
-          </p>
-          <p class="text-muted small flex-grow-1">{{ s.agenda|truncatewords:10 }}</p>
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <h5 class="card-title mb-0">{{ s.title }}</h5>
+            <small class="text-muted">{{ s.session_date|date:"M d, Y" }}</small>
+          </div>
 
-          <div class="d-flex justify-content-between mt-2">
-            {% if s.is_active %}
-              <a href="{% url 'join_live_session' s.id %}" class="btn btn-sm btn-success">
-                <i class="bi bi-camera-video"></i> Join Now
-              </a>
-            {% else %}
-              <button class="btn btn-sm btn-outline-secondary" disabled>
-                <i class="bi bi-clock"></i> Not Live
-              </button>
-            {% endif %}
+          <p class="text-muted small mb-2">
+            <i class="bi bi-calendar-event me-1"></i> {{ s.session_date|date:"M d, Y" }}
+            &nbsp; • &nbsp;
+            <i class="bi bi-clock me-1"></i> {{ s.session_time|time:"g:i a" }}
+          </p>
+
+          <p class="text-muted small mb-2">
+            <strong>Meeting ID:</strong> {{ s.meeting_number|default:"—" }}<br>
+            <strong>Passcode:</strong> {{ s.Passcode|default:"—" }}
+          </p>
+
+          <p class="text-muted small flex-grow-1 mb-3">{{ s.agenda|truncatewords:15 }}</p>
+
+          <div class="d-flex gap-2 align-items-center">
+        {% if s.is_active %}
+  <a href="{% url 'join_live_session' s.id %}" class="btn btn-sm btn-success flex-fill join-btn">
+    <i class="bi bi-camera-video"></i> Join Now
+  </a>
+{% else %}
+  <button class="btn btn-sm btn-outline-secondary flex-fill" disabled>
+    <i class="bi bi-clock"></i> Not Live
+  </button>
+{% endif %}
 
             <a href="{% url 'edit_live_session' s.id %}" class="btn btn-sm btn-outline-warning">
               <i class="bi bi-pencil-square"></i> Edit
             </a>
-            <a href="{% url 'delete_live_session' s.id %}" 
-               class="btn btn-sm btn-outline-danger"
-               onclick="return confirm('Delete this session?')">
-              <i class="bi bi-trash"></i> Delete
-            </a>
+
+            <form action="{% url 'delete_live_session' s.id %}" method="post" onsubmit="return confirm('Delete this session?')" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i> Delete
+              </button>
+            </form>
           </div>
         </div>
       </div>
@@ -65,4 +85,33 @@
 </div>
 
 {% include 'notify.html' %}
+
+<style>
+/* local styles for live sessions UI */
+.session-card { border-radius: 14px; overflow: hidden; }
+.session-card .card-body { padding: 1.25rem; }
+.badge-status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+}
+.badge-status.active { background: #1f9d55; color: #fff; }
+.badge-status.upcoming { background: #6c757d; color: #fff; }
+
+.join-btn { white-space: nowrap; }
+
+/* ensure buttons are separate and don't expand weirdly on small screens */
+.d-flex.gap-2 > .btn { min-width: 88px; }
+
+/* placeholder image style */
+.placeholder-img { color: #9fb0db; }
+
+/* subtle hover */
+.session-card:hover { transform: translateY(-4px); transition: transform .18s ease; }
+</style>
+
 {% endblock %}

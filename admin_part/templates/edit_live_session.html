@@ -12,7 +12,7 @@
     <form method="post" enctype="multipart/form-data" id="editLiveSessionForm" novalidate>
       {% csrf_token %}
       <div class="row g-3">
-        
+
         <!-- Title -->
         <div class="col-md-6">
           <label class="form-label fw-semibold">Session Title</label>
@@ -27,21 +27,18 @@
           <div class="invalid-feedback">Please enter a session agenda.</div>
         </div>
 
-        <!-- Short Description -->
-        <div class="col-12">
-          <label class="form-label fw-semibold">Short Description</label>
-          <textarea name="description" class="form-control" rows="3"
-                    placeholder="Brief about the session...">{{ session.description }}</textarea>
-          <div class="invalid-feedback">Please enter a short description.</div>
+        <!-- Meeting ID -->
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Meeting ID</label>
+          <input type="text" name="meeting_id" class="form-control" value="{{ session.meeting_number }}" required>
+          <div class="invalid-feedback">Please enter the meeting ID.</div>
         </div>
 
-        <!-- Google Meet URL -->
-        <div class="col-12">
-          <label class="form-label fw-semibold">Google Meet Link</label>
-          <input type="url" name="google_meet_url" class="form-control"
-                 value="{{ session.meeting_url }}" 
-                 placeholder="https://meet.google.com/xyz-abcd-efg" required>
-          <div class="invalid-feedback">Enter a valid Google Meet link.</div>
+        <!-- Passcode -->
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Passcode</label>
+          <input type="text" name="passcode" class="form-control" value="{{ session.Passcode }}" required>
+          <div class="invalid-feedback">Please enter the meeting passcode.</div>
         </div>
 
         <!-- Date -->
@@ -71,6 +68,7 @@
           </div>
           {% endif %}
         </div>
+
       </div>
 
       <!-- Submit Buttons -->
@@ -86,24 +84,5 @@
   </div>
 </div>
 
-<!-- Add Bootstrap Icons if not already -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-
-<script>
-// Client-side validation for Google Meet URL
-document.getElementById('editLiveSessionForm').addEventListener('submit', function(e) {
-  let valid = true;
-  const meetInput = document.querySelector('[name="google_meet_url"]');
-  const meetPattern = /^https:\/\/meet\.google\.com\/[a-z0-9\-]+$/i;
-
-  if (!meetPattern.test(meetInput.value)) {
-    meetInput.classList.add('is-invalid');
-    valid = false;
-  } else {
-    meetInput.classList.remove('is-invalid');
-  }
-
-  if (!valid) e.preventDefault();
-});
-</script>
 {% endblock %}
