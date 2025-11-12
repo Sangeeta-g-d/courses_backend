@@ -20,6 +20,7 @@ import time
 import jwt  # PyJWT
 from django.conf import settings
 from django.http import JsonResponse, HttpResponseBadRequest
+from .utils import get_video_duration,convert_to_hls 
 # Create your views here.
 
 
@@ -353,16 +354,16 @@ def delete_section(request, section_id):
 
     return redirect('course_detail', course_id=course_id)
 
+import os
 def add_lecture(request, section_id):
     section = get_object_or_404(CourseSection, id=section_id)
-    
+
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
-        duration = request.POST.get("duration", "").strip()
         is_preview = request.POST.get("is_preview") == "on"
+        order = request.POST.get("order") or 0
         video = request.FILES.get("video")
         resource = request.FILES.get("resource")
-        order = request.POST.get("order") or 0
 
         if not title:
             messages.error(request, "Lecture title is required.")
@@ -372,19 +373,40 @@ def add_lecture(request, section_id):
             lecture = Lecture.objects.create(
                 section=section,
                 title=title,
-                duration=duration,
+                order=order,
                 is_preview=is_preview,
-                video=video,
                 resource=resource,
-                order=order
+                
             )
+
+            # Save original video temporarily
+            if video:
+                video_path = os.path.join(settings.MEDIA_ROOT, "temp_videos", video.name)
+                os.makedirs(os.path.dirname(video_path), exist_ok=True)
+                with open(video_path, "wb+") as dest:
+                    for chunk in video.chunks():
+                        dest.write(chunk)
+
+                # Convert to HLS
+                hls_output_dir = os.path.join(settings.MEDIA_ROOT, "lectures", f"lecture_{lecture.id}")
+                hls_rel_path = convert_to_hls(video_path, hls_output_dir)
+
+                # Calculate duration
+                duration = get_video_duration(video_path)
+                lecture.duration = duration
+                lecture.video = hls_rel_path
+                lecture.save()
+
+                # Cleanup temp file
+                os.remove(video_path)
+
             messages.success(request, f"Lecture '{lecture.title}' added successfully!")
+
         except Exception as e:
             messages.error(request, f"Error adding lecture: {str(e)}")
 
         return redirect('course_detail', course_id=section.course.id)
-    
-    # GET request can optionally render a modal or separate template if needed
+
     return render(request, 'add_lecture.html', {'section': section})
 
 
@@ -393,11 +415,10 @@ def edit_lecture(request, lecture_id):
     
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
-        duration = request.POST.get("duration", "").strip()
         is_preview = request.POST.get("is_preview") == "on"
+        order = request.POST.get("order") or 0
         video = request.FILES.get("video")
         resource = request.FILES.get("resource")
-        order = request.POST.get("order") or 0
 
         if not title:
             messages.error(request, "Lecture title is required.")
@@ -405,22 +426,48 @@ def edit_lecture(request, lecture_id):
 
         try:
             lecture.title = title
-            lecture.duration = duration
             lecture.is_preview = is_preview
             lecture.order = order
+
+            # ✅ If new video uploaded, handle conversion and duration calculation
             if video:
-                lecture.video = video
+                # Save original temporarily
+                temp_path = os.path.join(settings.MEDIA_ROOT, "temp_videos", video.name)
+                os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+
+                with open(temp_path, "wb+") as dest:
+                    for chunk in video.chunks():
+                        dest.write(chunk)
+
+                # Convert to HLS (same as add_lecture)
+                hls_output_dir = os.path.join(settings.MEDIA_ROOT, "lectures", f"lecture_{lecture.id}")
+                hls_rel_path = convert_to_hls(temp_path, hls_output_dir)
+
+                # Auto calculate video duration
+                duration = get_video_duration(temp_path)
+
+                # Update lecture fields
+                lecture.video = hls_rel_path
+                lecture.duration = duration
+
+                # Cleanup temp video
+                os.remove(temp_path)
+
+            # ✅ Update resource if provided
             if resource:
                 lecture.resource = resource
+
             lecture.save()
             messages.success(request, f"Lecture '{lecture.title}' updated successfully!")
+
         except Exception as e:
             messages.error(request, f"Error updating lecture: {str(e)}")
 
         return redirect('course_detail', course_id=lecture.section.course.id)
     
-    # GET request to render form (optional modal)
+    # GET request → Render edit form
     return render(request, 'edit_lecture.html', {'lecture': lecture})
+
 
 def delete_lecture(request, lecture_id):
     lecture = get_object_or_404(Lecture, id=lecture_id)

@@ -93,6 +93,29 @@ class Course(models.Model):
 
     def __str__(self):
         return self.title
+    
+    @property
+    def calculated_total_duration(self):
+        """Auto-calculate total course duration from all sections (in seconds)"""
+        from django.db.models import Sum
+        total = self.course_sections.aggregate(
+            total_duration=Sum('lectures__duration')
+        )['total_duration'] or 0
+        return total
+    
+    @property
+    def calculated_total_duration_display(self):
+        """Formatted auto-calculated course duration"""
+        from admin_part.utils import format_duration
+        return format_duration(self.calculated_total_duration)
+    
+    @property
+    def calculated_total_lectures(self):
+        """Auto-calculate total lectures in course"""
+        from django.db.models import Count
+        return self.course_sections.aggregate(
+            total_lectures=Count('lectures')
+        )['total_lectures'] or 0
 
     
 
@@ -102,18 +125,50 @@ class CourseSection(models.Model):
     title = models.CharField(max_length=500)
     order = models.PositiveIntegerField(default=0)
     total_lectures = models.PositiveIntegerField(default=0)
-    total_duration = models.CharField(max_length=300, blank=True, null=True, help_text="Example: 19min or 2h 15min")
+    total_duration = models.FloatField(default=0, help_text="Total duration in seconds")
 
     class Meta:
         ordering = ['order']
 
     def __str__(self):
         return f"{self.course.title} - {self.title}"
+    
+    def get_section_duration_display(self):
+        """Get formatted section duration"""
+        from admin_part.utils import format_duration
+        return format_duration(self.total_duration)
+
+    def update_duration(self):
+        """Update section duration and lecture count."""
+        lectures = self.lectures.all()
+        total_seconds = sum(lecture.duration or 0 for lecture in lectures)
+
+        self.total_duration = total_seconds
+        self.total_lectures = lectures.count()
+        self.save()
+
+    @property
+    def calculated_total_duration(self):
+        """Auto-calculate total duration from lectures (in seconds)"""
+        return self.lectures.aggregate(
+            total_duration=models.Sum('duration')
+        )['total_duration'] or 0
+    
+    @property
+    def calculated_total_duration_display(self):
+        """Formatted auto-calculated duration"""
+        from admin_part.utils import format_duration
+        return format_duration(self.calculated_total_duration)
+    
+    @property
+    def calculated_total_lectures(self):
+        """Auto-calculate lecture count"""
+        return self.lectures.count()
 
 class Lecture(models.Model):
     section = models.ForeignKey(CourseSection, on_delete=models.CASCADE, related_name='lectures')
     title = models.CharField(max_length=500)
-    duration = models.CharField(max_length=500, blank=True, null=True, help_text="Example: 05:05 or 10min")
+    duration = models.FloatField(max_length=500, blank=True, null=True)
     video = models.FileField(upload_to='lectures/videos/', blank=True, null=True)
     is_preview = models.BooleanField(default=False)
     resource = models.FileField(upload_to='lectures/resources/', blank=True, null=True)
@@ -124,6 +179,10 @@ class Lecture(models.Model):
 
     def __str__(self):
         return f"{self.section.title} - {self.title}"
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # ✅ Update section duration each time a lecture is saved
+        self.section.update_duration()
 
     def get_next_lecture(self):
         """Get the next lecture in the same section"""
@@ -134,6 +193,44 @@ class Lecture(models.Model):
             ).order_by('order').first()
         except Exception:
             return None
+
+
+# user progress
+class UserProgress(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='progress')
+    lecture = models.ForeignKey('Lecture', on_delete=models.CASCADE, related_name='user_progress')
+    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='user_progress')
+    
+    # Progress tracking
+    completed = models.BooleanField(default=False)
+    watched_duration = models.FloatField(default=0, help_text="Total seconds watched")
+    total_duration = models.FloatField(default=0, help_text="Total video duration in seconds")
+    progress_percentage = models.FloatField(default=0, help_text="Percentage watched (0-100)")
+    
+    # Timestamps
+    last_watched = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        unique_together = ['user', 'lecture']
+        verbose_name = "User Progress"
+        verbose_name_plural = "User Progress"
+    
+    def save(self, *args, **kwargs):
+        # Calculate progress percentage
+        if self.total_duration > 0:
+            self.progress_percentage = min(100, (self.watched_duration / self.total_duration) * 100)
+        
+        # Mark as completed if watched 90% or more
+        if not self.completed and self.progress_percentage >= 90:
+            self.completed = True
+            self.completed_at = timezone.now()
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.lecture.title} ({self.progress_percentage:.1f}%)"
+
 
 # ---------------------------------------------------------
 # ENROLLMENT MODEL (student course enrollment)
@@ -276,6 +373,58 @@ class Enrollment(models.Model):
             self.progress_percentage = int((completed_lectures / total_lectures) * 100)
             self.save()
 
+
+# Add to your models.py
+class UserStats(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='stats')
+    total_learning_time = models.PositiveIntegerField(default=0, help_text="Total learning time in minutes")
+    completed_courses = models.PositiveIntegerField(default=0)
+    current_rank = models.PositiveIntegerField(default=0)
+    points = models.PositiveIntegerField(default=0)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "User Stats"
+        verbose_name_plural = "User Stats"
+
+    def __str__(self):
+        return f"{self.user.username} - Rank {self.current_rank}"
+
+    def update_stats(self):
+        """Update user stats based on their progress"""
+        # Calculate total learning time from UserProgress
+        from django.db.models import Sum
+        total_time = UserProgress.objects.filter(
+            user=self.user
+        ).aggregate(total=Sum('watched_duration'))['total'] or 0
+        self.total_learning_time = int(total_time / 60)  # Convert to minutes
+        
+        # Count completed courses
+        completed_courses = Enrollment.objects.filter(
+            user=self.user,
+            progress_percentage=100
+        ).count()
+        self.completed_courses = completed_courses
+        
+        # Calculate points (you can customize this formula)
+        self.points = (self.completed_courses * 100) + (self.total_learning_time // 10)
+        
+        self.save()
+        self.update_rank()
+
+    def update_rank(self):
+        """Update user rank based on points"""
+        # Get all users ordered by points
+        all_stats = UserStats.objects.select_related('user').order_by('-points', '-total_learning_time')
+        
+        current_rank = 1
+        for stats in all_stats:
+            stats.current_rank = current_rank
+            stats.save(update_fields=['current_rank'])
+            current_rank += 1
+
+
+
 class PaymentTransaction(models.Model):
     TRANSACTION_STATUS_CHOICES = [
         ('created', 'Created'),
@@ -356,25 +505,3 @@ class Refund(models.Model):
     def __str__(self):
         return f"Refund for {self.enrollment} - {self.refund_amount}"
     
-
-class UserProgress(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='progress')
-    lecture = models.ForeignKey(Lecture, on_delete=models.CASCADE, related_name='user_progress')
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='user_progress')
-    completed = models.BooleanField(default=False)
-    watched_duration = models.PositiveIntegerField(default=0)  # in seconds
-    total_duration = models.PositiveIntegerField(default=0)    # in seconds
-    last_watched = models.DateTimeField(auto_now=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        unique_together = ('user', 'lecture')
-        verbose_name_plural = "User Progress"
-
-    def __str__(self):
-        return f"{self.user.email} - {self.lecture.title} - {'Completed' if self.completed else 'In Progress'}"
-
-    def save(self, *args, **kwargs):
-        if self.completed and not self.completed_at:
-            self.completed_at = timezone.now()
-        super().save(*args, **kwargs)

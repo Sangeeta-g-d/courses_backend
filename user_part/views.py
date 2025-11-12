@@ -14,13 +14,14 @@ from django.db import transaction
 import razorpay
 import logging
 import json
+from django.db.models import Q, Sum, Count
 from django.http import JsonResponse
 from datetime import timedelta
 from django.contrib import messages
 from django.db.models import Count, Sum
 from django.views.decorators.http import require_POST
 from django.middleware.csrf import get_token
-
+from .utils import get_user_rank,get_user_watch_time_rankings
 
 def home(request):
     # Your existing course code
@@ -159,8 +160,32 @@ def user_details(request):
 
 def dashboard(request):
     bundles = Bundle.objects.filter(is_published=True).order_by('-created_at')
-    return render(request, 'dashboard.html',{'bundles': bundles})
-
+    
+    # Get top 5 users by watch time
+    top_users = get_user_watch_time_rankings()[:5]
+    
+    # Get current user's rank and stats
+    current_user_rank = None
+    current_user_stats = None
+    
+    if request.user.is_authenticated:
+        current_user_rank = get_user_rank(request.user)
+        
+        # Get current user's total watch time
+        current_user_stats = request.user.progress.aggregate(
+            total_watched_duration=Sum('watched_duration'),
+            completed_lectures=Count('lecture', filter=Q(completed=True)),
+            total_progress=Count('lecture')
+        )
+    
+    context = {
+        'bundles': bundles,
+        'top_users': top_users,
+        'current_user_rank': current_user_rank,
+        'current_user_stats': current_user_stats,
+    }
+    
+    return render(request, 'dashboard.html', context)
 
 # import your models
 # from .models import Course, Lecture, Enrollment, UserProgress
@@ -174,6 +199,9 @@ from django.utils import timezone
 
 # models: Course, Lecture, Enrollment, UserProgress
 
+from django.utils import timezone
+from django.db import transaction
+
 def course_details(request, course_id):
     course = get_object_or_404(
         Course.objects.prefetch_related('course_sections__lectures'),
@@ -181,6 +209,11 @@ def course_details(request, course_id):
     )
 
     is_enrolled = False
+    user_progress_map = {}
+    course_progress = 0
+    total_lectures = 0
+    completed_lectures = 0
+
     if request.user.is_authenticated and course.bundle:
         is_enrolled = Enrollment.objects.filter(
             user=request.user,
@@ -189,81 +222,84 @@ def course_details(request, course_id):
             is_active=True
         ).exists()
 
-    # total lectures
-    total_lectures = sum(section.lectures.count() for section in course.course_sections.all())
-
-    # load user progress for this course (select_related to ensure lecture attr available)
-    user_progress_map = {}
-    if request.user.is_authenticated:
-        ups = UserProgress.objects.filter(
+        # Get user progress for this course
+        progress_entries = UserProgress.objects.filter(
             user=request.user,
-            lecture__section__course=course
+            course=course
         ).select_related('lecture')
-        user_progress_map = {up.lecture_id: up for up in ups}
+        
+        user_progress_map = {up.lecture_id: up for up in progress_entries}
+        
+        # Calculate course progress
+        total_lectures = course.calculated_total_lectures
+        completed_lectures = progress_entries.filter(completed=True).count()
+        if total_lectures > 0:
+            course_progress = int((completed_lectures / total_lectures) * 100)
 
-    # initial lecture (continue where left off)
+    # Total lectures count
+    if not total_lectures:
+        total_lectures = sum(section.lectures.count() for section in course.course_sections.all())
+
+    # Initial lecture (continue where left off) - FIXED LOGIC
     initial_lecture_id = None
     initial_video_url = ''
     if request.user.is_authenticated:
-        last_up = UserProgress.objects.filter(
+        # Find last watched lecture that's not completed
+        last_progress = UserProgress.objects.filter(
             user=request.user,
-            lecture__section__course=course
-        ).order_by('-last_watched', '-id').select_related('lecture').first()
-        if last_up and last_up.lecture:
-            if getattr(last_up, 'completed', False):
-                # if completed, prefer next lecture (if exists)
-                next_lecture = last_up.lecture.get_next_lecture()
-                if next_lecture:
-                    initial_lecture_id = next_lecture.id
-                    if getattr(next_lecture, 'video', None):
-                        initial_video_url = next_lecture.video.url
-                else:
-                    # fallback to the completed lecture itself
-                    initial_lecture_id = last_up.lecture.id
-                    if getattr(last_up.lecture, 'video', None):
-                        initial_video_url = last_up.lecture.video.url
-            else:
-                # resume the unfinished lecture
-                initial_lecture_id = last_up.lecture.id
-                if getattr(last_up.lecture, 'video', None):
-                    initial_video_url = last_up.lecture.video.url
+            course=course,
+            completed=False
+        ).order_by('-last_watched').first()
+        
+        if last_progress:
+            initial_lecture_id = last_progress.lecture.id
+            if last_progress.lecture.video:
+                initial_video_url = last_progress.lecture.video.url
+        else:
+            # No progress yet, start with first lecture
+            first_lecture = Lecture.objects.filter(
+                section__course=course
+            ).order_by('section__order', 'order').first()
+            if first_lecture:
+                initial_lecture_id = first_lecture.id
+                if first_lecture.video:
+                    initial_video_url = first_lecture.video.url
 
-    # Build curriculum with access flags using persisted progress
+    # Build curriculum with access flags - FIXED ACCESS LOGIC
     curriculum = []
     for section in course.course_sections.all().order_by('order'):
         section_lectures = list(section.lectures.all().order_by('order'))
         lectures = []
-        for lecture in section_lectures:
+        
+        for i, lecture in enumerate(section_lectures):
             if lecture.is_preview:
                 accessible = True
             elif is_enrolled:
-                # previous lectures in this section must be completed
-                prevs = [l for l in section_lectures if l.order < lecture.order]
-                if not prevs:
+                # SIMPLIFIED ACCESS LOGIC: First lecture is always accessible
+                # Subsequent lectures require the immediate previous one to be completed
+                if i == 0:  # First lecture in section
                     accessible = True
                 else:
-                    # Require all previous to be completed
-                    all_prev_completed = True
-                    for p in prevs:
-                        up = user_progress_map.get(p.id)
-                        if not up or not getattr(up, 'completed', False):
-                            all_prev_completed = False
-                            break
-                    accessible = all_prev_completed
+                    # Check if previous lecture is completed
+                    prev_lecture = section_lectures[i-1]
+                    prev_progress = user_progress_map.get(prev_lecture.id)
+                    accessible = prev_progress and prev_progress.completed
             else:
                 accessible = False
 
             up = user_progress_map.get(lecture.id)
-            completed = bool(up and getattr(up, 'completed', False))
+            completed = bool(up and up.completed)
+            progress_percentage = up.progress_percentage if up else 0
 
             lectures.append({
                 'id': lecture.id,
                 'title': lecture.title,
                 'duration': lecture.duration,
-                'video_url': lecture.video.url if getattr(lecture, 'video', None) else '',
+                'video_url': lecture.video.url if lecture.video else '',
                 'is_preview': lecture.is_preview,
                 'accessible': accessible,
                 'completed': completed,
+                'progress_percentage': progress_percentage,
                 'order': lecture.order,
             })
 
@@ -278,6 +314,8 @@ def course_details(request, course_id):
     context = {
         'course': course,
         'total_lectures': total_lectures,
+        'completed_lectures': completed_lectures,
+        'course_progress': course_progress,
         'is_enrolled': is_enrolled,
         'user_is_authenticated': request.user.is_authenticated,
         'curriculum': curriculum,
@@ -289,138 +327,91 @@ def course_details(request, course_id):
 
 
 @require_POST
-@login_required
 def update_lecture_progress(request, lecture_id):
+    """Update lecture progress"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'})
+    
+    lecture = get_object_or_404(Lecture, id=lecture_id)
+    
     try:
-        lecture = Lecture.objects.get(id=lecture_id)
-    except Lecture.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Lecture not found'}, status=404)
-
-    # parse ints safely
-    try:
-        watched_duration = int(request.POST.get('watched_duration', 0))
-    except Exception:
-        watched_duration = 0
-    try:
-        total_duration = int(request.POST.get('total_duration', 0))
-    except Exception:
-        total_duration = 0
-
-    up, created = UserProgress.objects.get_or_create(
-        user=request.user,
-        lecture=lecture,
-        defaults={'course': lecture.section.course, 'watched_duration': watched_duration, 'total_duration': total_duration}
-    )
-
-    # Update numeric fields
-    if watched_duration > (up.watched_duration or 0):
-        up.watched_duration = watched_duration
-    if total_duration and (up.total_duration != total_duration):
-        up.total_duration = total_duration
-
-    # AUTO-COMPLETE: if user watched almost all of the video, mark as completed.
-    # This helps when 'ended' event doesn't fire (user closed tab, etc).
-    try:
-        if total_duration and watched_duration and (watched_duration >= int(total_duration * 0.9)):
-            up.completed = True
-            up.completed_at = up.completed_at or timezone.now()
-    except Exception:
-        # if total_duration is 0 or conversion fails, skip auto-complete
-        pass
-
-    up.save()
-    return JsonResponse({'success': True})
+        watched_duration = float(request.POST.get('watched_duration', 0))
+        total_duration = float(request.POST.get('total_duration', 0))
+        
+        with transaction.atomic():
+            progress, created = UserProgress.objects.get_or_create(
+                user=request.user,
+                lecture=lecture,
+                course=lecture.section.course,
+                defaults={
+                    'watched_duration': watched_duration,
+                    'total_duration': total_duration,
+                }
+            )
+            
+            if not created:
+                progress.watched_duration = max(progress.watched_duration, watched_duration)
+                progress.total_duration = total_duration
+                progress.save()
+        
+        return JsonResponse({'success': True})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @require_POST
-@login_required
 def mark_lecture_completed(request, lecture_id):
+    """Mark lecture as completed"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'})
+    
+    lecture = get_object_or_404(Lecture, id=lecture_id)
+    
     try:
-        lecture = Lecture.objects.get(id=lecture_id)
-    except Lecture.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Lecture not found'}, status=404)
+        with transaction.atomic():
+            progress, created = UserProgress.objects.get_or_create(
+                user=request.user,
+                lecture=lecture,
+                course=lecture.section.course
+            )
+            
+            progress.completed = True
+            progress.watched_duration = progress.total_duration or lecture.duration or 0
+            progress.progress_percentage = 100
+            progress.completed_at = timezone.now()
+            progress.save()
+        
+        # Get next lecture
+        next_lecture = lecture.get_next_lecture()
+        next_lecture_id = next_lecture.id if next_lecture else None
+        
+        return JsonResponse({
+            'success': True,
+            'next_lecture_id': next_lecture_id
+        })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
-    course = lecture.section.course
-    is_enrolled = Enrollment.objects.filter(
-        user=request.user,
-        bundle=course.bundle,
-        payment_status__in=['completed', 'free'],
-        is_active=True
-    ).exists()
 
-    access_allowed = False
-    if lecture.is_preview:
-        access_allowed = True
-    elif is_enrolled:
-        section_lectures = list(lecture.section.lectures.all().order_by('order'))
-        current_index = None
-        for i, l in enumerate(section_lectures):
-            if l.id == lecture.id:
-                current_index = i
-                break
-        if current_index == 0:
-            access_allowed = True
-        elif current_index is not None and current_index > 0:
-            prev_lecture = section_lectures[current_index - 1]
-            prev_up = UserProgress.objects.filter(user=request.user, lecture=prev_lecture, completed=True).first()
-            if prev_up:
-                access_allowed = True
-
-    if not access_allowed:
-        return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
-
-    up, created = UserProgress.objects.get_or_create(
-        user=request.user,
-        lecture=lecture,
-        defaults={'course': lecture.section.course}
-    )
-
-    up.completed = True
-    up.completed_at = up.completed_at or timezone.now()
-    try:
-        watched = int(request.POST.get('watched_duration', up.watched_duration or 0))
-    except Exception:
-        watched = up.watched_duration or 0
-    try:
-        total = int(request.POST.get('total_duration', up.total_duration or 0))
-    except Exception:
-        total = up.total_duration or 0
-
-    if watched:
-        up.watched_duration = max(up.watched_duration or 0, watched)
-    if total:
-        up.total_duration = total
-
-    up.save()
-
-    # Find next lecture (in same section). If none, try the next section's first lecture.
-    next_lecture_id = None
-    section_lectures = list(lecture.section.lectures.all().order_by('order'))
-    current_index = None
-    for i, l in enumerate(section_lectures):
-        if l.id == lecture.id:
-            current_index = i
-            break
-    if current_index is not None and current_index + 1 < len(section_lectures):
-        next_lecture_id = section_lectures[current_index + 1].id
-    else:
-        # try next section's first lecture
-        sections = list(lecture.section.course.course_sections.all().order_by('order'))
-        for si, sec in enumerate(sections):
-            if sec.id == lecture.section.id:
-                # next section index is si+1
-                if si + 1 < len(sections):
-                    next_sec_first = sections[si+1].lectures.all().order_by('order').first()
-                    if next_sec_first:
-                        next_lecture_id = next_sec_first.id
-                break
-
-    return JsonResponse({'success': True, 'next_lecture_id': next_lecture_id})
-
+@login_required
 def bundle_courses(request, bundle_id):
     bundle = get_object_or_404(Bundle, id=bundle_id)
-    courses = bundle.courses.all()  # ✅ Fetch queryset
-    return render(request, 'bundle_courses.html', {'bundle': bundle, 'courses': courses})
+    courses = bundle.courses.all()
+
+    # ✅ Check enrollment for current user
+    is_enrolled = Enrollment.objects.filter(user=request.user, bundle=bundle).exists()
+
+    return render(
+        request,
+        'bundle_courses.html',
+        {
+            'bundle': bundle,
+            'courses': courses,
+            'is_enrolled': is_enrolled,
+        }
+    )
 
 def logout_view(request):
     logout(request)

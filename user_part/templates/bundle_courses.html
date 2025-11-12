@@ -19,26 +19,29 @@
             {{ bundle.full_description|default:bundle.short_description|truncatewords:30 }}
         </p>
 
-        <div class="d-flex flex-column flex-md-row justify-content-center align-items-center gap-3 mt-4">
-            {% if bundle.is_free %}
-                <span class="badge bg-success fs-6">Free Bundle</span>
-                <a href="/user/enroll/{{ bundle.id}}/" class="btn btn-success btn-lg px-4">Enroll Now - Free</a>
-            {% elif bundle.discount > 0 %}
-                <div class="d-flex align-items-center gap-3">
-                    <h5 class="mb-0">
-                        <span class="text-decoration-line-through text-muted">₹{{ bundle.price }}</span>
-                        <span class="text-primary fw-bold">₹{{ bundle.get_discounted_price|floatformat:2 }}</span>
-                        <span class="badge bg-warning text-dark ms-2">{{ bundle.discount }}% Off</span>
-                    </h5>
-                    <a href="/user/enroll/{{ bundle.id}}/" class="btn btn-primary btn-lg px-4">Enroll Now</a>
-                </div>
-            {% else %}
-                <div class="d-flex align-items-center gap-3">
-                    <h5 class="text-primary fw-bold mb-0">₹{{ bundle.price|floatformat:2 }}</h5>
-                    <a href="/user/enroll/{{ bundle.id}}/" class="btn btn-primary btn-lg px-4">Enroll Now</a>
-                </div>
-            {% endif %}
+      <div class="d-flex flex-column flex-md-row justify-content-center align-items-center gap-3 mt-4">
+    {% if is_enrolled %}
+        <button class="btn btn-secondary btn-lg px-4" disabled>Enrolled</button>
+    {% elif bundle.is_free %}
+        <span class="badge bg-success fs-6">Free Bundle</span>
+        <a href="/user/enroll/{{ bundle.id }}/" class="btn btn-success btn-lg px-4">Enroll Now - Free</a>
+    {% elif bundle.discount > 0 %}
+        <div class="d-flex align-items-center gap-3">
+            <h5 class="mb-0">
+                <span class="text-decoration-line-through text-muted">₹{{ bundle.price }}</span>
+                <span class="text-primary fw-bold">₹{{ bundle.get_discounted_price|floatformat:2 }}</span>
+                <span class="badge bg-warning text-dark ms-2">{{ bundle.discount }}% Off</span>
+            </h5>
+            <a href="/user/enroll/{{ bundle.id }}/" class="btn btn-primary btn-lg px-4">Enroll Now</a>
         </div>
+    {% else %}
+        <div class="d-flex align-items-center gap-3">
+            <h5 class="text-primary fw-bold mb-0">₹{{ bundle.price|floatformat:2 }}</h5>
+            <a href="/user/enroll/{{ bundle.id }}/" class="btn btn-primary btn-lg px-4">Enroll Now</a>
+        </div>
+    {% endif %}
+</div>
+
     </div>
 </div>
 

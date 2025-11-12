@@ -1,5 +1,7 @@
 {% extends 'admin_base.html' %}
 {% block content %}
+{% load duration_filters %}
+
 <div class="page-heading d-flex justify-content-between align-items-center mb-4">
     <div>
         <nav aria-label="breadcrumb">
@@ -26,7 +28,9 @@
 <!-- Course Info Card -->
 <div class="card mb-4 border-0 shadow-sm">
     <div class="card-header bg-primary text-white py-3">
-        <h5 class="mb-0 text-white"><i class="bi bi-info-circle me-2"></i>Course Information</h5>
+        <h5 class="mb-0 text-white"><i class="bi bi-info-circle me-2"></i>Course Information
+        <span>(Duration: {{ course.calculated_total_duration_display }})</span>
+        </h5>
     </div>
 
     <div class="row g-0">
@@ -159,7 +163,9 @@
     {% for section in course.course_sections.all %}
     <div class="card mb-3 shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h6 class="mb-0">{{ section.title }}</h6>
+            <h6 class="mb-0">{{ section.title }}
+                <small class="text-muted ms-2">({{ section.calculated_total_duration_display }})</small>
+            </h6>
             <div>
                 <button type="button" class="btn btn-sm btn-warning me-2"
     onclick="openEditSectionModal('{{ section.id }}', '{{ section.title|escapejs }}', '{{ section.order }}')">
@@ -184,10 +190,7 @@
                         <label for="lecture_order_{{ section.id }}" class="form-label">Order</label>
                         <input type="number" class="form-control" id="lecture_order_{{ section.id }}" name="order" value="{{ section.lectures.count|add:1 }}" min="0">
                     </div>
-                    <div class="col-md-3">
-                        <label for="lecture_duration_{{ section.id }}" class="form-label">Duration</label>
-                        <input type="text" class="form-control" id="lecture_duration_{{ section.id }}" name="duration" placeholder="e.g. 05:05 or 10min">
-                    </div>
+                    
                     <div class="col-md-3">
                         <label for="lecture_video_{{ section.id }}" class="form-label">Video</label>
                         <input type="file" class="form-control" id="lecture_video_{{ section.id }}" name="video" accept="video/*">
@@ -281,10 +284,7 @@
               <label for="edit_lecture_order" class="form-label">Order</label>
               <input type="number" class="form-control" id="edit_lecture_order" name="order" min="0">
             </div>
-            <div class="col-md-3">
-              <label for="edit_lecture_duration" class="form-label">Duration</label>
-              <input type="text" class="form-control" id="edit_lecture_duration" name="duration">
-            </div>
+           
             <div class="col-md-6">
               <label for="edit_lecture_video" class="form-label">Video</label>
               <input type="file" class="form-control" id="edit_lecture_video" name="video">
@@ -321,7 +321,6 @@ function openEditLectureModal(lectureId, title, order, duration, isPreview) {
     form.action = `/edit_lecture/${lectureId}/`;  // Set the form action dynamically
     document.getElementById('edit_lecture_title').value = title;
     document.getElementById('edit_lecture_order').value = order;
-    document.getElementById('edit_lecture_duration').value = duration;
     document.getElementById('edit_is_preview').checked = isPreview;
     new bootstrap.Modal(document.getElementById('editLectureModal')).show();
 }

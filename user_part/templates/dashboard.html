@@ -1,5 +1,111 @@
 {% extends 'user_base.html' %}
 {% block content %}
+{% load math_filters %}
+{% load duration_filters %}
+
+{% if request.user.is_authenticated %}
+<!-- Leaderboard Section -->
+<div class="container-fluid py-4">
+    <div class="container">
+        <div class="row">
+            <!-- Top Users Leaderboard -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-trophy-fill me-2"></i>
+                            Top 5 Learners
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if top_users %}
+                            <div class="list-group list-group-flush">
+                                {% for user in top_users %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-warning text-dark me-3">#{{ forloop.counter }}</span>
+                                            <div>
+                                                <h6 class="mb-0">{{ user.full_name|default:user.email }}</h6>
+                                                <small class="text-muted">
+                                                    {{ user.total_watched_duration|default:0|duration_format }} watched
+                                                </small>
+                                            </div>
+                                        </div>
+                                        {% if forloop.first %}
+                                            <i class="bi bi-trophy text-warning fs-5"></i>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted text-center mb-0">No learning activity yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current User Stats -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-person-badge me-2"></i>
+                            Your Learning Stats
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if current_user_rank %}
+                            <div class="text-center mb-3">
+                                <h4 class="text-primary">Rank #{{ current_user_rank }}</h4>
+                                <p class="text-muted">Out of {{ top_users.count }} active learners</p>
+                            </div>
+                            
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <h5 class="text-success">{{ current_user_stats.total_watched_duration|default:0|duration_format }}</h5>
+                                    <small class="text-muted">Total Watched</small>
+                                </div>
+                                <div class="col-6">
+                                    <h5 class="text-success">{{ current_user_stats.completed_lectures|default:0 }}</h5>
+                                    <small class="text-muted">Lectures Completed</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Progress bar for watch time -->
+                            {% if top_users.first.total_watched_duration %}
+                                {% with top_watch_time=top_users.first.total_watched_duration %}
+                                {% with user_watch_time=current_user_stats.total_watched_duration|default:0 %}
+                                <div class="mt-3">
+                                    <small class="text-muted">Progress towards #1 spot</small>
+                                    <div class="progress mt-1" style="height: 8px;">
+                                        <div class="progress-bar bg-success" 
+                                             role="progressbar" 
+                                             style="width: {{ user_watch_time|div:top_watch_time|mul:100|floatformat:0 }}%"
+                                             aria-valuenow="{{ user_watch_time|div:top_watch_time|mul:100|floatformat:0 }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">
+                                        {{ user_watch_time|div:top_watch_time|mul:100|floatformat:0 }}% of top learner
+                                    </small>
+                                </div>
+                                {% endwith %}
+                                {% endwith %}
+                            {% endif %}
+                            
+                        {% else %}
+                            <p class="text-muted text-center mb-0">
+                                Start watching courses to appear on the leaderboard!
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Service Start -->
 <div class="container-fluid service pt-6 pb-6">
@@ -50,7 +156,6 @@
         </div>
     </div>
 </div>
-
 <!-- Service End -->
 
 {% endblock %}

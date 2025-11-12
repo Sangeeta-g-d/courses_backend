@@ -3,7 +3,7 @@ from . import views
 
 urlpatterns = [
     path('', views.home, name='home'),
-    path('login/',views.user_login,name='user_login'),
+    path('login/',views.user_login,name='login'),
     path('register/',views.register,name='register'),
     path('user_details/', views.user_details, name='user_details'),
     path('course_details/<int:course_id>/', views.course_details, name='course_details'),
@@ -28,7 +28,7 @@ urlpatterns = [
     path('profile/change-password/', views.change_password, name='change_password'),
     path('profile/delete-account/', views.delete_account, name='delete_account'),
 
-
-    path('user/update-lecture-progress/<int:lecture_id>/', views.update_lecture_progress, name='update_lecture_progress'),
-    path('user/mark-lecture-completed/<int:lecture_id>/', views.mark_lecture_completed, name='mark_lecture_completed'),
+    # progress url
+    path('update-lecture-progress/<int:lecture_id>/', views.update_lecture_progress, name='update_lecture_progress'),
+    path('mark-lecture-completed/<int:lecture_id>/', views.mark_lecture_completed, name='mark_lecture_completed'),
 ]
