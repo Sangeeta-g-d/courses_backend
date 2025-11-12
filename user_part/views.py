@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect,reverse
-from admin_part.models import Course, CourseSection, Lecture,Bundle, Enrollment, PaymentTransaction,Wishlist,UserProgress
+from admin_part.models import Course, CourseSection, Lecture,Bundle, Enrollment, PaymentTransaction,Wishlist,UserProgress,LiveSession
 from auth_app.models import CustomUser, UserProfile
 from django.contrib.auth import login
 from django.contrib import messages
@@ -20,6 +20,14 @@ from django.contrib import messages
 from django.db.models import Count, Sum
 from django.views.decorators.http import require_POST
 from django.middleware.csrf import get_token
+import time
+import jwt
+from django.conf import settings
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 
 def home(request):
@@ -1250,3 +1258,73 @@ def delete_account(request):
         return redirect('home')
     
     return redirect('profile')
+
+
+
+
+def meetings(request):
+    # Get all upcoming and recent live sessions
+    live_sessions = LiveSession.objects.all().order_by('session_date', 'session_time')
+    
+    # Separate into upcoming and past sessions
+    now = timezone.now().date()
+    upcoming_sessions = live_sessions.filter(session_date__gte=now)
+    past_sessions = live_sessions.filter(session_date__lt=now)
+    
+    context = {
+        'upcoming_sessions': upcoming_sessions,
+        'past_sessions': past_sessions,
+    }
+    return render(request, 'meetings.html', context)
+
+
+def join_live_session_user(request, session_id):
+    """
+    Render the user meeting page. The template is standalone (doesn't extend base)
+    and auto-joins the Zoom Meeting SDK.
+    """
+    session = get_object_or_404(LiveSession, id=session_id)
+    return render(request, 'join_live_session_user.html', {'session': session})
+
+
+# Signature endpoint used by client JS to get a JWT signature for the Zoom SDK.
+@require_GET
+@csrf_exempt
+def zoom_sdk_signature(request):
+    meeting_number = request.GET.get("meetingNumber")
+    role = request.GET.get("role", "0")
+
+    if not meeting_number:
+        return HttpResponseBadRequest("meetingNumber parameter is required")
+
+    try:
+        role = int(role)
+    except ValueError:
+        return HttpResponseBadRequest("role must be 0 or 1")
+
+    sdk_key = settings.ZOOM_SDK_KEY
+    sdk_secret = settings.ZOOM_SDK_SECRET
+
+    if not sdk_key or not sdk_secret:
+        return JsonResponse({"error": "Zoom SDK credentials missing"}, status=500)
+
+    iat = int(time.time())
+    exp = iat + 60 * 60 * 2  # 2 hours
+
+    payload = {
+        "appKey": sdk_key,
+        "sdkKey": sdk_key,
+        "mn": str(meeting_number).strip(),
+        "role": role,
+        "iat": iat,
+        "exp": exp,
+        "tokenExp": exp
+    }
+
+    try:
+        signature = jwt.encode(payload, sdk_secret, algorithm="HS256")
+        if isinstance(signature, bytes):
+            signature = signature.decode("utf-8")
+        return JsonResponse({"signature": signature, "meetingNumber": meeting_number})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

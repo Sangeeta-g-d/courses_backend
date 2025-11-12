@@ -185,35 +185,30 @@ class Tag(models.Model):
 
 
 
-
-# session models
 class LiveSession(models.Model):
     title = models.CharField(max_length=255)
     agenda = models.TextField()
     thumbnail = models.ImageField(upload_to='live_sessions/thumbnails/')
-    meeting_number = models.CharField(max_length=20, blank=True, null=True)
+    meeting_number = models.CharField(max_length=50, blank=True, null=True)
+    Passcode = models.CharField(max_length=20, blank=True, null=True)
+    meeting_url = models.CharField(max_length=800, blank=True, null=True)
     session_date = models.DateField()
     session_time = models.TimeField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+    @property
     def is_active(self):
         """
-        Returns True if the current IST time is within ±5 minutes of the session start time.
+        Return True if current IST time is between 5 minutes before start
+        and 60 minutes after start.
         """
         ist = ZoneInfo("Asia/Kolkata")
-
-        # Combine session date & time into one datetime
         session_datetime = datetime.combine(self.session_date, self.session_time).replace(tzinfo=ist)
-
-        # Current time in IST
         now_ist = timezone.now().astimezone(ist)
-
-        # Check if current time is within 5 minutes before and after the session start
         return (session_datetime - timedelta(minutes=5)) <= now_ist <= (session_datetime + timedelta(minutes=60))
 
     def __str__(self):
         return self.title
-
 # ---------------------------------------------------------
 # PAYMENT MODELS
 # ---------------------------------------------------------

@@ -35,8 +35,9 @@ RAZORPAY_WEBHOOK_SECRET = 'your_webhook_secret_here'  # Optional but recommended
 
 import os
 
-ZOOM_SDK_KEY = os.environ.get('ZOOM_SDK_KEY', 'mLPJRxgeQtK7yP_ZFE6WQA')
-ZOOM_SDK_SECRET = os.environ.get('ZOOM_SDK_SECRET', 'qDYpevpUH6METiw7P1O0FjDpzCcDV5um')
+ZOOM_SDK_KEY = os.getenv("ZOOM_SDK_KEY")
+ZOOM_SDK_SECRET = os.getenv("ZOOM_SDK_SECRET")
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
