@@ -38,6 +38,13 @@ import os
 ZOOM_SDK_KEY = os.getenv("ZOOM_SDK_KEY")
 ZOOM_SDK_SECRET = os.getenv("ZOOM_SDK_SECRET")
 
+#sceen record
+# settings.py
+VDOCIPHER_API_SECRET = "Z859e201wL8LGo30LYud9Rp8p9LXuKye3uyiOWWpXZErnxyPHDY5v5SHIC830T1o"   # keep secret
+VDOCIPHER_API_BASE = "https://api.vdocipher.com/v2"       # check docs for exact base
+
+
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',

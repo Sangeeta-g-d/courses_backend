@@ -268,16 +268,19 @@ def course_detail(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     return render(request, 'course_detail.html', {'course': course})
 
-
 def add_section(request, course_id):
     if request.method == "POST":
         course = get_object_or_404(Course, id=course_id)
+
         title = request.POST.get('title', '').strip()
         order = request.POST.get('order', '').strip()
+       
+
         # Backend Validation
         if not title:
             messages.error(request, "Section title is required.")
             return redirect('course_detail', course_id=course.id)
+
         if not order:
             order = course.course_sections.count() + 1
         else:
@@ -286,29 +289,34 @@ def add_section(request, course_id):
             except ValueError:
                 messages.error(request, "Order must be a number.")
                 return redirect('course_detail', course_id=course.id)
-        # Create the section
+
         try:
             section = CourseSection.objects.create(
                 course=course,
                 title=title,
-                order=order
+                order=order,
+               
             )
             messages.success(request, f"Section '{section.title}' added successfully!")
         except Exception as e:
             messages.error(request, f"Error adding section: {str(e)}")
-    return redirect('course_detail', course_id=course_id)
 
+    return redirect('course_detail', course_id=course_id)
 
 def edit_section(request, section_id):
     section = get_object_or_404(CourseSection, id=section_id)
     course_id = section.course.id
+
     if request.method == "POST":
         title = request.POST.get('title', '').strip()
         order = request.POST.get('order', '').strip()
+        
+
         # Validation
         if not title:
             messages.error(request, "Section title is required.")
             return redirect('course_detail', course_id=course_id)
+
         if order:
             try:
                 order = int(order)
@@ -316,14 +324,16 @@ def edit_section(request, section_id):
             except ValueError:
                 messages.error(request, "Order must be a number.")
                 return redirect('course_detail', course_id=course_id)
+
         section.title = title
+
         try:
             section.save()
             messages.success(request, f"Section '{section.title}' updated successfully!")
         except Exception as e:
             messages.error(request, f"Error updating section: {str(e)}")
-    return redirect('course_detail', course_id=course_id)
 
+    return redirect('course_detail', course_id=course_id)
 
 def delete_section(request, section_id):
     section = get_object_or_404(CourseSection, id=section_id)
@@ -345,6 +355,7 @@ def add_lecture(request, section_id):
         order = request.POST.get("order") or 0
         video = request.FILES.get("video")
         resource = request.FILES.get("resource")
+        thumbnail = request.FILES.get('thumbnail')  # <-- NEW
 
         if not title:
             messages.error(request, "Lecture title is required.")
@@ -356,6 +367,7 @@ def add_lecture(request, section_id):
                 order=order,
                 is_preview=is_preview,
                 resource=resource,
+                thumbnail=thumbnail
                 
             )
 
@@ -392,48 +404,95 @@ def add_lecture(request, section_id):
 
 def edit_lecture(request, lecture_id):
     lecture = get_object_or_404(Lecture, id=lecture_id)
+
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
         is_preview = request.POST.get("is_preview") == "on"
-        order = request.POST.get("order") or 0
+        order_raw = request.POST.get("order", "").strip()
         video = request.FILES.get("video")
         resource = request.FILES.get("resource")
+        remove_thumbnail = request.POST.get('remove_thumbnail')  # checkbox value if checked ('1' or 'on')
+        new_thumbnail = request.FILES.get('thumbnail')  # uploaded file (if any)
+
+        # Basic validation
         if not title:
             messages.error(request, "Lecture title is required.")
             return redirect('course_detail', course_id=lecture.section.course.id)
+
+        # Validate and set order
+        if order_raw != "":
+            try:
+                order = int(order_raw)
+            except ValueError:
+                messages.error(request, "Order must be a number.")
+                return redirect('course_detail', course_id=lecture.section.course.id)
+        else:
+            order = lecture.order or 0
+
         try:
             lecture.title = title
             lecture.is_preview = is_preview
             lecture.order = order
 
-            # ✅ If new video uploaded, handle conversion and duration calculation
+            # ---------- Handle video upload (existing logic) ----------
             if video:
                 # Save original temporarily
-                temp_path = os.path.join(settings.MEDIA_ROOT, "temp_videos", video.name)
-                os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+                temp_dir = os.path.join(settings.MEDIA_ROOT, "temp_videos")
+                os.makedirs(temp_dir, exist_ok=True)
+                temp_path = os.path.join(temp_dir, video.name)
 
                 with open(temp_path, "wb+") as dest:
                     for chunk in video.chunks():
                         dest.write(chunk)
 
-                # Convert to HLS (same as add_lecture)
+                # Convert to HLS (function you already have)
                 hls_output_dir = os.path.join(settings.MEDIA_ROOT, "lectures", f"lecture_{lecture.id}")
                 hls_rel_path = convert_to_hls(temp_path, hls_output_dir)
 
-                # Auto calculate video duration
+                # Auto calculate video duration (function you already have)
                 duration = get_video_duration(temp_path)
 
-                # Update lecture fields
+                # Update lecture fields (ensure these assignments match your storage usage)
                 lecture.video = hls_rel_path
                 lecture.duration = duration
 
                 # Cleanup temp video
-                os.remove(temp_path)
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
 
-            # ✅ Update resource if provided
+            # ---------- Handle resource upload ----------
             if resource:
+                # Optionally delete old resource file to avoid orphan files
+                if lecture.resource:
+                    try:
+                        lecture.resource.delete(save=False)
+                    except Exception:
+                        pass
                 lecture.resource = resource
 
+            # ---------- Handle thumbnail removal ----------
+            if remove_thumbnail:
+                # Checkbox may send '1' or 'on' or similar — treat any truthy value as checked
+                if lecture.thumbnail:
+                    try:
+                        lecture.thumbnail.delete(save=False)
+                    except Exception:
+                        pass
+                    lecture.thumbnail = None
+
+            # ---------- Handle new thumbnail upload (replace existing) ----------
+            if new_thumbnail:
+                # delete old thumbnail first to avoid orphan
+                if lecture.thumbnail:
+                    try:
+                        lecture.thumbnail.delete(save=False)
+                    except Exception:
+                        pass
+                lecture.thumbnail = new_thumbnail
+
+            # Save lecture
             lecture.save()
             messages.success(request, f"Lecture '{lecture.title}' updated successfully!")
 
@@ -441,10 +500,9 @@ def edit_lecture(request, lecture_id):
             messages.error(request, f"Error updating lecture: {str(e)}")
 
         return redirect('course_detail', course_id=lecture.section.course.id)
-    
-    # GET request → Render edit form
-    return render(request, 'edit_lecture.html', {'lecture': lecture})
 
+    # GET → render an edit page (if used)
+    return render(request, 'edit_lecture.html', {'lecture': lecture})
 
 def delete_lecture(request, lecture_id):
     lecture = get_object_or_404(Lecture, id=lecture_id)
@@ -631,3 +689,9 @@ def zoom_sdk_signature(request):
         return JsonResponse({"signature": signature, "meetingNumber": meeting_number})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+
+def contact_list(request):
+    contacts = ContactMessage.objects.all().order_by('-created_at')
+    return render(request, 'contact_list.html', {'contacts': contacts})

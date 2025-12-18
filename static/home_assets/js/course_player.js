@@ -90,6 +90,63 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Add this function to course_player.js
+    function updateResourceDisplay(resourceUrl, resourceName) {
+        const resourceSection = document.getElementById('resource-section');
+        const resourceList = document.getElementById('resource-list');
+
+        // Normalize & guard
+        if (!resourceUrl) {
+            resourceSection.classList.add('d-none');
+            resourceList.innerHTML = '';
+            return;
+        }
+
+        // resourceUrl is expected to be URL-encoded (from template). Decode it.
+        try {
+            resourceUrl = decodeURIComponent(resourceUrl);
+        } catch (e) {
+            // If decode fails, leave as-is
+        }
+
+        // Try to decode resourceName if needed (it was escaped for JS in template)
+        try {
+            resourceName = resourceName || '';
+        } catch (e) {
+            resourceName = resourceName || '';
+        }
+
+        // Derive filename fallback
+        let fileName = '';
+        if (resourceName && resourceName.trim() !== '') {
+            // resourceName could be a path - take last segment
+            fileName = resourceName.split('/').pop();
+        } else {
+            // derive from URL
+            const parts = resourceUrl.split('/');
+            fileName = parts[parts.length - 1] || 'resource.pdf';
+        }
+
+        resourceSection.classList.remove('d-none');
+        resourceList.innerHTML = `
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-file-pdf text-danger me-2 fs-5"></i>
+                    <div>
+                        <p class="mb-0 fw-semibold">${fileName}</p>
+                        
+                    </div>
+                </div>
+                <a href="${resourceUrl}" 
+                   class="btn btn-sm btn-outline-primary" 
+                   target="_blank" 
+                   download="${fileName}">
+                    <i class="fas fa-download me-1"></i> Download
+                </a>
+            </div>
+        `;
+    }
+
     function attachLectureClick(li) {
         if (!li || li._clickAttached) return;
         li._clickAttached = true;
@@ -102,6 +159,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const videoUrl = li.getAttribute('data-video-url');
             const lectureTitle = li.getAttribute('data-lecture-title');
+            const resourceUrl = li.getAttribute('data-resource-url');
+            const resourceName = li.getAttribute('data-resource-name');
             const isPreview = li.getAttribute('data-is-preview') === 'true';
             const isEnrolled = li.getAttribute('data-is-enrolled') === 'true';
             const isAuthenticated = li.getAttribute('data-is-authenticated') === 'true';
@@ -129,6 +188,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 videoTitle.textContent = lectureTitle;
                 videoDescription.textContent = isPreview ? ('Preview Video - ' + lectureTitle) : lectureTitle;
                 videoSectionTitle.textContent = 'Now Playing: ' + lectureTitle;
+
+                // Update resource display for this specific lecture
+                updateResourceDisplay(resourceUrl, resourceName);
 
                 videoPlayer.load();
                 
@@ -173,6 +235,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const el = findLectureElement(initialLectureId);
                 if (el && el.getAttribute('data-is-accessible') === 'true') {
                     const url = el.getAttribute('data-video-url');
+                    const resourceUrl = el.getAttribute('data-resource-url');
+                    const resourceName = el.getAttribute('data-resource-name');
+                    
                     if (url) {
                         videoPlayer.innerHTML = '';
                         const source = document.createElement('source');
@@ -191,9 +256,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         videoDescription.textContent = lectureTitle;
                         videoSectionTitle.textContent = 'Continue: ' + lectureTitle;
                         
+                        // Update resource display for initial lecture
+                        updateResourceDisplay(resourceUrl, resourceName);
+                        
                         console.log('Initialized player from server: lecture', currentLectureId);
                     }
                 }
+            }
+            
+            // Also check for initial resource from server
+            if (window.initialResourceUrl && window.initialResourceUrl.trim() !== '') {
+                updateResourceDisplay(window.initialResourceUrl, window.initialResourceName);
             }
         } catch (e) {
             console.warn('Initialization from server failed', e);

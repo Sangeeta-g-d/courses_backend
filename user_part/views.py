@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect,reverse
-from admin_part.models import Course, CourseSection, Lecture,Bundle, Enrollment, PaymentTransaction,Wishlist,UserProgress,LiveSession
+from admin_part.models import Course, CourseSection, Lecture,Bundle, Enrollment, PaymentTransaction,Wishlist,UserProgress,LiveSession, ContactMessage
 from auth_app.models import CustomUser, UserProfile
 from django.contrib.auth import login
 from django.contrib import messages
@@ -30,6 +30,17 @@ from django.http import JsonResponse, HttpResponseBadRequest
 from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+
+from django.shortcuts import get_object_or_404, render
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.middleware.csrf import get_token
+from django.utils import timezone
+from django.utils import timezone
+from django.db import transaction
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 
 
 def home(request):
@@ -75,6 +86,78 @@ def home(request):
         'bundles': bundles
     })
 
+def courses(request):
+    data= Course.objects.all()
+    return render(request,'courses.html',{'data':data})
+
+
+def bundle_list(request):
+    bundles= Bundle.objects.all()
+    return render(request,'bundle_list.html',{'bundles':bundles})
+
+
+def about_us(request):
+    return render(request, 'about_us.html')
+
+def contact_us(request):
+    """
+    GET -> render form
+    POST -> validate manually, save to DB, send optional admin email, redirect.
+    """
+    if request.method == "POST":
+        # Grab and sanitize inputs
+        name = (request.POST.get("name") or "").strip()
+        email = (request.POST.get("email") or "").strip()
+        phone = (request.POST.get("phone") or "").strip()
+        message_text = (request.POST.get("message") or "").strip()
+
+        # Basic validation
+        errors = []
+        if not name:
+            errors.append("Please enter your name.")
+        if not email:
+            errors.append("Please enter your email.")
+        else:
+            try:
+                validate_email(email)
+            except ValidationError:
+                errors.append("Please enter a valid email address.")
+        if not message_text:
+            errors.append("Please enter a message.")
+
+        # Optional: simple phone validation (digits/+, -, spaces) if provided
+        if phone:
+            normalized_phone = phone.replace(" ", "").replace("-", "")
+            if not all(c.isdigit() or c == "+" for c in normalized_phone):
+                errors.append("Please enter a valid phone number or leave it blank.")
+
+        if errors:
+            for err in errors:
+                messages.error(request, err)
+            # Keep previously entered values in context to refill the form
+            context = {
+                "prefill": {"name": name, "email": email, "phone": phone, "message": message_text}
+            }
+            return render(request, "contact_us.html", context)
+
+        # Save to DB
+        try:
+            contact = ContactMessage.objects.create(
+                name=name,
+                email=email,
+                phone=phone or None,
+                message=message_text
+            )
+        except Exception as e:
+            messages.error(request, "An error occurred while saving your message. Please try again.")
+            return render(request, "contact_us.html", {"prefill": {"name": name, "email": email, "phone": phone, "message": message_text}})
+
+        messages.success(request, "Thanks — your message has been received. We'll get back to you soon.")
+        return redirect("contact_us")   # change to your URL name if different
+
+    # GET
+    return render(request, "contact_us.html")
+
 def user_login(request):
     if request.method == "POST":
         email = request.POST.get("email")
@@ -107,9 +190,12 @@ def user_login(request):
         else:
             messages.error(request, "Invalid email or password.")
 
-        return redirect("user_login")
+        return redirect("login")
 
     return render(request, "user_login.html")
+
+def forgot_password(request):
+    return render(request, 'forgot_password.html')
 
 
 def register(request):
@@ -167,6 +253,7 @@ def user_details(request):
 
     return render(request, "user_details.html", {"user": user})
 
+@login_required
 def dashboard(request):
     bundles = Bundle.objects.filter(is_published=True).order_by('-created_at')
     
@@ -195,21 +282,6 @@ def dashboard(request):
     }
     
     return render(request, 'dashboard.html', context)
-
-# import your models
-# from .models import Course, Lecture, Enrollment, UserProgress
-# views.py — overwrite your existing functions with this improved version
-from django.shortcuts import get_object_or_404, render
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import login_required
-from django.middleware.csrf import get_token
-from django.utils import timezone
-
-# models: Course, Lecture, Enrollment, UserProgress
-
-from django.utils import timezone
-from django.db import transaction
 
 def course_details(request, course_id):
     course = get_object_or_404(
@@ -252,6 +324,9 @@ def course_details(request, course_id):
     # Initial lecture (continue where left off) - FIXED LOGIC
     initial_lecture_id = None
     initial_video_url = ''
+    initial_lecture_resource_url = ''
+    initial_lecture_resource_name = ''
+    
     if request.user.is_authenticated:
         # Find last watched lecture that's not completed
         last_progress = UserProgress.objects.filter(
@@ -264,6 +339,9 @@ def course_details(request, course_id):
             initial_lecture_id = last_progress.lecture.id
             if last_progress.lecture.video:
                 initial_video_url = last_progress.lecture.video.url
+            if last_progress.lecture.resource:
+                initial_lecture_resource_url = last_progress.lecture.resource.url
+                initial_lecture_resource_name = last_progress.lecture.resource.name
         else:
             # No progress yet, start with first lecture
             first_lecture = Lecture.objects.filter(
@@ -273,6 +351,9 @@ def course_details(request, course_id):
                 initial_lecture_id = first_lecture.id
                 if first_lecture.video:
                     initial_video_url = first_lecture.video.url
+                if first_lecture.resource:
+                    initial_lecture_resource_url = first_lecture.resource.url
+                    initial_lecture_resource_name = first_lecture.resource.name
 
     # Build curriculum with access flags - FIXED ACCESS LOGIC
     curriculum = []
@@ -300,11 +381,27 @@ def course_details(request, course_id):
             completed = bool(up and up.completed)
             progress_percentage = up.progress_percentage if up else 0
 
+            # Get thumbnail URL
+            thumbnail_url = ''
+            if hasattr(lecture, 'thumbnail') and lecture.thumbnail:
+                thumbnail_url = lecture.thumbnail.url
+            elif hasattr(section, 'thumbnail') and section.thumbnail:
+                thumbnail_url = section.thumbnail.url
+            elif hasattr(course, 'thumbnail') and course.thumbnail:
+                thumbnail_url = course.thumbnail.url
+
+            # Get resource info
+            resource_url = lecture.resource.url if lecture.resource else ''
+            resource_name = lecture.resource.name if lecture.resource else ''
+
             lectures.append({
                 'id': lecture.id,
                 'title': lecture.title,
                 'duration': lecture.duration,
                 'video_url': lecture.video.url if lecture.video else '',
+                'thumbnail_url': thumbnail_url,
+                'resource_url': resource_url,
+                'resource_name': resource_name,
                 'is_preview': lecture.is_preview,
                 'accessible': accessible,
                 'completed': completed,
@@ -331,9 +428,10 @@ def course_details(request, course_id):
         'csrf_token': get_token(request),
         'initial_lecture_id': initial_lecture_id,
         'initial_video_url': initial_video_url,
+        'initial_lecture_resource_url': initial_lecture_resource_url,
+        'initial_lecture_resource_name': initial_lecture_resource_name,
     }
     return render(request, 'course_details.html', context)
-
 
 @require_POST
 def update_lecture_progress(request, lecture_id):
@@ -404,13 +502,20 @@ def mark_lecture_completed(request, lecture_id):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@login_required
+
 def bundle_courses(request, bundle_id):
     bundle = get_object_or_404(Bundle, id=bundle_id)
     courses = bundle.courses.all()
 
-    # ✅ Check enrollment for current user
-    is_enrolled = Enrollment.objects.filter(user=request.user, bundle=bundle).exists()
+    # Default for not logged-in users
+    is_enrolled = False
+
+    # ✅ Check enrollment only if user is authenticated
+    if request.user.is_authenticated:
+        is_enrolled = Enrollment.objects.filter(
+            user=request.user,
+            bundle=bundle
+        ).exists()
 
     return render(
         request,
@@ -435,7 +540,7 @@ client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_S
 # Set up logger
 logger = logging.getLogger(__name__)
 
-
+@login_required
 def enroll(request, bundle_id):
     bundle = get_object_or_404(Bundle, id=bundle_id)
     courses = bundle.courses.all()
@@ -453,7 +558,7 @@ def enroll(request, bundle_id):
         'is_enrolled': is_enrolled
     })
 
-
+@login_required
 def create_payment_order(request, bundle_id):
     if request.method == 'POST':
         try:
@@ -542,6 +647,7 @@ def create_payment_order(request, bundle_id):
 
 from django.views.decorators.csrf import csrf_exempt
 
+@login_required
 @csrf_exempt
 @csrf_exempt
 def verify_payment(request):
@@ -647,6 +753,7 @@ def verify_payment(request):
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
+@login_required
 def free_enroll(request, bundle_id):
     if request.method == 'POST':
         try:
@@ -673,7 +780,7 @@ def free_enroll(request, bundle_id):
     
     return redirect('enroll', bundle_id=bundle_id)
 
-
+@login_required
 def payment_success(request):
     # Clear any session data
     if 'last_attempted_bundle' in request.session:
@@ -689,7 +796,7 @@ def payment_success(request):
         'enrollment': latest_enrollment
     })
 
-
+@login_required
 def payment_failed(request):
     # Get bundle_id from various possible sources
     bundle_id = (

@@ -1,0 +1,66 @@
+{% extends 'user_base.html' %}
+{% block content %}
+
+
+
+
+ 
+  <div class="container-fluid team pt-5 pb-6" id="bundles">
+    <div class="container">
+        <div class="text-center mx-auto wow fadeInUp" data-wow-delay="0.1s" style="max-width: 600px;">
+            <h1 class="display-6 text-uppercase mb-5">Explore Our Professional Course Bundles</h1>
+        </div>
+        <div class="row g-4">
+            {% for bundle in bundles %}
+            <div class="col-lg-4 col-md-6 wow fadeInUp" data-wow-delay="0.3s">
+                <div class="team-item h-100 d-flex flex-column">
+                    <div class="position-relative overflow-hidden flex-grow-0">
+                        {% if bundle.thumbnail %}
+                            <img class="img-fluid w-100 bundle-image" src="{{ bundle.thumbnail.url }}" alt="{{ bundle.name }}" style="height: 250px; object-fit: cover;">
+                        {% else %}
+                            <img class="img-fluid w-100 bundle-image" src="/static/home_assets/img/service-placeholder.jpg" alt="{{ bundle.name }}" style="height: 250px; object-fit: cover;">
+                        {% endif %}
+                        <div class="team-social">
+                            <a class="btn btn-dark btn-sm px-3" href="/user/bundle/{{ bundle.id }}/">
+                                View Courses
+                            </a>
+                        </div>
+                    </div>
+                    <div class="text-center p-4 d-flex flex-column flex-grow-1">
+                        <h5 class="mb-1">{{ bundle.name }}</h5>
+                        <span class="mb-2">
+                            {% if bundle.is_free %}
+                                <strong class="text-success">Free</strong>
+                            {% else %}
+                                <strong>₹{{ bundle.get_discounted_price }}</strong>
+                                {% if bundle.discount > 0 %}
+                                    <small class="text-muted text-decoration-line-through ms-1">₹{{ bundle.price }}</small>
+                                    <span class="badge bg-danger ms-1">{{ bundle.discount }}% OFF</span>
+                                {% endif %}
+                            {% endif %}
+                        </span>
+                        <p class="mt-2 small bundle-description flex-grow-1">{{ bundle.short_description|truncatewords:20 }}</p>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center">
+                <p>No bundles available at the moment.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+    <!-- Bundle End -->
+
+
+
+
+
+
+
+
+
+  
+
+{% endblock %}
