@@ -1,0 +1,514 @@
+{% extends 'user_base.html' %}
+{% block content %}
+
+<!-- Improved About Page Template with consistent section gaps -->
+
+<style>
+/* ===== About Page — refined visuals ===== */
+.about-hero {
+    background: linear-gradient(135deg, #2b2b63 0%, #2f2340 60%, #24152a 100%);
+    position: relative;
+    overflow: hidden;
+    padding: 6rem 0;
+    min-height: 420px;
+    display: flex;
+    align-items: center;
+}
+
+.about-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(9,10,24,0.25) 0%, rgba(9,10,24,0.45) 100%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    padding-right: 2rem;
+}
+
+/* Responsive headline */
+.about-hero h1 {
+    font-size: clamp(2rem, 4.2vw, 3.6rem);
+    line-height: 1.02;
+    letter-spacing: -0.5px;
+    margin-bottom: 1rem;
+    color: #ffffff;
+}
+
+/* hero paragraph */
+.about-hero .lead {
+    font-size: clamp(1rem, 1.6vw, 1.25rem);
+    max-width: 640px;
+    margin-bottom: 1.5rem;
+    opacity: 0.95;
+    color: rgba(255,255,255,0.95);
+}
+
+/* hero right image */
+.about-hero img {
+    position: relative;
+    z-index: 2;
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(5,6,20,0.45);
+}
+
+/* Stats section overlapping effect (reduced overlap to avoid collisions) */
+section.stats-wrapper {
+    position: relative;
+    margin-top: -40px; /* smaller overlap */
+    margin-bottom: 36px; /* extra gap after stats */
+    z-index: 3;
+}
+
+/* stat cards appearance */
+.stat-card {
+    transition: transform 0.32s cubic-bezier(.2,.9,.2,1), box-shadow 0.32s;
+    border: none;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #ffffff;
+    padding: 2.2rem 1.6rem;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 30px rgba(16,24,40,0.06);
+}
+
+/* stronger hover */
+.stat-card:hover {
+    transform: translateY(-12px);
+    box-shadow: 0 30px 60px rgba(9,10,25,0.12);
+}
+
+/* icon wrapper larger & centered */
+.icon-wrapper {
+    width: 86px;
+    height: 86px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    box-shadow: 0 6px 20px rgba(20,30,40,0.06);
+}
+
+/* translucent backgrounds for icons */
+.icon-wrapper.bg-primary { background: rgba(102,126,234,0.10); }
+.icon-wrapper.bg-success { background: rgba(16,185,129,0.08); }
+.icon-wrapper.bg-warning { background: rgba(255,193,7,0.08); }
+.icon-wrapper.bg-info { background: rgba(14,165,233,0.08); }
+
+/* numbers */
+.stat-card .display-5 {
+    font-size: 2.4rem;
+    line-height: 1;
+    margin-bottom: .25rem;
+    font-weight: 700;
+}
+
+/* label */
+.stat-card h6 {
+    font-size: .87rem;
+    letter-spacing: .06em;
+    margin: 0;
+    color: #7b8086;
+    text-transform: uppercase;
+}
+
+/* values-card adjustments */
+.values-card {
+    border-radius: 12px;
+    box-shadow: 0 14px 40px rgba(16,24,40,0.05);
+}
+
+/* team card tweaks */
+.team-card .team-img {
+    height: 220px;
+    object-fit: cover;
+    border-bottom: 0;
+}
+
+/* timeline styling */
+.timeline {
+    position: relative;
+    padding-left: 38px;
+}
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    background: linear-gradient(#667eea, #764ba2);
+    border-radius: 4px;
+}
+
+/* timeline dot */
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -26px;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border: 4px solid #667eea;
+    box-shadow: 0 6px 18px rgba(102,126,234,0.12);
+}
+
+/* testimonial card */
+.testimonial-card {
+    border-radius: 12px;
+    box-shadow: 0 12px 35px rgba(8,12,20,0.04);
+}
+
+/* CTA background lighten a touch */
+.cta-section {
+    position: relative;
+    overflow: hidden;
+    padding: 4.5rem 0;
+}
+.cta-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(3,20,37,0.12), rgba(2,16,26,0.18));
+    z-index: 0;
+}
+
+/* ===== GLOBAL SECTION SPACING =====
+   Ensure each section has consistent padding and small gap before the next one.
+*/
+section {
+    /* base vertical padding for sections */
+    padding-top: 3.5rem;
+    padding-bottom: 3.5rem;
+}
+
+/* Add a small gap when a section follows another section */
+section + section {
+    margin-top: 2.5rem; /* this creates the little gap you asked for */
+}
+
+/* If you have full-width hero where overlap is intentional, keep stats-wrapper special rules above.
+   Also provide a helper to reduce any unwanted extra spacing for back-to-back sections that are intentionally overlapping. */
+.no-gap + .no-gap {
+    margin-top: 0; /* optional class to cancel gap when you want sections flush */
+}
+
+/* responsive adjustments */
+@media (max-width: 991px) {
+    .about-hero { padding: 3.5rem 0; min-height: 360px; }
+    section.stats-wrapper { margin-top: -20px; margin-bottom: 28px; }
+    .stat-card { padding: 1.4rem; min-height: 160px; }
+    .icon-wrapper { width: 64px; height: 64px; }
+    .about-hero .lead { max-width: 100%; }
+
+    /* smaller gaps on mobile */
+    section { padding-top: 2rem; padding-bottom: 2rem; }
+    section + section { margin-top: 1.25rem; }
+}
+</style>
+
+<!-- Hero Section -->
+<section class="about-hero py-8">
+    <div class="container py-8">
+        <div class="row align-items-center">
+            <div class="col-lg-6 hero-content">
+                <h1 class="display-4 fw-bold mb-4 wow fadeInUp" data-wow-delay="0.1s">About SMTA Learning Platform</h1>
+                <p class="lead mb-4 wow fadeInUp" data-wow-delay="0.2s">
+                    Empowering millions of learners worldwide to achieve their goals through accessible, 
+                    high-quality education and cutting-edge technology.
+                </p>
+                <div class="d-flex flex-wrap gap-3 wow fadeInUp" data-wow-delay="0.3s">
+                    <a href="#mission" class="btn btn-light btn-lg px-4">
+                        <i class="bi bi-compass me-2"></i>Our Mission
+                    </a>
+                    <a href="#team" class="btn btn-outline-light btn-lg px-4">
+                        <i class="bi bi-people me-2"></i>Meet Our Team
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-lg-6 wow fadeInUp text-center" data-wow-delay="0.4s">
+                <img src="/static/home_assets/img/about-hero.png" alt="About SMTA" class="img-fluid rounded-3 shadow-lg">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section (wrapped for overlap) -->
+<section class="py-6 stats-wrapper">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="stat-card text-center p-4 shadow-sm wow fadeInUp" data-wow-delay="0.1s">
+                    <div class="icon-wrapper bg-primary">
+                        <i class="bi bi-people-fill text-primary fs-2"></i>
+                    </div>
+                    <!-- store original formatted number in data-target so counting preserves commas -->
+                    <h2 class="display-5 fw-bold text-primary mb-2" data-toggle="counter-up" data-target="100000">100,000</h2>
+                    <h6 class="text-uppercase text-muted">Active Learners</h6>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center p-4 shadow-sm wow fadeInUp" data-wow-delay="0.2s">
+                    <div class="icon-wrapper bg-success">
+                        <i class="bi bi-book text-success fs-2"></i>
+                    </div>
+                    <h2 class="display-5 fw-bold text-success mb-2" data-toggle="counter-up" data-target="500">500+</h2>
+                    <h6 class="text-uppercase text-muted">Courses</h6>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center p-4 shadow-sm wow fadeInUp" data-wow-delay="0.3s">
+                    <div class="icon-wrapper bg-warning">
+                        <i class="bi bi-award text-warning fs-2"></i>
+                    </div>
+                    <h2 class="display-5 fw-bold text-warning mb-2" data-toggle="counter-up" data-target="200">200+</h2>
+                    <h6 class="text-uppercase text-muted">Expert Instructors</h6>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center p-4 shadow-sm wow fadeInUp" data-wow-delay="0.4s">
+                    <div class="icon-wrapper bg-info">
+                        <i class="bi bi-globe text-info fs-2"></i>
+                    </div>
+                    <h2 class="display-5 fw-bold text-info mb-2" data-toggle="counter-up" data-target="120">120+</h2>
+                    <h6 class="text-uppercase text-muted">Countries Reached</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Our Story Section -->
+<section class="py-6 bg-light">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 wow fadeInLeft" data-wow-delay="0.1s">
+                <img src="/static/home_assets/img/about-story.png" alt="Our Story" class="img-fluid rounded-3 shadow-lg">
+            </div>
+            <div class="col-lg-6 wow fadeInRight" data-wow-delay="0.2s">
+                <h2 class="text-uppercase text-primary mb-4">Our Story</h2>
+                <h3 class="display-6 fw-bold mb-4">From Vision to Reality</h3>
+                <p class="lead mb-4">
+                    SMTA was founded in 2020 with a simple yet powerful vision: to make quality education 
+                    accessible to everyone, everywhere. What started as a small team of passionate educators 
+                    has grown into a global learning platform transforming lives through knowledge.
+                </p>
+                <p class="mb-4">
+                    We believe that education should not be a privilege but a fundamental right. Our platform 
+                    bridges the gap between learners and world-class instructors, creating a vibrant community 
+                    where anyone can learn, grow, and achieve their dreams.
+                </p>
+             
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Mission & Vision Section -->
+<section id="mission" class="py-6">
+    <div class="container">
+        <div class="text-center mb-6 wow fadeInUp" data-wow-delay="0.1s">
+            <h2 class="text-uppercase text-primary mb-3">Our Purpose</h2>
+            <h1 class="display-5 fw-bold mb-4">Mission & Vision</h1>
+            <p class="lead">Driving educational transformation through innovation and accessibility</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.2s">
+                <div class="values-card bg-primary text-white p-5 h-100">
+                    <div class="mb-4">
+                        <i class="bi bi-bullseye display-4"></i>
+                    </div>
+                    <h3 class="mb-4">Our Mission</h3>
+                    <p class="mb-4">
+                        To empower individuals worldwide with the skills and knowledge they need to succeed 
+                        in the modern world, by providing accessible, affordable, and high-quality education 
+                        through innovative technology.
+                    </p>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="bi bi-check-circle me-2"></i>Make learning accessible to everyone</li>
+                        <li class="mb-2"><i class="bi bi-check-circle me-2"></i>Provide industry-relevant skills</li>
+                        <li class="mb-2"><i class="bi bi-check-circle me-2"></i>Foster lifelong learning habits</li>
+                        <li class="mb-0"><i class="bi bi-check-circle me-2"></i>Bridge the global skills gap</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.3s">
+                <div class="values-card bg-dark text-white p-5 h-100">
+                    <div class="mb-4">
+                        <i class="bi bi-eye display-4"></i>
+                    </div>
+                    <h3 class="mb-4">Our Vision</h3>
+                    <p class="mb-4">
+                        To create a world where anyone, anywhere can transform their life through education, 
+                        building a global community of empowered learners who shape the future with their skills 
+                        and knowledge.
+                    </p>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="bi bi-stars me-2"></i>Become the world's leading learning platform</li>
+                        <li class="mb-2"><i class="bi bi-stars me-2"></i>Impact 10 million learners by 2025</li>
+                        <li class="mb-2"><i class="bi bi-stars me-2"></i>Pioneer AI-powered personalized learning</li>
+                        <li class="mb-0"><i class="bi bi-stars me-2"></i>Create opportunities for all</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+
+<!-- Team Section -->
+<section id="team" class="py-6">
+    <div class="container">
+        <div class="text-center mb-6 wow fadeInUp" data-wow-delay="0.1s">
+            <h2 class="text-uppercase text-primary mb-3">Meet Our Team</h2>
+            <h1 class="display-5 fw-bold mb-4">The Minds Behind SMTA</h1>
+            <p class="lead">Passionate educators, innovators, and leaders committed to your learning journey</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4 wow fadeInUp" data-wow-delay="0.2s">
+                <div class="team-card shadow">
+                    <img src="/static/home_assets/img/team-1.jpg" alt="CEO" class="img-fluid w-100 team-img">
+                    <div class="p-4">
+                        <h4 class="mb-1">Alex Johnson</h4>
+                        <p class="text-primary mb-3">Founder & CEO</p>
+                        <p class="text-muted mb-3">
+                            Education visionary with 15+ years experience in EdTech. Passionate about 
+                            democratizing access to quality education worldwide.
+                        </p>
+                        <div class="d-flex gap-2">
+                            <a href="#" class="btn btn-outline-primary btn-sm"><i class="bi bi-linkedin"></i></a>
+                            <a href="#" class="btn btn-outline-primary btn-sm"><i class="bi bi-twitter"></i></a>
+                            <a href="#" class="btn btn-outline-primary btn-sm"><i class="bi bi-envelope"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 wow fadeInUp" data-wow-delay="0.3s">
+                <div class="team-card shadow">
+                    <img src="/static/home_assets/img/team-2.jpg" alt="CTO" class="img-fluid w-100 team-img">
+                    <div class="p-4">
+                        <h4 class="mb-1">Sarah Chen</h4>
+                        <p class="text-primary mb-3">Chief Technology Officer</p>
+                        <p class="text-muted mb-3">
+                            AI and machine learning expert focused on creating personalized learning 
+                            experiences through innovative technology solutions.
+                        </p>
+                        <div class="d-flex gap-2">
+                            <a href="#" class="btn btn-outline-primary btn-sm"><i class="bi bi-linkedin"></i></a>
+                            <a href="#" class="btn btn-outline-primary btn-sm"><i class="bi bi-github"></i></a>
+                            <a href="#" class="btn btn-outline-primary btn-sm"><i class="bi bi-envelope"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 wow fadeInUp" data-wow-delay="0.4s">
+                <div class="team-card shadow">
+                    <img src="/static/home_assets/img/team-3.jpg" alt="Head of Education" class="img-fluid w-100 team-img">
+                    <div class="p-4">
+                        <h4 class="mb-1">Dr. Michael Rodriguez</h4>
+                        <p class="text-primary mb-3">Head of Education</p>
+                        <p class="text-muted mb-3">
+                            Former university professor dedicated to curriculum development and ensuring 
+                            academic excellence across all courses.
+                        </p>
+                        <div class="d-flex gap-2">
+                            <a href="#" class="btn btn-outline-primary btn-sm"><i class="bi bi-linkedin"></i></a>
+                            <a href="#" class="btn btn-outline-primary btn-sm"><i class="bi bi-globe"></i></a>
+                            <a href="#" class="btn btn-outline-primary btn-sm"><i class="bi bi-envelope"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+       
+    </div>
+</section>
+
+
+
+<!-- ===== JavaScript for Counter Animation & Smooth Scrolling ===== -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Counter that handles commas and + signs
+    function animateCounter(el, duration) {
+        const raw = el.getAttribute('data-target') || el.textContent.trim();
+        // strip plus sign and non-digits for numeric target
+        const cleaned = ('' + raw).replace(/[^\d\-]/g, '');
+        const numeric = parseInt(cleaned, 10) || 0;
+        const start = 0;
+        const end = numeric;
+        const startTime = performance.now();
+
+        function easeInOut(t) {
+            return t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t;
+        }
+
+        function tick(now) {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const eased = easeInOut(progress);
+            const val = Math.round(start + (end - start) * eased);
+            el.textContent = val.toLocaleString();
+            if (progress < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    }
+
+    // initialize counters (supports elements with data-target override)
+    document.querySelectorAll('[data-toggle="counter-up"]').forEach(function(node) {
+        // if data-target is not present, store the current text as data-target
+        if (!node.getAttribute('data-target')) {
+            node.setAttribute('data-target', node.textContent.trim());
+        }
+        // set content to 0 initially
+        node.textContent = '0';
+
+        // use IntersectionObserver so it animates when visible
+        const observer = new IntersectionObserver(function(entries, obs) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateCounter(node, 1600);
+                    obs.unobserve(node);
+                }
+            });
+        }, { threshold: 0.6 });
+        observer.observe(node);
+    });
+
+    // Smooth scrolling for anchors (safe)
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            const targetId = this.getAttribute('href');
+            if (!targetId || targetId === '#') return;
+            const targetElement = document.querySelector(targetId);
+            if (!targetElement) return;
+            e.preventDefault();
+            window.scrollTo({
+                top: targetElement.getBoundingClientRect().top + window.scrollY - 90,
+                behavior: 'smooth'
+            });
+        });
+    });
+});
+</script>
+
+{% endblock %}

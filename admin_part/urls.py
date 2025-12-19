@@ -37,6 +37,7 @@ urlpatterns = [
     path('bundle-enrollments/<int:bundle_id>/', views.bundle_enrollment_details, name='bundle_enrollment_details'),
     path('total_enrollments/', views.total_enrollments, name='total_enrollments'),
     path('bundle_candidates/<int:bundle_id>/', views.view_bundle_candidates, name='view_bundle_candidates'),
+    path('contact_list/', views.contact_list, name='contact_list'),
     
     
    

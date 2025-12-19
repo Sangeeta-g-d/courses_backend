@@ -80,6 +80,7 @@
                             Your browser does not support the video tag.
                         </video>
                     </div>
+                    
                     <div id="video-info" class="mt-3">
                         <h6 id="video-title" class="fw-bold mb-2">
                             {% if course.preview_video %}
@@ -90,7 +91,7 @@
                                 {% endif %}
                             {% endif %}
                         </h6>
-                        <p id="video-description" class="text-muted small mb-0">
+                        <p id="video-description" class="text-muted small mb-3">
                             {% if course.preview_video %}
                                 {% if not user_is_authenticated %}
                                     Please login to watch the course preview video.
@@ -99,6 +100,20 @@
                                 {% endif %}
                             {% endif %}
                         </p>
+                        
+                        <!-- Resource PDF Section -->
+                        <div id="resource-section" class="d-none">
+                            <div class="card border">
+                                <div class="card-body p-3">
+                                    <h6 class="fw-bold mb-2 d-flex align-items-center">
+                                       </i>Resources
+                                    </h6>
+                                    <div id="resource-list">
+                                        <!-- Resources will be loaded dynamically by JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -121,23 +136,22 @@
                                         data-bs-toggle="collapse" data-bs-target="#collapse{{ section.id }}" 
                                         aria-expanded="false" aria-controls="collapse{{ section.id }}">
                                     <div class="d-flex justify-content-between align-items-center w-100 me-3">
-                                       <!-- In your curriculum section, replace the complex with statement with: -->
-<div>
-    <span>{{ section.title }}</span>
-    {% if is_enrolled %}
-    {% with completed_count=section.lectures|length %}
-        {% for lecture in section.lectures %}
-            {% if not lecture.completed %}
-                {% with completed_count=completed_count|add:"-1" %}
-                {% endwith %}
-            {% endif %}
-        {% endfor %}
-        <small class="text-success ms-2">
-            ({{ completed_count }}/{{ section.lectures|length }})
-        </small>
-    {% endwith %}
-    {% endif %}
-</div>
+                                        <div>
+                                            <span>{{ section.title }}</span>
+                                            {% if is_enrolled %}
+                                            {% with completed_count=section.lectures|length %}
+                                                {% for lecture in section.lectures %}
+                                                    {% if not lecture.completed %}
+                                                        {% with completed_count=completed_count|add:"-1" %}
+                                                        {% endwith %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                                <small class="text-success ms-2">
+                                                    ({{ completed_count }}/{{ section.lectures|length }})
+                                                </small>
+                                            {% endwith %}
+                                            {% endif %}
+                                        </div>
                                         <small class="text-muted">
                                             {{ section.total_lectures }} lectures • {{ section.total_duration|duration_format }}
                                         </small>
@@ -153,13 +167,25 @@
                                             data-lecture-id="{{ lecture.id }}"
                                             data-video-url="{{ lecture.video_url }}"
                                             data-lecture-title="{{ lecture.title }}"
+                                            data-resource-url="{{ lecture.resource_url }}"
+                                            data-resource-name="{{ lecture.resource_name }}"
                                             data-is-preview="{{ lecture.is_preview|yesno:'true,false' }}"
                                             data-is-enrolled="{{ is_enrolled|yesno:'true,false' }}"
                                             data-is-authenticated="{{ user_is_authenticated|yesno:'true,false' }}"
                                             data-is-accessible="{{ lecture.accessible|yesno:'true,false' }}"
                                             data-is-completed="{{ lecture.completed|yesno:'true,false' }}">
                                             <div class="d-flex align-items-center flex-grow-1 me-3">
-                                                <i class="fas fa-play-circle text-muted me-3"></i>
+                                                <!-- Add thumbnail image here -->
+                                                <div class="position-relative me-3">
+                                                    <img src="{% if lecture.thumbnail_url %}{{ lecture.thumbnail_url }}{% else %}{% static 'home_assets/img/default-lecture.jpg' %}{% endif %}" 
+                                                         class="rounded" 
+                                                         width="80" 
+                                                         height="45" 
+                                                         alt="{{ lecture.title }} thumbnail"
+                                                         style="object-fit: cover;">
+                                                    <i class="fas fa-play-circle position-absolute text-white" 
+                                                       style="top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2rem;"></i>
+                                                </div>
                                                 <div class="flex-grow-1">
                                                     <span class="fw-medium d-block">{{ lecture.title }}</span>
                                                     {% if is_enrolled and lecture.progress_percentage > 0 and not lecture.completed %}
@@ -466,6 +492,8 @@
     window.courseProgress = {{ course_progress }};
     window.completedLectures = {{ completed_lectures }};
     window.totalLectures = {{ total_lectures }};
+    window.initialResourceUrl = "{{ initial_lecture_resource_url }}";
+    window.initialResourceName = "{{ initial_lecture_resource_name }}";
 </script>
 
 <!-- Include the external JavaScript file -->

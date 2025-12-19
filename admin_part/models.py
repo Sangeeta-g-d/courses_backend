@@ -122,6 +122,7 @@ class Course(models.Model):
 
 class CourseSection(models.Model):
     course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='course_sections')  # changed here
+    
     title = models.CharField(max_length=500)
     order = models.PositiveIntegerField(default=0)
     total_lectures = models.PositiveIntegerField(default=0)
@@ -173,6 +174,7 @@ class Lecture(models.Model):
     is_preview = models.BooleanField(default=False)
     resource = models.FileField(upload_to='lectures/resources/', blank=True, null=True)
     order = models.PositiveIntegerField(default=0)
+    thumbnail = models.ImageField(upload_to='section_thumbnails/', blank=True, null=True)
 
     class Meta:
         ordering = ['order']
@@ -500,3 +502,20 @@ class Refund(models.Model):
     def __str__(self):
         return f"Refund for {self.enrollment} - {self.refund_amount}"
     
+
+
+class ContactMessage(models.Model):
+    name = models.CharField(max_length=150)
+    email = models.EmailField()
+    phone = models.CharField(max_length=30, blank=True, null=True)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "Contact Message"
+        verbose_name_plural = "Contact Messages"
+
+    def __str__(self):
+        return f"{self.name} <{self.email}> - {self.created_at:%Y-%m-%d %H:%M}"

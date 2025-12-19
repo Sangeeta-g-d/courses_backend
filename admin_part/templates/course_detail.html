@@ -138,24 +138,30 @@
             <h5 class="mb-0">Add Section</h5>
         </div>
         <div class="card-body">
-            <form method="POST" action="{% url 'add_section' course.id %}">
-                {% csrf_token %}
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="section_title" class="form-label">Section Title</label>
-                        <input type="text" class="form-control" id="section_title" name="title" required>
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="section_order" class="form-label">Order</label>
-                        <input type="number" class="form-control" id="section_order" name="order" value="{{ course.course_sections.count|add:1 }}" min="0">
-                        <div class="invalid-feedback"></div>
-                    </div>
-                </div>
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-primary">Add Section</button>
-                </div>
-            </form>
+          <form method="POST" action="{% url 'add_section' course.id %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="row g-3">
+
+        <div class="col-md-6">
+            <label for="section_title" class="form-label">Section Title</label>
+            <input type="text" class="form-control" id="section_title" name="title" required>
+        </div>
+
+        <div class="col-md-6">
+            <label for="section_order" class="form-label">Order</label>
+            <input type="number" class="form-control" id="section_order" name="order"
+                   value="{{ course.course_sections.count|add:1 }}" min="0">
+        </div>
+
+       
+
+    </div>
+
+    <div class="mt-3">
+        <button type="submit" class="btn btn-primary">Add Section</button>
+    </div>
+</form>
+
         </div>
     </div>
 
@@ -195,10 +201,15 @@
                         <label for="lecture_video_{{ section.id }}" class="form-label">Video</label>
                         <input type="file" class="form-control" id="lecture_video_{{ section.id }}" name="video" accept="video/*">
                     </div>
-                    <div class="col-md-12 mt-2">
+                    <div class="col-md-6 mt-2">
                         <label for="lecture_resource_{{ section.id }}" class="form-label">Resource (Optional)</label>
-                        <input type="file" class="form-control" id="lecture_resource_{{ section.id }}" name="resource">
+                        <input type="file" class="form-control" id="lecture_resource_{{ section.id }}" name="resource"> 
                     </div>
+                     <div class="col-md-6">
+            <label for="thumbnail" class="form-label">Section Thumbnail</label>
+            <input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*">
+        </div>
+
                     <div class="col-12 mt-3">
                         <button type="submit" class="btn btn-success btn-sm">Add Lecture</button>
                     </div>
@@ -206,24 +217,104 @@
             </form>
 
             <!-- Lecture List -->
-            {% if section.lectures.all %}
-            <ul class="list-group list-group-flush mt-3">
-                {% for lecture in section.lectures.all %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ lecture.title }} ({{ lecture.duration }})
-                    <div>
-                        <button type="button" class="btn btn-sm btn-warning me-1"
-    onclick="openEditLectureModal({{ lecture.id }}, '{{ lecture.title|escapejs }}', {{ lecture.order }}, '{{ lecture.duration|default_if_none:'' }}', {{ lecture.is_preview|yesno:'true,false' }})">
-    <i class="bi bi-pencil-square"></i>
-</button>
-                        <a href="{% url 'delete_lecture' lecture.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
-                            <i class="bi bi-trash"></i>
+         {% if section.lectures.all %}
+<ul class="list-group list-group-flush mt-3">
+    {% for lecture in section.lectures.all %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+        <!-- Left: Thumbnail + small video preview -->
+        <div class="d-flex align-items-center flex-grow-1 me-3">
+            <div class="d-flex align-items-start me-3" style="gap:0.75rem;">
+                <!-- Thumbnail box -->
+                <div class="position-relative" style="width:80px; height:45px; flex:0 0 80px;">
+                    {% if lecture.thumbnail %}
+                        <img src="{{ lecture.thumbnail.url }}"
+                             class="rounded"
+                             alt="{{ lecture.title }} thumbnail"
+                             style="width:80px; height:45px; object-fit:cover;">
+                    {% elif section.thumbnail %}
+                        <img src="{{ section.thumbnail.url }}"
+                             class="rounded"
+                             alt="{{ lecture.title }} thumbnail"
+                             style="width:80px; height:45px; object-fit:cover;">
+                    {% else %}
+                        <div class="rounded bg-secondary d-flex align-items-center justify-content-center"
+                             style="width:80px; height:45px;">
+                            <i class="bi bi-play-circle text-white"></i>
+                        </div>
+                    {% endif %}
+                    <i class="bi bi-play-circle position-absolute text-white"
+                       style="top:50%; left:50%; transform:translate(-50%,-50%); font-size:1rem; opacity:0.95;"></i>
+                </div>
+
+                <!-- Small video preview (if available) -->
+                {% if lecture.video %}
+                <div style="width:120px; height:68px; flex:0 0 120px;">
+                    {# If it's an MP4 file show inline <video>. Otherwise show an open-link (HLS needs a player). #}
+                    {% if lecture.video.url|lower|slice:"-4:" == ".mp4" %}
+                        <video width="120" height="68" preload="metadata" controls style="object-fit:cover; border-radius:6px;">
+                            <source src="{{ lecture.video.url }}" type="video/mp4">
+                            Your browser does not support the preview.
+                        </video>
+                    {% else %}
+                        <a href="{{ lecture.video.url }}" target="_blank" class="d-inline-block text-truncate"
+                           style="max-width:120px; display:inline-flex; align-items:center; gap:.4rem;">
+                            <i class="bi bi-play-fill"></i>
+                            Open video
                         </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Middle: Title, duration, resource -->
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="fw-medium d-block">{{ lecture.title }}</span>
+                        <small class="text-muted">
+                            {{ lecture.duration|default:"0:00" }}
+                            {% if lecture.is_preview %}
+                                <span class="badge bg-warning text-dark ms-2">Preview</span>
+                            {% endif %}
+                        </small>
                     </div>
-                </li>
-                {% endfor %}
-            </ul>
-            {% endif %}
+                </div>
+
+                <!-- Resource + extra links -->
+                <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+                    {% if lecture.resource %}
+                        <a href="{{ lecture.resource.url }}" target="_blank"
+                           class="btn btn-sm btn-outline-secondary"
+                           download="{{ lecture.resource.name|default_if_none:'resource' }}">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i>
+                            {{ lecture.resource.name|default_if_none:'Resource'|slice:"-30:" }}
+                        </a>
+                    {% endif %}
+
+                    {% if lecture.video %}
+                        <a href="{{ lecture.video.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-play-fill me-1"></i>Open Video
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: action buttons -->
+        <div>
+            <button type="button" class="btn btn-sm btn-warning me-1"
+                onclick="openEditLectureModal({{ lecture.id }}, '{{ lecture.title|escapejs }}', {{ lecture.order }}, '{{ lecture.duration|default_if_none:'' }}', {{ lecture.is_preview|yesno:'true,false' }})">
+                <i class="bi bi-pencil-square"></i>
+            </button>
+            <a href="{% url 'delete_lecture' lecture.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">
+                <i class="bi bi-trash"></i>
+            </a>
+        </div>
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
 
         </div>
     </div>
@@ -239,22 +330,30 @@
 <div class="modal fade" id="editSectionModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
-      <form id="editSectionForm" method="POST">
+      <!-- form action will be set dynamically via JavaScript -->
+      <form id="editSectionForm" method="POST" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="modal-header">
           <h5 class="modal-title">Edit Section</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
+
         <div class="modal-body">
           <div class="mb-3">
             <label for="edit_section_title" class="form-label">Section Title</label>
             <input type="text" class="form-control" id="edit_section_title" name="title" required>
           </div>
+
           <div class="mb-3">
             <label for="edit_section_order" class="form-label">Order</label>
             <input type="number" class="form-control" id="edit_section_order" name="order" min="0">
           </div>
+
+          <hr>
+
+          
         </div>
+
         <div class="modal-footer">
           <button type="submit" class="btn btn-primary">Save Changes</button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -293,6 +392,26 @@
               <label for="edit_lecture_resource" class="form-label">Resource</label>
               <input type="file" class="form-control" id="edit_lecture_resource" name="resource">
             </div>
+
+            <!-- Current thumbnail preview -->
+          <div id="currentThumbnailWrapper" class="mb-3" style="display:none;">
+            <label class="form-label">Current Thumbnail</label>
+            <div>
+              <img id="currentThumbnailImg" src="" alt="Thumbnail" class="img-fluid rounded" style="max-height:160px;">
+            </div>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" value="1" id="remove_thumbnail" name="remove_thumbnail">
+              <label class="form-check-label" for="remove_thumbnail">Remove existing thumbnail</label>
+            </div>
+          </div>
+
+          <!-- Upload new thumbnail -->
+          <div class="mb-3">
+            <label for="thumbnail" class="form-label">Upload New Thumbnail (optional)</label>
+            <input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*">
+            <div class="form-text">If you upload a file it will replace the existing thumbnail.</div>
+          </div>
+
             <div class="col-md-12 form-check mt-2">
               <input type="checkbox" class="form-check-input" id="edit_is_preview" name="is_preview">
               <label class="form-check-label" for="edit_is_preview">Preview Lecture</label>
