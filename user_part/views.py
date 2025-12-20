@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect,reverse
-from admin_part.models import Course, CourseSection, Lecture,Bundle, Enrollment, PaymentTransaction,Wishlist,UserProgress,LiveSession, ContactMessage
+from admin_part.models import Course, CourseSection, Lecture,Bundle, Enrollment, PaymentTransaction,Wishlist,UserProgress,LiveSession, ContactMessage ,Review
 from auth_app.models import CustomUser, UserProfile
 from django.contrib.auth import login
 from django.contrib import messages
@@ -41,6 +41,7 @@ from django.utils import timezone
 from django.db import transaction
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.db.models import Avg
 
 
 def home(request):
@@ -87,8 +88,10 @@ def home(request):
     })
 
 def courses(request):
-    data= Course.objects.all()
-    return render(request,'courses.html',{'data':data})
+    data = Course.objects.annotate(
+        avg_rating=Avg('reviews__rating')
+    )
+    return render(request, 'courses.html', {'data': data})
 
 
 def bundle_list(request):
@@ -283,6 +286,7 @@ def dashboard(request):
     
     return render(request, 'dashboard.html', context)
 
+
 def course_details(request, course_id):
     course = get_object_or_404(
         Course.objects.prefetch_related('course_sections__lectures'),
@@ -303,38 +307,35 @@ def course_details(request, course_id):
             is_active=True
         ).exists()
 
-        # Get user progress for this course
         progress_entries = UserProgress.objects.filter(
             user=request.user,
             course=course
         ).select_related('lecture')
-        
+
         user_progress_map = {up.lecture_id: up for up in progress_entries}
-        
-        # Calculate course progress
+
         total_lectures = course.calculated_total_lectures
         completed_lectures = progress_entries.filter(completed=True).count()
+
         if total_lectures > 0:
             course_progress = int((completed_lectures / total_lectures) * 100)
 
-    # Total lectures count
     if not total_lectures:
         total_lectures = sum(section.lectures.count() for section in course.course_sections.all())
 
-    # Initial lecture (continue where left off) - FIXED LOGIC
+    # ---------- INITIAL LECTURE ----------
     initial_lecture_id = None
     initial_video_url = ''
     initial_lecture_resource_url = ''
     initial_lecture_resource_name = ''
-    
+
     if request.user.is_authenticated:
-        # Find last watched lecture that's not completed
         last_progress = UserProgress.objects.filter(
             user=request.user,
             course=course,
             completed=False
         ).order_by('-last_watched').first()
-        
+
         if last_progress:
             initial_lecture_id = last_progress.lecture.id
             if last_progress.lecture.video:
@@ -343,10 +344,10 @@ def course_details(request, course_id):
                 initial_lecture_resource_url = last_progress.lecture.resource.url
                 initial_lecture_resource_name = last_progress.lecture.resource.name
         else:
-            # No progress yet, start with first lecture
             first_lecture = Lecture.objects.filter(
                 section__course=course
             ).order_by('section__order', 'order').first()
+
             if first_lecture:
                 initial_lecture_id = first_lecture.id
                 if first_lecture.video:
@@ -355,25 +356,20 @@ def course_details(request, course_id):
                     initial_lecture_resource_url = first_lecture.resource.url
                     initial_lecture_resource_name = first_lecture.resource.name
 
-    # Build curriculum with access flags - FIXED ACCESS LOGIC
+    # ---------- CURRICULUM ----------
     curriculum = []
     for section in course.course_sections.all().order_by('order'):
         section_lectures = list(section.lectures.all().order_by('order'))
         lectures = []
-        
+
         for i, lecture in enumerate(section_lectures):
             if lecture.is_preview:
                 accessible = True
             elif is_enrolled:
-                # SIMPLIFIED ACCESS LOGIC: First lecture is always accessible
-                # Subsequent lectures require the immediate previous one to be completed
-                if i == 0:  # First lecture in section
-                    accessible = True
-                else:
-                    # Check if previous lecture is completed
-                    prev_lecture = section_lectures[i-1]
-                    prev_progress = user_progress_map.get(prev_lecture.id)
-                    accessible = prev_progress and prev_progress.completed
+                accessible = True if i == 0 else (
+                    user_progress_map.get(section_lectures[i - 1].id)
+                    and user_progress_map[section_lectures[i - 1].id].completed
+                )
             else:
                 accessible = False
 
@@ -381,18 +377,11 @@ def course_details(request, course_id):
             completed = bool(up and up.completed)
             progress_percentage = up.progress_percentage if up else 0
 
-            # Get thumbnail URL
-            thumbnail_url = ''
-            if hasattr(lecture, 'thumbnail') and lecture.thumbnail:
-                thumbnail_url = lecture.thumbnail.url
-            elif hasattr(section, 'thumbnail') and section.thumbnail:
-                thumbnail_url = section.thumbnail.url
-            elif hasattr(course, 'thumbnail') and course.thumbnail:
-                thumbnail_url = course.thumbnail.url
-
-            # Get resource info
-            resource_url = lecture.resource.url if lecture.resource else ''
-            resource_name = lecture.resource.name if lecture.resource else ''
+            thumbnail_url = (
+                lecture.thumbnail.url if lecture.thumbnail else
+                section.thumbnail.url if hasattr(section, 'thumbnail') and section.thumbnail else
+                course.thumbnail.url if course.thumbnail else ''
+            )
 
             lectures.append({
                 'id': lecture.id,
@@ -400,13 +389,12 @@ def course_details(request, course_id):
                 'duration': lecture.duration,
                 'video_url': lecture.video.url if lecture.video else '',
                 'thumbnail_url': thumbnail_url,
-                'resource_url': resource_url,
-                'resource_name': resource_name,
+                'resource_url': lecture.resource.url if lecture.resource else '',
+                'resource_name': lecture.resource.name if lecture.resource else '',
                 'is_preview': lecture.is_preview,
                 'accessible': accessible,
                 'completed': completed,
                 'progress_percentage': progress_percentage,
-                'order': lecture.order,
             })
 
         curriculum.append({
@@ -417,6 +405,15 @@ def course_details(request, course_id):
             'total_lectures': len(section_lectures),
         })
 
+    # ---------- REVIEWS ----------
+    reviews = Review.objects.filter(course=course).select_related('student')
+    average_rating = reviews.aggregate(avg=Avg('rating'))['avg']
+    average_rating = round(average_rating, 1) if average_rating else 0
+
+    user_review = None
+    if request.user.is_authenticated:
+        user_review = reviews.filter(student=request.user).first()
+
     context = {
         'course': course,
         'total_lectures': total_lectures,
@@ -425,13 +422,37 @@ def course_details(request, course_id):
         'is_enrolled': is_enrolled,
         'user_is_authenticated': request.user.is_authenticated,
         'curriculum': curriculum,
-        'csrf_token': get_token(request),
         'initial_lecture_id': initial_lecture_id,
         'initial_video_url': initial_video_url,
         'initial_lecture_resource_url': initial_lecture_resource_url,
         'initial_lecture_resource_name': initial_lecture_resource_name,
+        'reviews': reviews,
+        'average_rating': average_rating,
+        'user_review': user_review,
+        'csrf_token': get_token(request),
     }
+
     return render(request, 'course_details.html', context)
+
+
+@login_required
+def submit_review(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+
+    if request.method == 'POST':
+        rating = int(request.POST.get('rating'))
+        comment = request.POST.get('comment', '')
+
+        Review.objects.update_or_create(
+            student=request.user,
+            course=course,
+            defaults={
+                'rating': rating,
+                'comment': comment
+            }
+        )
+
+    return redirect('course_details', course_id=course.id)
 
 @require_POST
 def update_lecture_progress(request, lecture_id):
