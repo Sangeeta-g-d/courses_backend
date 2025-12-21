@@ -43,4 +43,6 @@ urlpatterns = [
     path('meetings/', views.meetings, name='meetings'),
     path('join_live_session_user/<int:session_id>/', views.join_live_session_user, name='join_live_session_user'),
     path('zoom_signature/', views.zoom_sdk_signature, name='zoom_sdk_signature'),
+
+    path('course/<int:course_id>/review/', views.submit_review, name='submit_review'),
 ]

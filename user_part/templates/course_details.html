@@ -4,6 +4,21 @@
 
 {% block content %}
 {% csrf_token %}
+
+<style>
+.star-rating i {
+    font-size: 1.4rem;
+    color: #ccc;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    margin-right: 6px;
+}
+
+.star-rating i.filled {
+    color: #f4c150;
+}
+</style>
+
 <!-- Course Header with Progress Bar -->
 <div class="container-fluid py-5 bg-light position-relative">
     <!-- Course Progress Bar -->
@@ -277,35 +292,126 @@
                         </div>
 
                         <!-- Reviews Tab -->
-                        <div class="tab-pane fade" id="reviews" role="tabpanel" aria-labelledby="reviews-tab">
-                            <h5 class="fw-bold text-dark mb-4">Student Reviews</h5>
-                            
-                            <div class="border rounded-3 p-3 mb-3">
-                                <div class="d-flex align-items-center mb-2">
-                                    <img src="{% static 'home_assets/img/user1.jpg' %}" class="rounded-circle me-3" width="45" height="45" alt="">
-                                    <div>
-                                        <h6 class="mb-0 fw-semibold">Ravi Kumar</h6>
-                                        <small class="text-muted">⭐⭐⭐⭐☆ (4/5)</small>
-                                    </div>
-                                </div>
-                                <p class="text-muted mb-0">
-                                    Great course! Explained in a simple and easy-to-follow way.
-                                </p>
-                            </div>
+                     <!-- Reviews Tab -->
+<div class="tab-pane fade" id="reviews" role="tabpanel" aria-labelledby="reviews-tab">
 
-                            <div class="border rounded-3 p-3 mb-3">
-                                <div class="d-flex align-items-center mb-2">
-                                    <img src="{% static 'home_assets/img/user2.jpg' %}" class="rounded-circle me-3" width="45" height="45" alt="">
-                                    <div>
-                                        <h6 class="mb-0 fw-semibold">Priya Sharma</h6>
-                                        <small class="text-muted">⭐⭐⭐⭐⭐ (5/5)</small>
-                                    </div>
-                                </div>
-                                <p class="text-muted mb-0">
-                                    Loved the course content and practical examples. Highly recommend!
-                                </p>
-                            </div>
-                        </div>
+    <!-- Heading -->
+    <div class="d-flex align-items-center mb-3">
+        <h5 class="fw-bold mb-0">Student Reviews</h5>
+        <span class="badge bg-warning text-dark ms-3">
+            ⭐ {{ average_rating }}/5
+        </span>
+    </div>
+
+    <!-- Existing Reviews -->
+    {% if reviews %}
+        {% for review in reviews %}
+        <div class="border rounded-3 p-3 mb-3">
+            <div class="d-flex align-items-center mb-2">
+                <div class="rounded-circle bg-warning text-white d-flex align-items-center justify-content-center me-3"
+                     style="width:45px;height:45px;">
+                    {{ review.student.username|first|upper }}
+                </div>
+                <div>
+                    <h6 class="mb-0 fw-semibold">{{ review.student.username }}</h6>
+                    <small class="text-muted">
+                        {% for i in "12345"|slice:":review.rating" %}⭐{% endfor %}
+                        ({{ review.rating }}/5)
+                    </small>
+                </div>
+            </div>
+            <p class="text-muted mb-0">{{ review.comment }}</p>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p class="text-muted">No reviews yet.</p>
+    {% endif %}
+
+    <!-- Review Form -->
+    {% if is_enrolled and user_is_authenticated %}
+    <hr>
+
+    <h6 class="fw-bold">
+        {% if user_review %}Update Your Review{% else %}Add a Review{% endif %}
+    </h6>
+
+    <form method="post" action="{% url 'submit_review' course.id %}">
+        {% csrf_token %}
+
+        <!-- ⭐ STAR RATING -->
+        <div class="mb-3">
+            <label class="form-label">Rating</label>
+
+            <div class="star-rating" data-current="{{ user_review.rating|default:0 }}">
+                <i class="fa-regular fa-star" data-value="1"></i>
+                <i class="fa-regular fa-star" data-value="2"></i>
+                <i class="fa-regular fa-star" data-value="3"></i>
+                <i class="fa-regular fa-star" data-value="4"></i>
+                <i class="fa-regular fa-star" data-value="5"></i>
+            </div>
+
+            <input type="hidden" name="rating" id="rating-input"
+                   value="{{ user_review.rating|default:0 }}" required>
+        </div>
+
+        <!-- Comment -->
+        <div class="mb-3">
+            <label class="form-label">Comment</label>
+            <textarea name="comment" class="form-control" rows="3"
+                      placeholder="Write your feedback...">{{ user_review.comment }}</textarea>
+        </div>
+
+        <button class="btn btn-warning fw-semibold">
+            {% if user_review %}Update Review{% else %}Submit Review{% endif %}
+        </button>
+    </form>
+    {% endif %}
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const starContainer = document.querySelector('.star-rating');
+    if (!starContainer) return;
+
+    const stars = starContainer.querySelectorAll('i');
+    const ratingInput = document.getElementById('rating-input');
+
+    function fillStars(rating) {
+        stars.forEach(star => {
+            const value = parseInt(star.dataset.value);
+            if (value <= rating) {
+                star.classList.add('filled', 'fa-solid');
+                star.classList.remove('fa-regular');
+            } else {
+                star.classList.remove('filled', 'fa-solid');
+                star.classList.add('fa-regular');
+            }
+        });
+    }
+
+    // Initial load (update review case)
+    fillStars(ratingInput.value);
+
+    stars.forEach(star => {
+
+        star.addEventListener('mouseover', function () {
+            fillStars(this.dataset.value);
+        });
+
+        star.addEventListener('mouseout', function () {
+            fillStars(ratingInput.value);
+        });
+
+        star.addEventListener('click', function () {
+            ratingInput.value = this.dataset.value;
+            fillStars(this.dataset.value);
+        });
+
+    });
+});
+</script>
+
+
                     </div>
                 </div>
             </div>
