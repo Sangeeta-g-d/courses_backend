@@ -22,8 +22,11 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('admin_part.urls')),   # 👈 Add this line
-    path('auth/', include('auth_app.urls')),  # if you have an auth app
     path('user/', include('user_part.urls')),  # 👈 Add this line
+
+
+    # API URLs
+    path('api/auth/', include('auth_app.urls')),
 ]
 
 if settings.DEBUG:

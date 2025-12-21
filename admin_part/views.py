@@ -558,11 +558,15 @@ def bundle_enrollment_details(request, bundle_id):
     return render(request, 'bundle_enrollment_details.html', context)
 
 def total_enrollments(request):
-    # Get all enrollments for admin view with optimized query
-    all_enrollments = Enrollment.objects.all().select_related('bundle', 'user').prefetch_related('bundle__courses', 'bundle__enrollments')
+    # Get bundles with enrollment count (grouped by bundle)
+    from django.db.models import Count
+    
+    bundles_with_enrollments = Bundle.objects.annotate(
+        enrollment_count=Count('enrollments')
+    ).prefetch_related('courses', 'enrollments').filter(enrollment_count__gt=0).order_by('-enrollment_count')
     
     context = {
-        'enrollments': all_enrollments
+        'bundles': bundles_with_enrollments
     }
     return render(request, 'total_enrollments.html', context)
 
