@@ -27,6 +27,7 @@ urlpatterns = [
 
     # API URLs
     path('api/auth/', include('auth_app.urls')),
+    path('api/courses/', include('course_api.urls')),
 ]
 
 if settings.DEBUG:

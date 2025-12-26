@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt.token_blacklist',
+    'course_api',
 ]
 AUTH_USER_MODEL = 'auth_app.CustomUser'
 MIDDLEWARE = [
