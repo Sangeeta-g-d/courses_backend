@@ -12,7 +12,7 @@ class APIResponseMixin:
     ):
         return Response(
             {
-                "status": True,
+                "status": status_code,
                 "message": message,
                 "response": data if data is not None else []
             },
@@ -34,7 +34,7 @@ class APIResponseMixin:
 
         return Response(
             {
-                "status": False,
+                "status": status_code,
                 "message": message,
                 "response": []
             },

@@ -50,9 +50,9 @@ def home(request):
     courses = []
     for c in qs[:4]:
         try:
-            thumb = c.thumbnail.url if c.thumbnail else '/static/home_assets/img/service-placeholder.jpg'
+            thumb = c.thumbnail.url if c.thumbnail else '/static/home_assets/img/coming.webp'
         except ValueError:
-            thumb = '/static/home_assets/img/service-placeholder.jpg'
+            thumb = '/static/home_assets/img/coming.webp'
 
         try:
             detail_url = reverse('course_detail', args=[c.id])
