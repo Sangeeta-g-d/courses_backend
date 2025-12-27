@@ -72,7 +72,7 @@ def home(request):
     while len(courses) < 4:
         courses.append({
             'title': 'Coming Soon',
-            'thumbnail_url': '/static/home_assets/img/service-placeholder.jpg',
+            'thumbnail_url': '/static/home_assets/img/coming.webp',
             'level': '—',
             'language': '—',
             'short_description': 'New courses are added frequently — check back soon!',
