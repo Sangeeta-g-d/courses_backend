@@ -6,6 +6,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from .models import Lecture
 from .utils import convert_to_hls, get_video_duration
+import shutil
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=30, retry_kwargs={"max_retries": 3})
 def process_lecture_video(self, lecture_id):
@@ -24,7 +25,7 @@ def process_lecture_video(self, lecture_id):
             
             # Read from storage (works with S3 or local)
             with lecture.original_video.open('rb') as source:
-                temp_video.write(source.read())
+                shutil.copyfileobj(source, temp_video, length=1024*1024)
 
         # ✅ Create temp directory for HLS output
         temp_output_dir = tempfile.mkdtemp()

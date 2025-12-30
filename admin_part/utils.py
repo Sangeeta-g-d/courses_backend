@@ -102,22 +102,18 @@ def convert_to_hls(input_path, output_dir):
         FFMPEG_PATH,
         "-y",
         "-i", input_path,
-        "-codec:v", "libx264",
-        "-codec:a", "aac",
-        "-preset", "medium",
-        "-crf", "23",
-        "-sc_threshold", "0",
-        "-g", "48",
-        "-keyint_min", "48",
-        "-hls_time", "10",
+        "-c:v", "libx264",
+        "-preset", "ultrafast",   # 🔥 BIG SPEED GAIN
+        "-crf", "30",
+        "-threads", "1",          # prevent CPU hog
+        "-hls_time", "6",
         "-hls_playlist_type", "vod",
         "-hls_segment_filename",
         os.path.join(output_dir, "segment_%03d.ts"),
-        "-start_number", "0",
-        "-hls_list_size", "0",
         "-f", "hls",
         output_path,
     ]
+
 
     try:
         subprocess.run(
@@ -125,7 +121,7 @@ def convert_to_hls(input_path, output_dir):
             check=True,
             capture_output=True,
             text=True,
-            timeout=600,  # 10 minutes
+            timeout=1800,  # 10 minutes
         )
 
     except subprocess.TimeoutExpired:
