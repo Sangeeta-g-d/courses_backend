@@ -392,7 +392,6 @@ def add_lecture(request, section_id):
 
     return render(request, "add_lecture.html", {"section": section})
 
-
 def edit_lecture(request, lecture_id):
     lecture = get_object_or_404(Lecture, id=lecture_id)
 
@@ -402,15 +401,15 @@ def edit_lecture(request, lecture_id):
         order_raw = request.POST.get("order", "").strip()
         video = request.FILES.get("video")
         resource = request.FILES.get("resource")
-        remove_thumbnail = request.POST.get('remove_thumbnail')  # checkbox value if checked ('1' or 'on')
-        new_thumbnail = request.FILES.get('thumbnail')  # uploaded file (if any)
+        remove_thumbnail = request.POST.get('remove_thumbnail')  # checkbox
+        new_thumbnail = request.FILES.get('thumbnail')
 
-        # Basic validation
+        # Validate title
         if not title:
             messages.error(request, "Lecture title is required.")
             return redirect('course_detail', course_id=lecture.section.course.id)
 
-        # Validate and set order
+        # Validate order
         if order_raw != "":
             try:
                 order = int(order_raw)
@@ -425,37 +424,30 @@ def edit_lecture(request, lecture_id):
             lecture.is_preview = is_preview
             lecture.order = order
 
-            # ---------- Handle video upload (existing logic) ----------
+            # ---------- Handle new video upload ----------
             if video:
-                # Save original temporarily
-                temp_dir = os.path.join(settings.MEDIA_ROOT, "temp_videos")
-                os.makedirs(temp_dir, exist_ok=True)
-                temp_path = os.path.join(temp_dir, video.name)
+                # Delete old videos (optional)
+                if lecture.original_video:
+                    try:
+                        lecture.original_video.delete(save=False)
+                    except Exception:
+                        pass
+                if lecture.processed_video:
+                    try:
+                        lecture.processed_video.delete(save=False)
+                    except Exception:
+                        pass
 
-                with open(temp_path, "wb+") as dest:
-                    for chunk in video.chunks():
-                        dest.write(chunk)
+                # Save new original video
+                lecture.original_video = video
+                lecture.processing_status = "pending"
+                lecture.save(update_fields=["original_video", "processing_status"])
 
-                # Convert to HLS (function you already have)
-                hls_output_dir = os.path.join(settings.MEDIA_ROOT, "lectures", f"lecture_{lecture.id}")
-                hls_rel_path = convert_to_hls(temp_path, hls_output_dir)
-
-                # Auto calculate video duration (function you already have)
-                duration = get_video_duration(temp_path)
-
-                # Update lecture fields (ensure these assignments match your storage usage)
-                lecture.video = hls_rel_path
-                lecture.duration = duration
-
-                # Cleanup temp video
-                try:
-                    os.remove(temp_path)
-                except OSError:
-                    pass
+                # Send to Celery for background processing
+                process_lecture_video.delay(lecture.id)
 
             # ---------- Handle resource upload ----------
             if resource:
-                # Optionally delete old resource file to avoid orphan files
                 if lecture.resource:
                     try:
                         lecture.resource.delete(save=False)
@@ -464,18 +456,15 @@ def edit_lecture(request, lecture_id):
                 lecture.resource = resource
 
             # ---------- Handle thumbnail removal ----------
-            if remove_thumbnail:
-                # Checkbox may send '1' or 'on' or similar — treat any truthy value as checked
-                if lecture.thumbnail:
-                    try:
-                        lecture.thumbnail.delete(save=False)
-                    except Exception:
-                        pass
-                    lecture.thumbnail = None
+            if remove_thumbnail and lecture.thumbnail:
+                try:
+                    lecture.thumbnail.delete(save=False)
+                except Exception:
+                    pass
+                lecture.thumbnail = None
 
-            # ---------- Handle new thumbnail upload (replace existing) ----------
+            # ---------- Handle new thumbnail upload ----------
             if new_thumbnail:
-                # delete old thumbnail first to avoid orphan
                 if lecture.thumbnail:
                     try:
                         lecture.thumbnail.delete(save=False)
@@ -483,7 +472,7 @@ def edit_lecture(request, lecture_id):
                         pass
                 lecture.thumbnail = new_thumbnail
 
-            # Save lecture
+            # Save other changes
             lecture.save()
             messages.success(request, f"Lecture '{lecture.title}' updated successfully!")
 
@@ -492,7 +481,7 @@ def edit_lecture(request, lecture_id):
 
         return redirect('course_detail', course_id=lecture.section.course.id)
 
-    # GET → render an edit page (if used)
+    # GET → render edit page
     return render(request, 'edit_lecture.html', {'lecture': lecture})
 
 def delete_lecture(request, lecture_id):
