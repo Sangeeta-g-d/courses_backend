@@ -277,7 +277,7 @@
                             {% if lecture.is_preview %}
                                 <span class="badge bg-warning text-dark ms-2">Preview</span>
                             {% endif %}
-                            {% if lecture.original_video %}
+                            {% if lecture.processing_status %}
                                 {% if lecture.processing_status == 'pending' %}
                                     <span class="badge bg-secondary ms-2"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
                                 {% elif lecture.processing_status == 'processing' %}
