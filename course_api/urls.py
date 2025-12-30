@@ -3,5 +3,5 @@ from . import views
 from . views import *
 
 urlpatterns = [
-    path("bundles/", PublishedBundleListAPIView.as_view(), name="published-bundles"),
+    path("bundles/", BundleDetailAPIView.as_view(), name="published-bundles"),
 ]

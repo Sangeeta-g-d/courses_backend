@@ -232,6 +232,22 @@ class Lecture(models.Model):
             section=self.section,
             order__gt=self.order
         ).order_by('order').first()
+    
+    @property
+    def video_url(self):
+        """
+        Returns playable video URL (processed preferred)
+        """
+        if self.processed_video:
+            return self.processed_video.url
+
+        if self.original_video_file:
+            return self.original_video_file.url
+
+        if self.original_video_key:
+            return f"{settings.AWS_CLOUDFRONT_DOMAIN}/{self.original_video_key}"
+
+        return ""
 
 
 # user progress

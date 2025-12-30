@@ -412,9 +412,14 @@ def edit_lecture(request, lecture_id):
         title = request.POST.get("title", "").strip()
         is_preview = request.POST.get("is_preview") == "on"
         order_raw = request.POST.get("order", "").strip()
-        video = request.FILES.get("video")
+
+        # 🔹 Local upload
+        video_file = request.FILES.get("video")
+        # 🔹 Direct S3 upload
+        s3_key = request.POST.get("s3_key")
+
         resource = request.FILES.get("resource")
-        remove_thumbnail = request.POST.get('remove_thumbnail')  # checkbox
+        remove_thumbnail = request.POST.get("remove_thumbnail")  # checkbox
         new_thumbnail = request.FILES.get('thumbnail')
 
         # Validate title
@@ -438,23 +443,27 @@ def edit_lecture(request, lecture_id):
             lecture.order = order
 
             # ---------- Handle new video upload ----------
-            if video:
+            if video_file or s3_key:
                 # Delete old videos (optional)
-                if lecture.original_video:
+                if lecture.original_video_file:
                     try:
-                        lecture.original_video.delete(save=False)
+                        lecture.original_video_file.delete(save=False)
                     except Exception:
                         pass
+                if lecture.original_video_key:
+                    # S3 key does not need delete, optional if you want to remove old key
+                    pass
                 if lecture.processed_video:
                     try:
                         lecture.processed_video.delete(save=False)
                     except Exception:
                         pass
 
-                # Save new original video
-                lecture.original_video = video
+                # Save new video (local or S3)
+                lecture.original_video_file = video_file if video_file else None
+                lecture.original_video_key = s3_key if s3_key else None
                 lecture.processing_status = "pending"
-                lecture.save(update_fields=["original_video", "processing_status"])
+                lecture.save(update_fields=["original_video_file", "original_video_key", "processing_status"])
 
                 # Send to Celery for background processing
                 process_lecture_video.delay(lecture.id)

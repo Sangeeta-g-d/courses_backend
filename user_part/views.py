@@ -286,7 +286,6 @@ def dashboard(request):
     
     return render(request, 'dashboard.html', context)
 
-
 def course_details(request, course_id):
     course = get_object_or_404(
         Course.objects.prefetch_related('course_sections__lectures'),
@@ -337,12 +336,12 @@ def course_details(request, course_id):
         ).order_by('-last_watched').first()
 
         if last_progress:
-            initial_lecture_id = last_progress.lecture.id
-            if last_progress.lecture.video:
-                initial_video_url = last_progress.lecture.video.url
-            if last_progress.lecture.resource:
-                initial_lecture_resource_url = last_progress.lecture.resource.url
-                initial_lecture_resource_name = last_progress.lecture.resource.name
+            lecture = last_progress.lecture
+            initial_lecture_id = lecture.id
+            initial_video_url = lecture.video_url or ''
+            if lecture.resource:
+                initial_lecture_resource_url = lecture.resource.url
+                initial_lecture_resource_name = lecture.resource.name
         else:
             first_lecture = Lecture.objects.filter(
                 section__course=course
@@ -350,8 +349,7 @@ def course_details(request, course_id):
 
             if first_lecture:
                 initial_lecture_id = first_lecture.id
-                if first_lecture.video:
-                    initial_video_url = first_lecture.video.url
+                initial_video_url = first_lecture.video_url or ''
                 if first_lecture.resource:
                     initial_lecture_resource_url = first_lecture.resource.url
                     initial_lecture_resource_name = first_lecture.resource.name
@@ -387,7 +385,8 @@ def course_details(request, course_id):
                 'id': lecture.id,
                 'title': lecture.title,
                 'duration': lecture.duration,
-                'video_url': lecture.video.url if lecture.video else '',
+                # ✅ FIX HERE
+                'video_url': lecture.video_url or '',
                 'thumbnail_url': thumbnail_url,
                 'resource_url': lecture.resource.url if lecture.resource else '',
                 'resource_name': lecture.resource.name if lecture.resource else '',

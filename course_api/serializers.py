@@ -1,8 +1,7 @@
 from rest_framework import serializers
 from admin_part.models import Bundle
 
-
-class BundleSerializer(serializers.ModelSerializer):
+class BundleDetailSerializer(serializers.ModelSerializer):
     thumbnail_url = serializers.SerializerMethodField()
     discounted_price = serializers.SerializerMethodField()
 
@@ -19,6 +18,8 @@ class BundleSerializer(serializers.ModelSerializer):
             "short_description",
             "full_description",
             "thumbnail_url",
+            "is_published",
+            "created_at",
         ]
 
     def get_thumbnail_url(self, obj):

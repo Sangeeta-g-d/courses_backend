@@ -1,32 +1,66 @@
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated,AllowAny
-from rest_framework import status
-from admin_part.models import Bundle
-from .serializers import BundleSerializer
+from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from django.shortcuts import get_object_or_404
+
+from admin_part.models import Bundle, Enrollment
+from .serializers import BundleDetailSerializer
 from courses_backend.api_response import APIResponseMixin
 
 
-class PublishedBundleListAPIView(APIResponseMixin, APIView):
-    permission_classes = [IsAuthenticated]
+class BundleDetailAPIView(APIView, APIResponseMixin):
+    permission_classes = [AllowAny]
+    authentication_classes = []  # handled manually
 
-    def get(self, request):
-        try:
-            bundles = Bundle.objects.filter(is_published=True).order_by("-created_at")
+    def get(self, request, slug):
+        user = None
+        already_enrolled = False
 
-            serializer = BundleSerializer(
-                bundles,
-                many=True,
-                context={"request": request}
-            )
+        # ---------------------------
+        # OPTIONAL JWT AUTH HANDLING
+        # ---------------------------
+        auth_header = request.headers.get("Authorization")
 
-            return self.success_response(
-                message="Published bundles fetched successfully",
-                data=serializer.data,
-                status_code=status.HTTP_200_OK
-            )
+        if auth_header:
+            try:
+                jwt_auth = JWTAuthentication()
+                validated_token = jwt_auth.get_validated_token(
+                    jwt_auth.get_raw_token(auth_header.split()[1])
+                )
+                user = jwt_auth.get_user(validated_token)
 
-        except Exception as e:
-            return self.error_response(
-                errors=str(e),
-                status_code=status.HTTP_400_BAD_REQUEST
-            )
+            except (InvalidToken, TokenError):
+                return self.error_response(
+                    "Access token is expired or invalid",
+                    status_code=401
+                )
+
+        # ---------------------------
+        # FETCH BUNDLE
+        # ---------------------------
+        bundle = get_object_or_404(Bundle, slug=slug, is_published=True)
+
+        serializer = BundleDetailSerializer(
+            bundle,
+            context={"request": request}
+        )
+
+        response_data = serializer.data
+
+        # ---------------------------
+        # ENROLLMENT CHECK
+        # ---------------------------
+        if user and user.is_authenticated:
+            already_enrolled = Enrollment.objects.filter(
+                user=user,
+                bundle=bundle,
+                payment_status__in=["completed", "free"]
+            ).exists()
+
+            response_data["already_enrolled"] = already_enrolled
+
+        return self.success_response(
+            message="Bundle details fetched successfully",
+            data=response_data
+        )
