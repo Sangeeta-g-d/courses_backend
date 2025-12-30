@@ -54,7 +54,6 @@ def process_lecture_video(self, lecture_id):
             os.remove(temp_input)
         
         if temp_output_dir and os.path.exists(temp_output_dir):
-            import shutil
             shutil.rmtree(temp_output_dir, ignore_errors=True)
 
 
