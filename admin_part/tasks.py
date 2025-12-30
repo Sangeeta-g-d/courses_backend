@@ -20,7 +20,8 @@ def process_lecture_video(self, lecture_id):
         duration = get_video_duration(input_path)
 
         # Assign processed video using Django File object
-        with open(hls_path, "rb") as f:
+        full_hls_path = os.path.join(settings.MEDIA_ROOT, hls_path)
+        with open(full_hls_path, "rb") as f:
             django_file = File(f)
             lecture.processed_video.save(f"lecture_{lecture.id}/index.m3u8", django_file, save=False)
 
