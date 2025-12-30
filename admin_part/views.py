@@ -27,6 +27,8 @@ from django.views import View
 import json
 from django.views.decorators.http import require_GET
 from .tasks import process_lecture_video
+from django.conf import settings
+
 # Create your views here.
 
 
@@ -355,7 +357,12 @@ def add_lecture(request, section_id):
         is_preview = request.POST.get("is_preview") == "on"
         order = request.POST.get("order") or 0
 
-        video = request.FILES.get("video")
+        # 🔹 LOCAL upload
+        video_file = request.FILES.get("video")
+
+        # 🔹 PRODUCTION upload (direct S3)
+        s3_key = request.POST.get("s3_key")
+
         resource = request.FILES.get("resource")
         thumbnail = request.FILES.get("thumbnail")
 
@@ -363,22 +370,28 @@ def add_lecture(request, section_id):
             messages.error(request, "Lecture title is required.")
             return redirect("course_detail", course_id=section.course.id)
 
+        if not video_file and not s3_key:
+            messages.error(request, "Video is required.")
+            return redirect("course_detail", course_id=section.course.id)
+
         try:
-            # ✅ Create lecture (FAST, no processing)
             lecture = Lecture.objects.create(
                 section=section,
                 title=title,
                 order=order,
                 is_preview=is_preview,
+
+                # ✅ Local OR S3 (only one will be filled)
+                original_video_file=video_file if video_file else None,
+                original_video_key=s3_key if s3_key else None,
+
                 resource=resource,
                 thumbnail=thumbnail,
-                original_video=video,  # 🔥 store original upload
-                processing_status="pending"
+                processing_status="pending",
             )
 
-            # ✅ Send to Celery for background processing
-            if video:
-                process_lecture_video.delay(lecture.id)
+            # ✅ Background processing
+            process_lecture_video.delay(lecture.id)
 
             messages.success(
                 request,

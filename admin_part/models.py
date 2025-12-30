@@ -183,14 +183,22 @@ class Lecture(models.Model):
     title = models.CharField(max_length=500)
     duration = models.FloatField(blank=True, null=True)
 
-    # 🔹 Original uploaded video
-    original_video = models.FileField(
+    # 🔹 LOCAL DEV upload (FileField)
+    original_video_file = models.FileField(
         upload_to='lectures/originals/',
         blank=True,
         null=True
     )
 
-    # 🔹 Converted / optimized video
+    # 🔹 PRODUCTION upload (S3 key)
+    original_video_key = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="S3 key of original uploaded video"
+    )
+
+    # 🔹 Processed HLS (Celery uploads this)
     processed_video = models.FileField(
         upload_to='lectures/processed/',
         blank=True,
@@ -210,6 +218,7 @@ class Lecture(models.Model):
 
     class Meta:
         ordering = ['order']
+
 
     def __str__(self):
         return f"{self.section.title} - {self.title}"

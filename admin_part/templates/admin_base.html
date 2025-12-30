@@ -147,6 +147,10 @@
             </footer>
         </div>
     </div>
+     <!-- GLOBAL JS FLAGS -->
+        <script>
+        window.USE_DIRECT_S3_UPLOAD = {{ not debug|yesno:"true,false" }};
+    </script>
     <script src="/static/assets/vendors/perfect-scrollbar/perfect-scrollbar.min.js"></script>
     <script src="/static/assets/js/bootstrap.bundle.min.js"></script>
 
