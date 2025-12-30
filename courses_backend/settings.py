@@ -44,6 +44,10 @@ VDOCIPHER_API_SECRET = "Z859e201wL8LGo30LYud9Rp8p9LXuKye3uyiOWWpXZErnxyPHDY5v5SH
 VDOCIPHER_API_BASE = "https://api.vdocipher.com/v2"       # check docs for exact base
 
 
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
 
 
 INSTALLED_APPS = [

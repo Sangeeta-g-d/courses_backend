@@ -167,10 +167,42 @@ class CourseSection(models.Model):
         return self.lectures.count()
 
 class Lecture(models.Model):
-    section = models.ForeignKey(CourseSection, on_delete=models.CASCADE, related_name='lectures')
+    PROCESSING_STATUS = (
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    )
+
+    section = models.ForeignKey(
+        'CourseSection',
+        on_delete=models.CASCADE,
+        related_name='lectures'
+    )
+
     title = models.CharField(max_length=500)
-    duration = models.FloatField(max_length=500, blank=True, null=True)
-    video = models.FileField(upload_to='lectures/videos/', blank=True, null=True)
+    duration = models.FloatField(blank=True, null=True)
+
+    # 🔹 Original uploaded video
+    original_video = models.FileField(
+        upload_to='lectures/originals/',
+        blank=True,
+        null=True
+    )
+
+    # 🔹 Converted / optimized video
+    processed_video = models.FileField(
+        upload_to='lectures/processed/',
+        blank=True,
+        null=True
+    )
+
+    processing_status = models.CharField(
+        max_length=20,
+        choices=PROCESSING_STATUS,
+        default='pending'
+    )
+
     is_preview = models.BooleanField(default=False)
     resource = models.FileField(upload_to='lectures/resources/', blank=True, null=True)
     order = models.PositiveIntegerField(default=0)
@@ -181,20 +213,16 @@ class Lecture(models.Model):
 
     def __str__(self):
         return f"{self.section.title} - {self.title}"
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        # ✅ Update section duration each time a lecture is saved
         self.section.update_duration()
 
     def get_next_lecture(self):
-        """Get the next lecture in the same section"""
-        try:
-            return Lecture.objects.filter(
-                section=self.section,
-                order__gt=self.order
-            ).order_by('order').first()
-        except Exception:
-            return None
+        return Lecture.objects.filter(
+            section=self.section,
+            order__gt=self.order
+        ).order_by('order').first()
 
 
 # user progress

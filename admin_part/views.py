@@ -26,6 +26,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 import json
 from django.views.decorators.http import require_GET
+from .tasks import process_lecture_video
 # Create your views here.
 
 
@@ -353,53 +354,43 @@ def add_lecture(request, section_id):
         title = request.POST.get("title", "").strip()
         is_preview = request.POST.get("is_preview") == "on"
         order = request.POST.get("order") or 0
+
         video = request.FILES.get("video")
         resource = request.FILES.get("resource")
-        thumbnail = request.FILES.get('thumbnail')  # <-- NEW
+        thumbnail = request.FILES.get("thumbnail")
 
         if not title:
             messages.error(request, "Lecture title is required.")
-            return redirect('course_detail', course_id=section.course.id)
+            return redirect("course_detail", course_id=section.course.id)
+
         try:
+            # ✅ Create lecture (FAST, no processing)
             lecture = Lecture.objects.create(
                 section=section,
                 title=title,
                 order=order,
                 is_preview=is_preview,
                 resource=resource,
-                thumbnail=thumbnail
-                
+                thumbnail=thumbnail,
+                original_video=video,  # 🔥 store original upload
+                processing_status="pending"
             )
 
-            # Save original video temporarily
+            # ✅ Send to Celery for background processing
             if video:
-                video_path = os.path.join(settings.MEDIA_ROOT, "temp_videos", video.name)
-                os.makedirs(os.path.dirname(video_path), exist_ok=True)
-                with open(video_path, "wb+") as dest:
-                    for chunk in video.chunks():
-                        dest.write(chunk)
+                process_lecture_video.delay(lecture.id)
 
-                # Convert to HLS
-                hls_output_dir = os.path.join(settings.MEDIA_ROOT, "lectures", f"lecture_{lecture.id}")
-                hls_rel_path = convert_to_hls(video_path, hls_output_dir)
-
-                # Calculate duration
-                duration = get_video_duration(video_path)
-                lecture.duration = duration
-                lecture.video = hls_rel_path
-                lecture.save()
-
-                # Cleanup temp file
-                os.remove(video_path)
-
-            messages.success(request, f"Lecture '{lecture.title}' added successfully!")
+            messages.success(
+                request,
+                f"Lecture '{lecture.title}' uploaded. Video processing started."
+            )
 
         except Exception as e:
             messages.error(request, f"Error adding lecture: {str(e)}")
 
-        return redirect('course_detail', course_id=section.course.id)
+        return redirect("course_detail", course_id=section.course.id)
 
-    return render(request, 'add_lecture.html', {'section': section})
+    return render(request, "add_lecture.html", {"section": section})
 
 
 def edit_lecture(request, lecture_id):
