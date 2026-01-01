@@ -23,7 +23,7 @@ class Bundle(models.Model):  # Keep table name the same
     thumbnail = models.ImageField(upload_to='bundle_thumbnails/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    is_published = models.BooleanField(default=False)
+    is_published = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "Bundle"

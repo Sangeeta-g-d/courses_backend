@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from admin_part.models import Bundle, Enrollment
+from admin_part.models import Bundle, Enrollment,Course
 
 class BundleDetailSerializer(serializers.ModelSerializer):
     thumbnail_url = serializers.SerializerMethodField()
@@ -44,3 +44,54 @@ class BundleDetailSerializer(serializers.ModelSerializer):
             ).exists()
 
         return False
+
+
+class CourseSerializer(serializers.ModelSerializer):
+    thumbnail_url = serializers.SerializerMethodField()
+    preview_video_url = serializers.SerializerMethodField()
+    total_duration = serializers.ReadOnlyField(source='calculated_total_duration_display')
+    total_lectures = serializers.ReadOnlyField(source='calculated_total_lectures')
+
+    class Meta:
+        model = Course
+        fields = [
+            'id',
+            'title',
+            'short_description',
+            'full_description',
+            'language',
+            'level',
+            'thumbnail_url',
+            'preview_video_url',
+            'total_duration',
+            'total_lectures',
+            'created_at',
+        ]
+
+    def get_thumbnail_url(self, obj):
+        request = self.context.get('request')
+        if obj.thumbnail and request:
+            return request.build_absolute_uri(obj.thumbnail.url)
+        return None
+
+    def get_preview_video_url(self, obj):
+        request = self.context.get('request')
+        if obj.preview_video and request:
+            return request.build_absolute_uri(obj.preview_video.url)
+        return None
+    
+
+class EnrollmentSerializer(serializers.ModelSerializer):
+    bundle_name = serializers.CharField(source='bundle.name', read_only=True)
+
+    class Meta:
+        model = Enrollment
+        fields = [
+            'id',
+            'bundle',
+            'bundle_name',
+            'payment_status',
+            'amount_paid',
+            'progress_percentage',
+            'enrolled_at'
+        ]
