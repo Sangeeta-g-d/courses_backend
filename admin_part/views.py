@@ -26,6 +26,9 @@ from django.utils.decorators import method_decorator
 from django.views import View
 import json
 from django.views.decorators.http import require_GET
+from .tasks import process_lecture_video
+from django.conf import settings
+
 # Create your views here.
 
 
@@ -353,54 +356,54 @@ def add_lecture(request, section_id):
         title = request.POST.get("title", "").strip()
         is_preview = request.POST.get("is_preview") == "on"
         order = request.POST.get("order") or 0
-        video = request.FILES.get("video")
+
+        # 🔹 LOCAL upload
+        video_file = request.FILES.get("video")
+
+        # 🔹 PRODUCTION upload (direct S3)
+        s3_key = request.POST.get("s3_key")
+
         resource = request.FILES.get("resource")
-        thumbnail = request.FILES.get('thumbnail')  # <-- NEW
+        thumbnail = request.FILES.get("thumbnail")
 
         if not title:
             messages.error(request, "Lecture title is required.")
-            return redirect('course_detail', course_id=section.course.id)
+            return redirect("course_detail", course_id=section.course.id)
+
+        if not video_file and not s3_key:
+            messages.error(request, "Video is required.")
+            return redirect("course_detail", course_id=section.course.id)
+
         try:
             lecture = Lecture.objects.create(
                 section=section,
                 title=title,
                 order=order,
                 is_preview=is_preview,
+
+                # ✅ Local OR S3 (only one will be filled)
+                original_video_file=video_file if video_file else None,
+                original_video_key=s3_key if s3_key else None,
+
                 resource=resource,
-                thumbnail=thumbnail
-                
+                thumbnail=thumbnail,
+                processing_status="pending",
             )
 
-            # Save original video temporarily
-            if video:
-                video_path = os.path.join(settings.MEDIA_ROOT, "temp_videos", video.name)
-                os.makedirs(os.path.dirname(video_path), exist_ok=True)
-                with open(video_path, "wb+") as dest:
-                    for chunk in video.chunks():
-                        dest.write(chunk)
+            # ✅ Background processing
+            process_lecture_video.delay(lecture.id)
 
-                # Convert to HLS
-                hls_output_dir = os.path.join(settings.MEDIA_ROOT, "lectures", f"lecture_{lecture.id}")
-                hls_rel_path = convert_to_hls(video_path, hls_output_dir)
-
-                # Calculate duration
-                duration = get_video_duration(video_path)
-                lecture.duration = duration
-                lecture.video = hls_rel_path
-                lecture.save()
-
-                # Cleanup temp file
-                os.remove(video_path)
-
-            messages.success(request, f"Lecture '{lecture.title}' added successfully!")
+            messages.success(
+                request,
+                f"Lecture '{lecture.title}' uploaded. Video processing started."
+            )
 
         except Exception as e:
             messages.error(request, f"Error adding lecture: {str(e)}")
 
-        return redirect('course_detail', course_id=section.course.id)
+        return redirect("course_detail", course_id=section.course.id)
 
-    return render(request, 'add_lecture.html', {'section': section})
-
+    return render(request, "add_lecture.html", {"section": section})
 
 def edit_lecture(request, lecture_id):
     lecture = get_object_or_404(Lecture, id=lecture_id)
@@ -409,17 +412,22 @@ def edit_lecture(request, lecture_id):
         title = request.POST.get("title", "").strip()
         is_preview = request.POST.get("is_preview") == "on"
         order_raw = request.POST.get("order", "").strip()
-        video = request.FILES.get("video")
-        resource = request.FILES.get("resource")
-        remove_thumbnail = request.POST.get('remove_thumbnail')  # checkbox value if checked ('1' or 'on')
-        new_thumbnail = request.FILES.get('thumbnail')  # uploaded file (if any)
 
-        # Basic validation
+        # 🔹 Local upload
+        video_file = request.FILES.get("video")
+        # 🔹 Direct S3 upload
+        s3_key = request.POST.get("s3_key")
+
+        resource = request.FILES.get("resource")
+        remove_thumbnail = request.POST.get("remove_thumbnail")  # checkbox
+        new_thumbnail = request.FILES.get('thumbnail')
+
+        # Validate title
         if not title:
             messages.error(request, "Lecture title is required.")
             return redirect('course_detail', course_id=lecture.section.course.id)
 
-        # Validate and set order
+        # Validate order
         if order_raw != "":
             try:
                 order = int(order_raw)
@@ -434,37 +442,34 @@ def edit_lecture(request, lecture_id):
             lecture.is_preview = is_preview
             lecture.order = order
 
-            # ---------- Handle video upload (existing logic) ----------
-            if video:
-                # Save original temporarily
-                temp_dir = os.path.join(settings.MEDIA_ROOT, "temp_videos")
-                os.makedirs(temp_dir, exist_ok=True)
-                temp_path = os.path.join(temp_dir, video.name)
-
-                with open(temp_path, "wb+") as dest:
-                    for chunk in video.chunks():
-                        dest.write(chunk)
-
-                # Convert to HLS (function you already have)
-                hls_output_dir = os.path.join(settings.MEDIA_ROOT, "lectures", f"lecture_{lecture.id}")
-                hls_rel_path = convert_to_hls(temp_path, hls_output_dir)
-
-                # Auto calculate video duration (function you already have)
-                duration = get_video_duration(temp_path)
-
-                # Update lecture fields (ensure these assignments match your storage usage)
-                lecture.video = hls_rel_path
-                lecture.duration = duration
-
-                # Cleanup temp video
-                try:
-                    os.remove(temp_path)
-                except OSError:
+            # ---------- Handle new video upload ----------
+            if video_file or s3_key:
+                # Delete old videos (optional)
+                if lecture.original_video_file:
+                    try:
+                        lecture.original_video_file.delete(save=False)
+                    except Exception:
+                        pass
+                if lecture.original_video_key:
+                    # S3 key does not need delete, optional if you want to remove old key
                     pass
+                if lecture.processed_video:
+                    try:
+                        lecture.processed_video.delete(save=False)
+                    except Exception:
+                        pass
+
+                # Save new video (local or S3)
+                lecture.original_video_file = video_file if video_file else None
+                lecture.original_video_key = s3_key if s3_key else None
+                lecture.processing_status = "pending"
+                lecture.save(update_fields=["original_video_file", "original_video_key", "processing_status"])
+
+                # Send to Celery for background processing
+                process_lecture_video.delay(lecture.id)
 
             # ---------- Handle resource upload ----------
             if resource:
-                # Optionally delete old resource file to avoid orphan files
                 if lecture.resource:
                     try:
                         lecture.resource.delete(save=False)
@@ -473,18 +478,15 @@ def edit_lecture(request, lecture_id):
                 lecture.resource = resource
 
             # ---------- Handle thumbnail removal ----------
-            if remove_thumbnail:
-                # Checkbox may send '1' or 'on' or similar — treat any truthy value as checked
-                if lecture.thumbnail:
-                    try:
-                        lecture.thumbnail.delete(save=False)
-                    except Exception:
-                        pass
-                    lecture.thumbnail = None
+            if remove_thumbnail and lecture.thumbnail:
+                try:
+                    lecture.thumbnail.delete(save=False)
+                except Exception:
+                    pass
+                lecture.thumbnail = None
 
-            # ---------- Handle new thumbnail upload (replace existing) ----------
+            # ---------- Handle new thumbnail upload ----------
             if new_thumbnail:
-                # delete old thumbnail first to avoid orphan
                 if lecture.thumbnail:
                     try:
                         lecture.thumbnail.delete(save=False)
@@ -492,7 +494,7 @@ def edit_lecture(request, lecture_id):
                         pass
                 lecture.thumbnail = new_thumbnail
 
-            # Save lecture
+            # Save other changes
             lecture.save()
             messages.success(request, f"Lecture '{lecture.title}' updated successfully!")
 
@@ -501,7 +503,7 @@ def edit_lecture(request, lecture_id):
 
         return redirect('course_detail', course_id=lecture.section.course.id)
 
-    # GET → render an edit page (if used)
+    # GET → render edit page
     return render(request, 'edit_lecture.html', {'lecture': lecture})
 
 def delete_lecture(request, lecture_id):
@@ -558,11 +560,15 @@ def bundle_enrollment_details(request, bundle_id):
     return render(request, 'bundle_enrollment_details.html', context)
 
 def total_enrollments(request):
-    # Get all enrollments for admin view with optimized query
-    all_enrollments = Enrollment.objects.all().select_related('bundle', 'user').prefetch_related('bundle__courses', 'bundle__enrollments')
+    # Get bundles with enrollment count (grouped by bundle)
+    from django.db.models import Count
+    
+    bundles_with_enrollments = Bundle.objects.annotate(
+        enrollment_count=Count('enrollments')
+    ).prefetch_related('courses', 'enrollments').filter(enrollment_count__gt=0).order_by('-enrollment_count')
     
     context = {
-        'enrollments': all_enrollments
+        'bundles': bundles_with_enrollments
     }
     return render(request, 'total_enrollments.html', context)
 

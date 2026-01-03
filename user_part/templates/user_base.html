@@ -102,6 +102,35 @@
         <a href="/user/contact_us/" class="nav-item nav-link">Contact Us</a>
          <a href="/user/meetings/" class="nav-item nav-link">Meetings</a>
     </div>
+   <div class="navbar-nav">
+
+<a href="{% url 'home' %}"
+   class="nav-item nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+  Home
+</a>
+
+<a href="{% url 'courses' %}"
+   class="nav-item nav-link {% if request.resolver_match.url_name == 'courses' %}active{% endif %}">
+  Courses
+</a>
+
+<a href="{% url 'bundle_list' %}"
+   class="nav-item nav-link {% if request.resolver_match.url_name == 'bundle_list' %}active{% endif %}">
+  Bundles
+</a>
+
+<a href="{% url 'about_us' %}"
+   class="nav-item nav-link {% if request.resolver_match.url_name == 'about_us' %}active{% endif %}">
+  About Us
+</a>
+
+<a href="{% url 'contact_us' %}"
+   class="nav-item nav-link {% if request.resolver_match.url_name == 'contact_us' %}active{% endif %}">
+  Contact Us
+</a>
+
+</div>
+
 
     <div class="ms-auto d-none d-lg-flex align-items-center">
       {% if request.user.is_authenticated %}

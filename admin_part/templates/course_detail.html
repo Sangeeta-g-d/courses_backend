@@ -209,6 +209,7 @@
             <label for="thumbnail" class="form-label">Section Thumbnail</label>
             <input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*">
         </div>
+<input type="hidden" name="s3_key" id="s3Key_{{ section.id }}">
 
                     <div class="col-12 mt-3">
                         <button type="submit" class="btn btn-success btn-sm">Add Lecture</button>
@@ -275,6 +276,17 @@
                             {{ lecture.duration|default:"0:00" }}
                             {% if lecture.is_preview %}
                                 <span class="badge bg-warning text-dark ms-2">Preview</span>
+                            {% endif %}
+                            {% if lecture.processing_status %}
+                                {% if lecture.processing_status == 'pending' %}
+                                    <span class="badge bg-secondary ms-2"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+                                {% elif lecture.processing_status == 'processing' %}
+                                    <span class="badge bg-info ms-2"><i class="bi bi-arrow-repeat me-1"></i>Processing</span>
+                                {% elif lecture.processing_status == 'completed' %}
+                                    <span class="badge bg-success ms-2"><i class="bi bi-check-circle me-1"></i>Ready</span>
+                                {% elif lecture.processing_status == 'failed' %}
+                                    <span class="badge bg-danger ms-2"><i class="bi bi-exclamation-circle me-1"></i>Failed</span>
+                                {% endif %}
                             {% endif %}
                         </small>
                     </div>
@@ -442,6 +454,49 @@ function openEditLectureModal(lectureId, title, order, duration, isPreview) {
     document.getElementById('edit_lecture_order').value = order;
     document.getElementById('edit_is_preview').checked = isPreview;
     new bootstrap.Modal(document.getElementById('editLectureModal')).show();
+}
+</script>
+
+
+<script>
+async function handleVideoUpload(input, sectionId) {
+    // If no file selected → do nothing
+    if (!input.files || !input.files[0]) return;
+
+    // If NOT production → fallback to normal Django upload
+    if (!window.USE_DIRECT_S3_UPLOAD) return;
+
+    const file = input.files[0];
+
+    // Ask backend for presigned URL
+    const response = await fetch("/api/s3/presign/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify({
+            filename: file.name,
+            content_type: file.type
+        })
+    });
+
+    const data = await response.json();
+
+    // Upload directly to S3
+    await fetch(data.upload_url, {
+        method: "PUT",
+        body: file,
+        headers: {
+            "Content-Type": file.type
+        }
+    });
+
+    // Set S3 key & clear file input
+    document.getElementById(`s3Key_${sectionId}`).value = data.key;
+    input.value = "";
+
+    alert("Video uploaded successfully. Now submit the form.");
 }
 </script>
 

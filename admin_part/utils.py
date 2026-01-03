@@ -1,133 +1,154 @@
 import os
 import json
-import subprocess
 import shutil
+import subprocess
+import platform
 from django.conf import settings
 
 
-def find_ffmpeg_binary(name):
+# =========================================================
+# FFmpeg / FFprobe PATH RESOLUTION (PRODUCTION SAFE)
+# =========================================================
+
+def find_ffmpeg_binary_windows(name):
     """
-    Try to find ffmpeg/ffprobe binary.
-    First checks if it's in PATH, then checks common Windows locations.
+    Find ffmpeg / ffprobe on Windows systems.
     """
-    # Try to find in PATH
     binary = shutil.which(name)
     if binary:
         return binary
-    
-    # Common Windows installation paths
+
     common_paths = [
         r"C:\ffmpeg\bin",
         r"C:\ffmpeg-8.0-essentials_build\bin",
         r"C:\Program Files\ffmpeg\bin",
         r"C:\Program Files (x86)\ffmpeg\bin",
     ]
-    
+
     for path in common_paths:
         full_path = os.path.join(path, f"{name}.exe")
         if os.path.exists(full_path):
             return full_path
-    
-    # If not found, return the name and let it fail with helpful error
-    return name
+
+    return name  # Let it fail with helpful error
 
 
-# Get FFmpeg paths
-FFMPEG_PATH = find_ffmpeg_binary("ffmpeg")
-FFPROBE_PATH = find_ffmpeg_binary("ffprobe")
+# Detect OS and assign paths
+if platform.system() == "Windows":
+    FFMPEG_PATH = find_ffmpeg_binary_windows("ffmpeg")
+    FFPROBE_PATH = find_ffmpeg_binary_windows("ffprobe")
+else:
+    # Linux / AWS / VPS (BEST PRACTICE)
+    FFMPEG_PATH = "/usr/bin/ffmpeg"
+    FFPROBE_PATH = "/usr/bin/ffprobe"
 
+
+# Safety check (fail fast on server)
+if not os.path.exists(FFMPEG_PATH):
+    raise RuntimeError(f"FFmpeg not found at {FFMPEG_PATH}")
+
+if not os.path.exists(FFPROBE_PATH):
+    raise RuntimeError(f"FFprobe not found at {FFPROBE_PATH}")
+
+
+# =========================================================
+# VIDEO DURATION
+# =========================================================
 
 def get_video_duration(video_path):
-    """Get video duration in seconds using ffprobe."""
+    """
+    Get video duration in seconds using ffprobe.
+    """
     command = [
         FFPROBE_PATH,
         "-v", "error",
         "-show_entries", "format=duration",
         "-of", "json",
-        video_path
-    ]
-    
-    try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
-        data = json.loads(result.stdout)
-        duration = float(data['format']['duration'])
-        return round(duration, 2)
-    except FileNotFoundError:
-        raise Exception(
-            f"FFprobe not found at: {FFPROBE_PATH}\n"
-            "Please ensure FFmpeg is installed and in your system PATH.\n"
-            "Installation guide: https://www.gyan.dev/ffmpeg/builds/"
-        )
-    except subprocess.CalledProcessError as e:
-        raise Exception(f"FFprobe error: {e.stderr}")
-    except (KeyError, ValueError) as e:
-        raise Exception(f"Error parsing video duration: {str(e)}")
-
-
-def convert_to_hls(input_path, output_dir):
-    """
-    Convert uploaded video to HLS (.m3u8) format using ffmpeg.
-    Returns relative path to the HLS master playlist.
-    """
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir, exist_ok=True)
-
-    output_path = os.path.join(output_dir, "index.m3u8")
-
-    # FFmpeg command for HLS conversion with better quality settings
-    command = [
-        FFMPEG_PATH,
-        "-i", input_path,
-        "-codec:v", "libx264",  # Video codec
-        "-codec:a", "aac",      # Audio codec
-        "-preset", "medium",    # Encoding speed/quality tradeoff
-        "-crf", "23",           # Quality (lower = better, 18-28 is good range)
-        "-sc_threshold", "0",   # Disable scene change detection
-        "-g", "48",             # GOP size (keyframe interval)
-        "-keyint_min", "48",
-        "-hls_time", "10",      # Segment duration in seconds
-        "-hls_playlist_type", "vod",
-        "-hls_segment_filename", os.path.join(output_dir, "segment_%03d.ts"),
-        "-start_number", "0",
-        "-hls_list_size", "0",
-        "-f", "hls",
-        output_path,
+        video_path,
     ]
 
     try:
         result = subprocess.run(
-            command, 
-            check=True, 
-            capture_output=True, 
+            command,
+            capture_output=True,
             text=True,
-            timeout=300  # 5 minute timeout
+            check=True,
         )
-    except FileNotFoundError:
-        raise Exception(
-            f"FFmpeg not found at: {FFMPEG_PATH}\n"
-            "Please ensure FFmpeg is installed and in your system PATH.\n"
-            "Installation guide: https://www.gyan.dev/ffmpeg/builds/"
+        data = json.loads(result.stdout)
+        duration = float(data["format"]["duration"])
+        return round(duration, 2)
+
+    except subprocess.CalledProcessError as e:
+        raise Exception(f"FFprobe error: {e.stderr}")
+
+    except (KeyError, ValueError, json.JSONDecodeError):
+        raise Exception("Failed to parse video duration")
+
+
+# =========================================================
+# HLS CONVERSION
+# =========================================================
+
+def convert_to_hls(input_path, output_dir):
+    """
+    Convert video to HLS (.m3u8) format.
+    Returns relative path to the master playlist.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    output_path = os.path.join(output_dir, "index.m3u8")
+
+    command = [
+        FFMPEG_PATH,
+        "-y",
+        "-i", input_path,
+        "-c:v", "libx264",
+        "-preset", "ultrafast",   # 🔥 BIG SPEED GAIN
+        "-crf", "30",
+        "-threads", "1",          # prevent CPU hog
+        "-hls_time", "6",
+        "-hls_playlist_type", "vod",
+        "-hls_segment_filename",
+        os.path.join(output_dir, "segment_%03d.ts"),
+        "-f", "hls",
+        output_path,
+    ]
+
+
+    try:
+        subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=1800,  # 10 minutes
         )
+
     except subprocess.TimeoutExpired:
-        raise Exception("FFmpeg conversion timed out (took longer than 5 minutes)")
+        raise Exception("FFmpeg conversion timed out")
+
     except subprocess.CalledProcessError as e:
         raise Exception(f"FFmpeg conversion failed: {e.stderr}")
 
-    # Return relative path (e.g. for saving to DB)
-    rel_path = os.path.relpath(output_path, settings.MEDIA_ROOT)
-    return rel_path
+    return os.path.relpath(output_path, settings.MEDIA_ROOT)
 
 
-
-# Add this to your utils.py file
+# =========================================================
+# DURATION FORMATTER
+# =========================================================
 
 def format_duration(seconds):
-    """Convert seconds to HH:MM:SS format"""
+    """
+    Convert seconds to readable format.
+    """
     if not seconds:
         return "0:00"
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-    if hours > 0:
+
+    seconds = int(seconds)
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+
+    if hours:
         return f"{hours}h {minutes}m {secs}s"
     return f"{minutes}m {secs}s"

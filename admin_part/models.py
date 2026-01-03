@@ -23,7 +23,7 @@ class Bundle(models.Model):  # Keep table name the same
     thumbnail = models.ImageField(upload_to='bundle_thumbnails/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    is_published = models.BooleanField(default=False)
+    is_published = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "Bundle"
@@ -167,10 +167,50 @@ class CourseSection(models.Model):
         return self.lectures.count()
 
 class Lecture(models.Model):
-    section = models.ForeignKey(CourseSection, on_delete=models.CASCADE, related_name='lectures')
+    PROCESSING_STATUS = (
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    )
+
+    section = models.ForeignKey(
+        'CourseSection',
+        on_delete=models.CASCADE,
+        related_name='lectures'
+    )
+
     title = models.CharField(max_length=500)
-    duration = models.FloatField(max_length=500, blank=True, null=True)
-    video = models.FileField(upload_to='lectures/videos/', blank=True, null=True)
+    duration = models.FloatField(blank=True, null=True)
+
+    # 🔹 LOCAL DEV upload (FileField)
+    original_video_file = models.FileField(
+        upload_to='lectures/originals/',
+        blank=True,
+        null=True
+    )
+
+    # 🔹 PRODUCTION upload (S3 key)
+    original_video_key = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="S3 key of original uploaded video"
+    )
+
+    # 🔹 Processed HLS (Celery uploads this)
+    processed_video = models.FileField(
+        upload_to='lectures/processed/',
+        blank=True,
+        null=True
+    )
+
+    processing_status = models.CharField(
+        max_length=20,
+        choices=PROCESSING_STATUS,
+        default='pending'
+    )
+
     is_preview = models.BooleanField(default=False)
     resource = models.FileField(upload_to='lectures/resources/', blank=True, null=True)
     order = models.PositiveIntegerField(default=0)
@@ -179,22 +219,35 @@ class Lecture(models.Model):
     class Meta:
         ordering = ['order']
 
+
     def __str__(self):
         return f"{self.section.title} - {self.title}"
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        # ✅ Update section duration each time a lecture is saved
         self.section.update_duration()
 
     def get_next_lecture(self):
-        """Get the next lecture in the same section"""
-        try:
-            return Lecture.objects.filter(
-                section=self.section,
-                order__gt=self.order
-            ).order_by('order').first()
-        except Exception:
-            return None
+        return Lecture.objects.filter(
+            section=self.section,
+            order__gt=self.order
+        ).order_by('order').first()
+    
+    @property
+    def video_url(self):
+        """
+        Returns playable video URL (processed preferred)
+        """
+        if self.processed_video:
+            return self.processed_video.url
+
+        if self.original_video_file:
+            return self.original_video_file.url
+
+        if self.original_video_key:
+            return f"{settings.AWS_CLOUDFRONT_DOMAIN}/{self.original_video_key}"
+
+        return ""
 
 
 # user progress

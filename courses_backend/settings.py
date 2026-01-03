@@ -44,6 +44,10 @@ VDOCIPHER_API_SECRET = "Z859e201wL8LGo30LYud9Rp8p9LXuKye3uyiOWWpXZErnxyPHDY5v5SH
 VDOCIPHER_API_BASE = "https://api.vdocipher.com/v2"       # check docs for exact base
 
 
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
 
 
 INSTALLED_APPS = [
@@ -56,7 +60,10 @@ INSTALLED_APPS = [
     'admin_part',
     'auth_app',
     'user_part',
-    'rest_framework'
+    'rest_framework',
+    'rest_framework.authtoken',
+    'rest_framework_simplejwt.token_blacklist',
+    'course_api',
 ]
 AUTH_USER_MODEL = 'auth_app.CustomUser'
 MIDDLEWARE = [
@@ -88,6 +95,22 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'courses_backend.wsgi.application'
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',
+    ),
+}
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=60),
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
