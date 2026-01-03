@@ -1448,3 +1448,20 @@ def zoom_sdk_signature(request):
         return JsonResponse({"signature": signature, "meetingNumber": meeting_number})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+    
+
+
+def meetings(request):
+    # Get all upcoming and recent live sessions
+    live_sessions = LiveSession.objects.all().order_by('session_date', 'session_time')
+    
+    # Separate into upcoming and past sessions
+    now = timezone.now().date()
+    upcoming_sessions = live_sessions.filter(session_date__gte=now)
+    past_sessions = live_sessions.filter(session_date__lt=now)
+    
+    context = {
+        'upcoming_sessions': upcoming_sessions,
+        'past_sessions': past_sessions,
+    }
+    return render(request, 'meetings.html', context)
