@@ -246,3 +246,50 @@ class VerifyRazorpayPaymentAPIView(APIView, APIResponseMixin):
                 "payment_status": enrollment.payment_status
             }
         )
+    
+
+# featured courses
+class HomeFeaturedAPIView(APIView, APIResponseMixin):
+    """
+    Home page API:
+    - Featured 5 bundles
+    - Featured top 5 recent courses
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        try:
+            # 🔹 Featured Bundles (latest 5 published)
+            featured_bundles = (
+                Bundle.objects
+                .filter(is_published=True)
+                .order_by('-created_at')[:5]
+            )
+
+            # 🔹 Featured Recent Courses (latest 5 published)
+            featured_courses = (
+                Course.objects
+                .filter(is_published=True)
+                .select_related('bundle')
+                .order_by('-created_at')[:5]
+            )
+
+            response_data = {
+                "featured_bundles": FeaturedBundleSerializer(
+                    featured_bundles, many=True, context={'request': request}
+                ).data,
+                "featured_courses": FeaturedCourseSerializer(
+                    featured_courses, many=True, context={'request': request}
+                ).data
+            }
+
+            return self.success_response(
+                message="Home featured data fetched successfully",
+                data=response_data
+            )
+
+        except Exception as e:
+            return self.error_response(
+                str(e),
+                status_code=500
+            )

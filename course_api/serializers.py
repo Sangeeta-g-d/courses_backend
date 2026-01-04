@@ -95,3 +95,67 @@ class EnrollmentSerializer(serializers.ModelSerializer):
             'progress_percentage',
             'enrolled_at'
         ]
+
+
+# featured bundles serializer
+class FeaturedBundleSerializer(serializers.ModelSerializer):
+    discounted_price = serializers.SerializerMethodField()
+    thumbnail = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Bundle
+        fields = [
+            'id',
+            'name',
+            'slug',
+            'price',
+            'discount',
+            'discounted_price',
+            'is_free',
+            'short_description',
+            'thumbnail',
+        ]
+
+    def get_discounted_price(self, obj):
+        return obj.get_discounted_price()
+
+    def get_thumbnail(self, obj):
+        request = self.context.get('request')
+        if obj.thumbnail and request:
+            return request.build_absolute_uri(obj.thumbnail.url)
+        return None
+
+
+# feature courses serializer
+class FeaturedCourseSerializer(serializers.ModelSerializer):
+    bundle_name = serializers.CharField(source='bundle.name', read_only=True)
+    total_duration = serializers.CharField(
+        source='calculated_total_duration_display',
+        read_only=True
+    )
+    total_lectures = serializers.IntegerField(
+        source='calculated_total_lectures',
+        read_only=True
+    )
+    thumbnail = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Course
+        fields = [
+            'id',
+            'title',
+            'thumbnail',
+            'short_description',
+            'language',
+            'level',
+            'bundle_name',
+            'total_duration',
+            'total_lectures',
+            'created_at',
+        ]
+
+    def get_thumbnail(self, obj):
+        request = self.context.get('request')
+        if obj.thumbnail and request:
+            return request.build_absolute_uri(obj.thumbnail.url)
+        return None
