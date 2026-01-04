@@ -107,7 +107,6 @@ class FeaturedBundleSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'name',
-            'slug',
             'price',
             'discount',
             'discounted_price',
