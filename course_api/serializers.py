@@ -150,7 +150,6 @@ class FeaturedCourseSerializer(serializers.ModelSerializer):
             'bundle_name',
             'total_duration',
             'total_lectures',
-            'created_at',
         ]
 
     def get_thumbnail(self, obj):

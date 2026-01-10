@@ -69,19 +69,27 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
             bundle=bundle,
         ).order_by('-created_at')
 
-        serializer = CourseSerializer(
+        course_serializer = CourseSerializer(
             courses,
             many=True,
             context={'request': request}
         )
+
+        # 🔹 Get thumbnail URL
+        thumbnail_url = None
+        if bundle.thumbnail and request:
+            thumbnail_url = request.build_absolute_uri(bundle.thumbnail.url)
 
         return self.success_response(
             message="Courses fetched successfully",
             data={
                 "bundle_id": bundle.id,
                 "bundle_name": bundle.name,
+                "bundle_thumbnail": thumbnail_url,
+                "short_description": bundle.short_description,
+                "full_description": bundle.full_description,
                 "total_courses": courses.count(),
-                "courses": serializer.data
+                "courses": course_serializer.data
             }
         )
     
