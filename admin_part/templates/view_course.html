@@ -24,6 +24,7 @@
             <p class="card-text text-truncate">{{ course.short_description }}</p>
             <p class="mb-1"><strong>Level:</strong> {{ course.level }}</p>
             <p class="mb-2"><strong>Language:</strong> {{ course.language }}</p>
+             <p class="mb-2"><strong>Published:</strong> {{ course.is_published }}</p>
             <div class="mt-auto d-flex" style="gap: 5px;">
               <a href="{% url 'edit_course' course.id %}" class="btn btn-sm btn-warning">
                 <i class="bi bi-pencil-square"></i>

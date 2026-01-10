@@ -66,10 +66,10 @@
           </div>
 
           <!-- Is Published -->
-          <div class="col-md-6 d-flex align-items-center">
-            <div class="form-check mt-4">
-              <input type="checkbox" class="form-check-input" id="is_published" name="is_published" {% if bundle.is_published %}checked{% endif %}>
-              <label class="form-check-label" for="is_published">Publish Bundle</label>
+          <div class="col-md-6 d-flex align-items-center mt-3">
+            <div class="form-check form-switch">
+              <input type="checkbox" class="form-check-input" id="is_published" name="is_published" {% if bundle.is_published %}checked{% endif %} style="width: 3em; height: 1.5em; cursor: pointer;">
+              <label class="form-check-label" for="is_published" style="cursor: pointer; margin-left: 0.5rem;">Publish Bundle</label>
             </div>
           </div>
         </div>
