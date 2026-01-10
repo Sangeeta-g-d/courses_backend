@@ -107,3 +107,46 @@ class LoginAPIView(APIResponseMixin, APIView):
             errors=serializer.errors,
             status_code=status.HTTP_400_BAD_REQUEST
         )
+    
+
+class FetchUserProfileAPIView(APIView, APIResponseMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserDetailSerializer(request.user)
+        return self.success_response(
+            message="User details fetched successfully",
+            data=serializer.data
+        )
+
+    def put(self, request):
+        serializer = UserDetailSerializer(
+            request.user,
+            data=request.data,
+            partial=False
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return self.success_response(
+                message="User details updated successfully",
+                data=serializer.data
+            )
+
+        return self.error_response(serializer.errors)
+
+    def patch(self, request):
+        serializer = UserDetailSerializer(
+            request.user,
+            data=request.data,
+            partial=True
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return self.success_response(
+                message="User details updated successfully",
+                data=serializer.data
+            )
+
+        return self.error_response(serializer.errors)

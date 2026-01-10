@@ -80,3 +80,48 @@ class LoginSerializer(serializers.Serializer):
 
         attrs['user'] = user
         return attrs
+
+
+# user profile
+class FetchUserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = [
+            "dob",
+            "highest_qualification",
+            "city",
+        ]
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    profile = FetchUserProfileSerializer(required=False)
+    email = serializers.EmailField(read_only=True)
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            "id",
+            "email",           # read-only
+            "full_name",
+            "phone_number",
+            "profile_image",
+            "role",
+            "profile",
+        ]
+
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop("profile", None)
+
+        # Update CustomUser fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Update or create profile
+        if profile_data:
+            profile, _ = UserProfile.objects.get_or_create(user=instance)
+            for attr, value in profile_data.items():
+                setattr(profile, attr, value)
+            profile.save()
+
+        return instance
