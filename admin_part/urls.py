@@ -38,6 +38,10 @@ urlpatterns = [
     path('total_enrollments/', views.total_enrollments, name='total_enrollments'),
     path('bundle_candidates/<int:bundle_id>/', views.view_bundle_candidates, name='view_bundle_candidates'),
     path('contact_list/', views.contact_list, name='contact_list'),
+
+
+    # is_published toggle API urls
+    path('course/<int:course_id>/toggle-publish/',views.toggle_course_publish,name='toggle_course_publish'),
     
     
    

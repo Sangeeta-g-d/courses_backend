@@ -6,6 +6,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.text import slugify
 from django.contrib.auth import logout
 import json
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from datetime import datetime, date, time
 import uuid
@@ -231,6 +233,45 @@ def view_courses(request):
     })
 
 
+@require_POST
+def toggle_course_publish(request, course_id):
+    try:
+        # Parse JSON data
+        data = json.loads(request.body)
+        is_published = data.get("is_published", False)
+        
+        # Get the course
+        course = Course.objects.get(id=course_id)
+        
+        # Update the field
+        course.is_published = is_published
+        course.save()
+        
+        # Return success response
+        return JsonResponse({
+            "success": True,
+            "is_published": course.is_published,
+            "message": f"Course '{course.title}' is now {'published' if is_published else 'unpublished'}"
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "success": False, 
+            "error": "Invalid JSON data"
+        }, status=400)
+        
+    except Course.DoesNotExist:
+        return JsonResponse({
+            "success": False, 
+            "error": "Course not found"
+        }, status=404)
+        
+    except Exception as e:
+        return JsonResponse({
+            "success": False, 
+            "error": str(e)
+        }, status=400)
+    
 def edit_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     categories = Bundle.objects.all()
