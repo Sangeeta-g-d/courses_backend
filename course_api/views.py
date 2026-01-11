@@ -53,8 +53,8 @@ class BundleListAPIView(APIView, APIResponseMixin):
         )
     
 
-
 class BundleCoursesAPIView(APIView, APIResponseMixin):
+    permission_classes = [AllowAny]
 
     def get(self, request, bundle_id):
         try:
@@ -66,7 +66,7 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
             )
 
         courses = Course.objects.filter(
-            bundle=bundle,
+            bundle=bundle
         ).order_by('-created_at')
 
         course_serializer = CourseSerializer(
@@ -75,10 +75,31 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
             context={'request': request}
         )
 
-        # 🔹 Get thumbnail URL
-        thumbnail_url = None
-        if bundle.thumbnail and request:
-            thumbnail_url = request.build_absolute_uri(bundle.thumbnail.url)
+        # 🔹 Bundle thumbnail
+        thumbnail_url = (
+            request.build_absolute_uri(bundle.thumbnail.url)
+            if bundle.thumbnail else None
+        )
+
+        # 🔐 Auth & Enrollment Check
+        is_logged_in = request.user.is_authenticated
+        is_enrolled = False
+        enrollment_id = None
+        payment_status = None
+        progress_percentage = 0
+
+        if is_logged_in:
+            enrollment = Enrollment.objects.filter(
+                user=request.user,
+                bundle=bundle,
+                is_active=True
+            ).first()
+
+            if enrollment:
+                is_enrolled = True
+                enrollment_id = enrollment.id
+                payment_status = enrollment.payment_status
+                progress_percentage = enrollment.progress_percentage
 
         return self.success_response(
             message="Courses fetched successfully",
@@ -88,10 +109,25 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
                 "bundle_thumbnail": thumbnail_url,
                 "short_description": bundle.short_description,
                 "full_description": bundle.full_description,
+                "price": bundle.price,
+                "discount": bundle.discount,
+                "discounted_price": bundle.get_discounted_price(),
+                "is_free": bundle.is_free,
+
+                # 🔐 Auth info
+                "is_logged_in": is_logged_in,
+                "is_enrolled": is_enrolled,
+
+                # 🎓 Enrollment details (only if enrolled)
+                "enrollment_id": enrollment_id,
+                "payment_status": payment_status,
+                "progress_percentage": progress_percentage,
+
                 "total_courses": courses.count(),
-                "courses": course_serializer.data
+                "courses": course_serializer.data,
             }
         )
+
     
 class BundleEnrollAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
