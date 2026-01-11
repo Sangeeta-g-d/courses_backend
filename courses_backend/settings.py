@@ -29,9 +29,10 @@ ALLOWED_HOSTS = []
 
 
 # Razorpay Configuration
-RAZORPAY_KEY_ID = 'rzp_test_RaWcxIqhOgXCx2'
-RAZORPAY_KEY_SECRET = 'YPteJpM01RX1caw0R3xoVDcS'
-RAZORPAY_WEBHOOK_SECRET = 'your_webhook_secret_here'  # Optional but recommended
+
+RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID')
+RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET')
+
 
 import os
 
