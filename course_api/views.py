@@ -354,7 +354,7 @@ class CourseSectionsAPIView(APIView, APIResponseMixin):
                 status_code=drf_status.HTTP_404_NOT_FOUND
             )
 
-        sections = course.course_sections.all().order_by('order')
+        sections = course.course_sections.prefetch_related('lectures').order_by('order')
 
         section_serializer = CourseSectionSerializer(
             sections,
@@ -374,6 +374,36 @@ class CourseSectionsAPIView(APIView, APIResponseMixin):
             if course.preview_video else None
         )
 
+        # -------------------------------
+        # USER-AWARE PROGRESS
+        # -------------------------------
+        course_progress = None
+        completed_lectures = None
+        total_lectures = None
+        is_enrolled = False
+
+        if request.user.is_authenticated:
+            is_enrolled = Enrollment.objects.filter(
+                user=request.user,
+                bundle=course.bundle,
+                payment_status__in=['completed', 'free'],
+                is_active=True
+            ).exists()
+
+            progress_qs = UserProgress.objects.filter(
+                user=request.user,
+                course=course
+            )
+
+            total_lectures = progress_qs.count()
+            completed_lectures = progress_qs.filter(completed=True).count()
+
+            course_progress = progress_qs.aggregate(
+                avg_progress=Avg('progress_percentage')
+            )['avg_progress']
+
+            course_progress = int(course_progress) if course_progress else 0
+
         return self.success_response(
             message="Course sections fetched successfully",
             data={
@@ -381,6 +411,10 @@ class CourseSectionsAPIView(APIView, APIResponseMixin):
                 "course_name": course.title,
                 "course_thumbnail": course_thumbnail,
                 "preview_video": preview_video,
+                "is_enrolled": is_enrolled,
+                "course_progress": course_progress,
+                "completed_lectures": completed_lectures,
+                "total_lectures": total_lectures,
                 "total_sections": sections.count(),
                 "sections": section_serializer.data
             }

@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from admin_part.models import Bundle, CourseSection, Enrollment,Course
+from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProgress
+from django.db.models import Avg
 
 class BundleDetailSerializer(serializers.ModelSerializer):
     thumbnail_url = serializers.SerializerMethodField()
@@ -164,6 +165,8 @@ class CourseSectionSerializer(serializers.ModelSerializer):
     total_duration_display = serializers.ReadOnlyField(
         source='calculated_total_duration_display'
     )
+    thumbnail = serializers.SerializerMethodField()
+    section_progress = serializers.SerializerMethodField()
 
     class Meta:
         model = CourseSection
@@ -173,4 +176,31 @@ class CourseSectionSerializer(serializers.ModelSerializer):
             'order',
             'total_lectures',
             'total_duration_display',
+            'thumbnail',
+            'section_progress',
         ]
+
+    def get_thumbnail(self, obj):
+        """
+        Section thumbnail → first lecture thumbnail (fallback)
+        """
+        request = self.context.get('request')
+
+        lecture = obj.lectures.filter(thumbnail__isnull=False).first()
+        if lecture and lecture.thumbnail and request:
+            return request.build_absolute_uri(lecture.thumbnail.url)
+
+        return None
+
+    def get_section_progress(self, obj):
+        request = self.context.get('request')
+
+        if not request or not request.user.is_authenticated:
+            return None
+
+        progress = UserProgress.objects.filter(
+            user=request.user,
+            lecture__section=obj
+        ).aggregate(avg_progress=Avg('progress_percentage'))['avg_progress']
+
+        return int(progress) if progress is not None else 0
