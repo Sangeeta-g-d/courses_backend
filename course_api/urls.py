@@ -8,4 +8,6 @@ urlpatterns = [
     path('enroll/<int:bundle_id>/',BundleEnrollAPIView.as_view(),name='bundle-enroll'),
     path('verify-payment/',VerifyRazorpayPaymentAPIView.as_view(),name='verify-enrollment-payment'),
     path('dashboard-api/', HomeFeaturedAPIView.as_view(), name='home-featured'),
+
+    path('course-sections/<int:course_id>/',CourseSectionsAPIView.as_view(),name='course-sections'),
 ]

@@ -27,6 +27,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+from decouple import config
 
 # Razorpay Configuration
 

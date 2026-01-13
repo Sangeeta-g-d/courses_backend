@@ -337,3 +337,51 @@ class HomeFeaturedAPIView(APIView, APIResponseMixin):
                 str(e),
                 status_code=500
             )
+        
+
+class CourseSectionsAPIView(APIView, APIResponseMixin):
+    permission_classes = [AllowAny]
+
+    def get(self, request, course_id):
+        try:
+            course = Course.objects.select_related('bundle').get(
+                id=course_id,
+                is_published=True
+            )
+        except Course.DoesNotExist:
+            return self.error_response(
+                "Course not found",
+                status_code=drf_status.HTTP_404_NOT_FOUND
+            )
+
+        sections = course.course_sections.all().order_by('order')
+
+        section_serializer = CourseSectionSerializer(
+            sections,
+            many=True,
+            context={'request': request}
+        )
+
+        # 🔹 Course thumbnail
+        course_thumbnail = (
+            request.build_absolute_uri(course.thumbnail.url)
+            if course.thumbnail else None
+        )
+
+        # 🔹 Preview video
+        preview_video = (
+            request.build_absolute_uri(course.preview_video.url)
+            if course.preview_video else None
+        )
+
+        return self.success_response(
+            message="Course sections fetched successfully",
+            data={
+                "course_id": course.id,
+                "course_name": course.title,
+                "course_thumbnail": course_thumbnail,
+                "preview_video": preview_video,
+                "total_sections": sections.count(),
+                "sections": section_serializer.data
+            }
+        )

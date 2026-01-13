@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from admin_part.models import Bundle, Enrollment,Course
+from admin_part.models import Bundle, CourseSection, Enrollment,Course
 
 class BundleDetailSerializer(serializers.ModelSerializer):
     thumbnail_url = serializers.SerializerMethodField()
@@ -157,3 +157,20 @@ class FeaturedCourseSerializer(serializers.ModelSerializer):
         if obj.thumbnail and request:
             return request.build_absolute_uri(obj.thumbnail.url)
         return None
+
+
+
+class CourseSectionSerializer(serializers.ModelSerializer):
+    total_duration_display = serializers.ReadOnlyField(
+        source='calculated_total_duration_display'
+    )
+
+    class Meta:
+        model = CourseSection
+        fields = [
+            'id',
+            'title',
+            'order',
+            'total_lectures',
+            'total_duration_display',
+        ]
