@@ -10,4 +10,6 @@ urlpatterns = [
     path('dashboard-api/', HomeFeaturedAPIView.as_view(), name='home-featured'),
 
     path('course-sections/<int:course_id>/',CourseSectionsAPIView.as_view(),name='course-sections'),
+    path("lectures/<int:section_id>/",SectionLectureListAPIView.as_view(),name="section-lectures"),
+    path("update-progress/",UpdateUserProgressAPIView.as_view(),name="update-user-progress"),
 ]

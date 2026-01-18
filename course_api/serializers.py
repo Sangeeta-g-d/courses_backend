@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProgress
+from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProgress, Lecture
 from django.db.models import Avg
 
 class BundleDetailSerializer(serializers.ModelSerializer):
@@ -40,7 +40,7 @@ class BundleDetailSerializer(serializers.ModelSerializer):
             return Enrollment.objects.filter(
                 user=user,
                 bundle=obj,
-                payment_status__in=["completed", "free"],
+                payment_status__in=["completed", "free"],  # ONLY FINAL STATES
                 is_active=True
             ).exists()
 
@@ -204,3 +204,37 @@ class CourseSectionSerializer(serializers.ModelSerializer):
         ).aggregate(avg_progress=Avg('progress_percentage'))['avg_progress']
 
         return int(progress) if progress is not None else 0
+    
+
+# lectures
+class LectureListSerializer(serializers.ModelSerializer):
+    video_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Lecture
+        fields = [
+            "id",
+            "title",
+            "duration",
+            "video_url",
+            "is_preview",
+            "order",
+            "processing_status",
+            "thumbnail",
+            "resource",
+        ]
+
+    def get_video_url(self, obj):
+        """
+        Return video URL only if:
+        - lecture is preview
+        OR
+        - user is enrolled (optional logic below)
+        """
+        request = self.context.get("request")
+        return obj.video_url
+    
+
+class UserProgressUpdateSerializer(serializers.Serializer):
+    lecture_id = serializers.IntegerField()
+    watched_seconds = serializers.FloatField(min_value=1)

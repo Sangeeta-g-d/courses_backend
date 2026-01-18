@@ -419,3 +419,112 @@ class CourseSectionsAPIView(APIView, APIResponseMixin):
                 "sections": section_serializer.data
             }
         )
+
+
+# lecture detail API can be added later
+class SectionLectureListAPIView(APIView, APIResponseMixin):
+    permission_classes = [IsAuthenticated]  # change if needed
+
+    def get(self, request, section_id):
+        # 1️⃣ Validate section
+        section = get_object_or_404(
+            CourseSection,
+            id=section_id,
+            course__is_published=True
+        )
+
+        # 2️⃣ Fetch lectures
+        lectures = Lecture.objects.filter(
+            section=section
+        ).order_by("order")
+
+        serializer = LectureListSerializer(
+            lectures,
+            many=True,
+            context={"request": request}
+        )
+
+        return self.success_response(
+            message="Lectures fetched successfully",
+            data={
+                "section_id": section.id,
+                "section_title": section.title,
+                "total_lectures": lectures.count(),
+                "lectures": serializer.data
+            },
+            status_code=drf_status.HTTP_200_OK
+        )
+
+
+class UpdateUserProgressAPIView(APIView, APIResponseMixin):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        serializer = UserProgressUpdateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return self.error_response(serializer.errors)
+
+        lecture_id = serializer.validated_data["lecture_id"]
+        watched_seconds = serializer.validated_data["watched_seconds"]
+        user = request.user
+
+        # 1️⃣ Validate lecture
+        try:
+            lecture = Lecture.objects.select_related(
+                "section__course"
+            ).get(id=lecture_id)
+        except Lecture.DoesNotExist:
+            return self.error_response(
+                "Lecture not found",
+                status_code=drf_status.HTTP_404_NOT_FOUND
+            )
+
+        course = lecture.section.course
+
+        # 2️⃣ Get or create progress row
+        progress, created = UserProgress.objects.get_or_create(
+            user=user,
+            lecture=lecture,
+            defaults={
+                "course": course,
+                "total_duration": lecture.duration or 0
+            }
+        )
+
+        # 3️⃣ Skip update if already completed (IMPORTANT)
+        if progress.completed:
+            return self.success_response(
+                message="Lecture already completed",
+                data={
+                    "lecture_id": lecture.id,
+                    "progress_percentage": progress.progress_percentage,
+                    "completed": True
+                }
+            )
+
+        # 4️⃣ Increment watched duration (CAP at total duration)
+        progress.watched_duration = min(
+            progress.total_duration,
+            progress.watched_duration + watched_seconds
+        )
+
+        # 5️⃣ Save ONLY required fields (performance critical)
+        progress.save(update_fields=[
+            "watched_duration",
+            "progress_percentage",
+            "completed",
+            "completed_at",
+            "last_watched"
+        ])
+
+        return self.success_response(
+            message="Progress updated",
+            data={
+                "lecture_id": lecture.id,
+                "watched_duration": progress.watched_duration,
+                "progress_percentage": round(progress.progress_percentage, 2),
+                "completed": progress.completed
+            },
+            status_code=drf_status.HTTP_200_OK
+        )
