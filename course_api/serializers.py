@@ -209,6 +209,8 @@ class CourseSectionSerializer(serializers.ModelSerializer):
 # lectures
 class LectureListSerializer(serializers.ModelSerializer):
     video_url = serializers.SerializerMethodField()
+    is_watched = serializers.SerializerMethodField()
+    progress_percentage = serializers.SerializerMethodField()
 
     class Meta:
         model = Lecture
@@ -219,24 +221,34 @@ class LectureListSerializer(serializers.ModelSerializer):
             "video_url",
             "is_preview",
             "order",
-            "processing_status",
+            "processing_status",   # video processing only
+            "is_watched",          # ✅ user-specific
+            "progress_percentage", # ✅ user-specific
             "thumbnail",
             "resource",
         ]
 
     def get_video_url(self, obj):
-        """
-        Show video URL only if:
-        - Lecture is preview
-        OR
-        - User is enrolled in bundle
-        """
         is_enrolled = self.context.get("is_enrolled", False)
-
         if obj.is_preview or is_enrolled:
             return obj.video_url
-
         return None
+
+    def get_is_watched(self, obj):
+        user = self.context["request"].user
+        progress = UserProgress.objects.filter(
+            user=user,
+            lecture=obj
+        ).only("completed").first()
+        return progress.completed if progress else False
+
+    def get_progress_percentage(self, obj):
+        user = self.context["request"].user
+        progress = UserProgress.objects.filter(
+            user=user,
+            lecture=obj
+        ).only("progress_percentage").first()
+        return progress.progress_percentage if progress else 0
 
 
 class UserProgressUpdateSerializer(serializers.Serializer):
