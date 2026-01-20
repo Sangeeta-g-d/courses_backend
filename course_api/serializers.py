@@ -226,14 +226,18 @@ class LectureListSerializer(serializers.ModelSerializer):
 
     def get_video_url(self, obj):
         """
-        Return video URL only if:
-        - lecture is preview
+        Show video URL only if:
+        - Lecture is preview
         OR
-        - user is enrolled (optional logic below)
+        - User is enrolled in bundle
         """
-        request = self.context.get("request")
-        return obj.video_url
-    
+        is_enrolled = self.context.get("is_enrolled", False)
+
+        if obj.is_preview or is_enrolled:
+            return obj.video_url
+
+        return None
+
 
 class UserProgressUpdateSerializer(serializers.Serializer):
     lecture_id = serializers.IntegerField()

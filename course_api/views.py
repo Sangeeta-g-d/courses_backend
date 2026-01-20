@@ -423,7 +423,7 @@ class CourseSectionsAPIView(APIView, APIResponseMixin):
 
 # lecture detail API can be added later
 class SectionLectureListAPIView(APIView, APIResponseMixin):
-    permission_classes = [IsAuthenticated]  # change if needed
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, section_id):
         # 1️⃣ Validate section
@@ -433,7 +433,19 @@ class SectionLectureListAPIView(APIView, APIResponseMixin):
             course__is_published=True
         )
 
-        # 2️⃣ Fetch lectures
+        # 2️⃣ Check enrollment for bundle
+        bundle = section.course.bundle
+        is_enrolled = False
+
+        if bundle:
+            is_enrolled = Enrollment.objects.filter(
+                user=request.user,
+                bundle=bundle,
+                is_active=True,
+                payment_status__in=['completed', 'free']
+            ).exists()
+
+        # 3️⃣ Fetch lectures
         lectures = Lecture.objects.filter(
             section=section
         ).order_by("order")
@@ -441,7 +453,10 @@ class SectionLectureListAPIView(APIView, APIResponseMixin):
         serializer = LectureListSerializer(
             lectures,
             many=True,
-            context={"request": request}
+            context={
+                "request": request,
+                "is_enrolled": is_enrolled
+            }
         )
 
         return self.success_response(
@@ -450,11 +465,11 @@ class SectionLectureListAPIView(APIView, APIResponseMixin):
                 "section_id": section.id,
                 "section_title": section.title,
                 "total_lectures": lectures.count(),
+                "is_enrolled": is_enrolled,
                 "lectures": serializer.data
             },
             status_code=drf_status.HTTP_200_OK
         )
-
 
 class UpdateUserProgressAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
