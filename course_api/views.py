@@ -652,3 +652,65 @@ class EnrolledBundleListAPIView(APIView, APIResponseMixin):
             },
             status_code=drf_status.HTTP_200_OK
         )
+
+
+# user profile stats
+class UserProfileStatsAPIView(APIView, APIResponseMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        # 🔹 Bundles enrolled
+        bundles_enrolled = Enrollment.objects.filter(
+            user=user,
+            is_active=True,
+            payment_status__in=["completed", "free"]
+        )
+
+        total_bundles_enrolled = bundles_enrolled.count()
+
+        # 🔹 Bundles completed
+        bundles_completed = bundles_enrolled.filter(
+            progress_percentage=100
+        ).count()
+
+        # 🔹 Courses completed
+        # A course is considered completed if its bundle is completed
+        completed_bundle_ids = bundles_enrolled.filter(
+            progress_percentage=100
+        ).values_list("bundle_id", flat=True)
+
+        courses_completed = Course.objects.filter(
+            bundle_id__in=completed_bundle_ids,
+            is_published=True
+        ).count()
+
+        # 🔹 Lectures completed
+        lectures_completed = UserProgress.objects.filter(
+            user=user,
+            completed=True
+        ).count()
+
+        # 🔹 Total learning time (seconds → hours)
+        total_watch_seconds = UserProgress.objects.filter(
+            user=user
+        ).aggregate(
+            total=Sum("watched_duration")
+        )["total"] or 0
+
+        total_learning_hours = round(total_watch_seconds / 3600, 2)
+
+        data = {
+            "bundles_enrolled": total_bundles_enrolled,
+            "bundles_completed": bundles_completed,
+            "courses_completed": courses_completed,
+            "lectures_completed": lectures_completed,
+            "total_learning_hours": total_learning_hours
+        }
+
+        return self.success_response(
+            message="User profile statistics fetched successfully",
+            data=data,
+            status_code=drf_status.HTTP_200_OK
+        )

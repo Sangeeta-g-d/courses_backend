@@ -16,4 +16,5 @@ urlpatterns = [
     path('user-rankings/', DashboardRankingAPIView.as_view()),
     path('courses-list/',CourseListAPIView.as_view(),name='courses-list'),
     path('enrolled-bundles/',EnrolledBundleListAPIView.as_view(),name='enrolled-bundles'),
+    path('profile-stats/',UserProfileStatsAPIView.as_view(),name='user-profile-stats'),
 ]
