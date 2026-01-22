@@ -150,3 +150,6 @@ class FetchUserProfileAPIView(APIView, APIResponseMixin):
             )
 
         return self.error_response(serializer.errors)
+    
+
+# dashboard api view

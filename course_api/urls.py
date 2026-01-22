@@ -12,4 +12,8 @@ urlpatterns = [
     path('course-sections/<int:course_id>/',CourseSectionsAPIView.as_view(),name='course-sections'),
     path("lectures/<int:section_id>/",SectionLectureListAPIView.as_view(),name="section-lectures"),
     path("update-progress/",UpdateUserProgressAPIView.as_view(),name="update-user-progress"),
+
+    path('user-rankings/', DashboardRankingAPIView.as_view()),
+    path('courses-list/',CourseListAPIView.as_view(),name='courses-list'),
+    path('enrolled-bundles/',EnrolledBundleListAPIView.as_view(),name='enrolled-bundles'),
 ]

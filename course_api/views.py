@@ -5,12 +5,15 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from django.shortcuts import get_object_or_404
 from rest_framework import status as drf_status
 from admin_part.models import Bundle, Enrollment, Course
+from user_part.utils import get_user_rank, get_user_watch_time_rankings
 from .serializers import *
 from courses_backend.api_response import APIResponseMixin
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.conf import settings
 import razorpay
+from django.db.models import Sum, Count, Q
+
 
 
 class BundleListAPIView(APIView, APIResponseMixin):
@@ -423,7 +426,7 @@ class CourseSectionsAPIView(APIView, APIResponseMixin):
 
 # lecture detail API can be added later
 class SectionLectureListAPIView(APIView, APIResponseMixin):
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # 🔥 allow unauthenticated access
 
     def get(self, request, section_id):
         # 1️⃣ Validate section
@@ -433,14 +436,15 @@ class SectionLectureListAPIView(APIView, APIResponseMixin):
             course__is_published=True
         )
 
-        # 2️⃣ Check enrollment for bundle
-        bundle = section.course.bundle
+        user = request.user
+        is_authenticated = user.is_authenticated
         is_enrolled = False
 
-        if bundle:
+        # 2️⃣ Check enrollment only if authenticated
+        if is_authenticated and section.course.bundle:
             is_enrolled = Enrollment.objects.filter(
-                user=request.user,
-                bundle=bundle,
+                user=user,
+                bundle=section.course.bundle,
                 is_active=True,
                 payment_status__in=['completed', 'free']
             ).exists()
@@ -455,16 +459,24 @@ class SectionLectureListAPIView(APIView, APIResponseMixin):
             many=True,
             context={
                 "request": request,
+                "is_authenticated": is_authenticated,
                 "is_enrolled": is_enrolled
             }
         )
 
+        message = (
+            "Lectures fetched successfully"
+            if is_authenticated
+            else "Unauthenticated user. Login required to access full content"
+        )
+
         return self.success_response(
-            message="Lectures fetched successfully",
+            message=message,
             data={
                 "section_id": section.id,
                 "section_title": section.title,
                 "total_lectures": lectures.count(),
+                "is_authenticated": is_authenticated,
                 "is_enrolled": is_enrolled,
                 "lectures": serializer.data
             },
@@ -540,6 +552,103 @@ class UpdateUserProgressAPIView(APIView, APIResponseMixin):
                 "watched_duration": progress.watched_duration,
                 "progress_percentage": round(progress.progress_percentage, 2),
                 "completed": progress.completed
+            },
+            status_code=drf_status.HTTP_200_OK
+        )
+
+
+class DashboardRankingAPIView(APIView, APIResponseMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        # 🔹 Top 5 users
+        top_users = get_user_watch_time_rankings()[:5]
+
+        # 🔹 Current user rank
+        current_user_rank = get_user_rank(user)
+
+        # 🔹 Current user stats
+        current_user_stats = user.progress.aggregate(
+            total_watched_duration=Sum('watched_duration'),
+            completed_lectures=Count(
+                'lecture',
+                filter=Q(completed=True)
+            ),
+            total_lectures=Count('lecture')
+        )
+
+        response_data = {
+            "top_users": top_users,
+            "current_user_rank": current_user_rank,
+            "current_user_stats": {
+                "total_watch_time_minutes": int(
+                    (current_user_stats["total_watched_duration"] or 0) / 60
+                ),
+                "completed_lectures": current_user_stats["completed_lectures"],
+                "total_lectures": current_user_stats["total_lectures"],
+            }
+        }
+
+        return self.success_response(
+            message="Dashboard ranking data fetched successfully",
+            data=response_data,
+            status_code=drf_status.HTTP_200_OK
+        )
+
+
+class CourseListAPIView(APIView, APIResponseMixin):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        courses = Course.objects.filter(
+            is_published=True
+        ).prefetch_related(
+            'course_sections',
+            'course_sections__lectures'
+        ).order_by('-created_at')
+
+        serializer = CourseListSerializer(
+            courses,
+            many=True,
+            context={'request': request}
+        )
+
+        return self.success_response(
+            message="Courses fetched successfully",
+            data={
+                "total_courses": courses.count(),
+                "courses": serializer.data
+            },
+            status_code=drf_status.HTTP_200_OK
+        )
+
+
+class EnrolledBundleListAPIView(APIView, APIResponseMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        enrollments = Enrollment.objects.filter(
+            user=request.user,
+            is_active=True
+        ).select_related(
+            'bundle'
+        ).prefetch_related(
+            'bundle__courses'
+        ).order_by('-enrolled_at')
+
+        serializer = EnrolledBundleSerializer(
+            enrollments,
+            many=True,
+            context={'request': request}
+        )
+
+        return self.success_response(
+            message="Enrolled bundles fetched successfully",
+            data={
+                "total_enrolled_bundles": enrollments.count(),
+                "bundles": serializer.data
             },
             status_code=drf_status.HTTP_200_OK
         )
