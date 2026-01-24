@@ -6,6 +6,7 @@ class BundleDetailSerializer(serializers.ModelSerializer):
     thumbnail_url = serializers.SerializerMethodField()
     discounted_price = serializers.SerializerMethodField()
     already_enrolled = serializers.SerializerMethodField()
+    total_courses = serializers.SerializerMethodField()
 
     class Meta:
         model = Bundle
@@ -21,6 +22,7 @@ class BundleDetailSerializer(serializers.ModelSerializer):
             "thumbnail_url",
             "already_enrolled",
             "is_published",
+            "total_courses",
             "created_at",
         ]
 
@@ -45,6 +47,13 @@ class BundleDetailSerializer(serializers.ModelSerializer):
             ).exists()
 
         return False
+
+    def get_total_courses(self, obj):
+        # Use annotated total_courses if available (from queryset annotation)
+        # Otherwise fall back to counting courses
+        if hasattr(obj, 'total_courses'):
+            return obj.total_courses
+        return obj.courses.count()
 
 
 class CourseSerializer(serializers.ModelSerializer):
@@ -211,6 +220,8 @@ class LectureListSerializer(serializers.ModelSerializer):
     video_url = serializers.SerializerMethodField()
     is_watched = serializers.SerializerMethodField()
     progress_percentage = serializers.SerializerMethodField()
+    last_watched_at = serializers.SerializerMethodField()
+    watched_duration_seconds = serializers.SerializerMethodField()
 
     class Meta:
         model = Lecture
@@ -226,6 +237,8 @@ class LectureListSerializer(serializers.ModelSerializer):
             "progress_percentage",
             "thumbnail",
             "resource",
+            "last_watched_at",
+            "watched_duration_seconds",
         ]
 
     def get_video_url(self, obj):
@@ -245,28 +258,71 @@ class LectureListSerializer(serializers.ModelSerializer):
         user = getattr(request, "user", None)
 
         if not user or not user.is_authenticated:
-            return False
-
-        progress = UserProgress.objects.filter(
-            user=user,
-            lecture=obj
-        ).only("completed").first()
-
-        return progress.completed if progress else False
-
-    def get_progress_percentage(self, obj):
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-
-        if not user or not user.is_authenticated:
-            return 0
+            return None
 
         progress = UserProgress.objects.filter(
             user=user,
             lecture=obj
         ).only("progress_percentage").first()
 
-        return progress.progress_percentage if progress else 0
+        if not progress:
+            return None
+
+        # Return True if watched >= 95%, False otherwise
+        return progress.progress_percentage >= 95
+
+    def get_progress_percentage(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        if not user or not user.is_authenticated:
+            return None
+
+        progress = UserProgress.objects.filter(
+            user=user,
+            lecture=obj
+        ).only("progress_percentage").first()
+
+        if not progress:
+            return None
+
+        # Round to 2 decimal places
+        return round(progress.progress_percentage, 2)
+
+    def get_last_watched_at(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        if not user or not user.is_authenticated:
+            return None
+
+        progress = UserProgress.objects.filter(
+            user=user,
+            lecture=obj
+        ).only("last_watched").first()
+
+        if not progress:
+            return None
+
+        # Return ISO 8601 format in UTC
+        return progress.last_watched.isoformat() if progress.last_watched else None
+
+    def get_watched_duration_seconds(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        if not user or not user.is_authenticated:
+            return None
+
+        progress = UserProgress.objects.filter(
+            user=user,
+            lecture=obj
+        ).only("watched_duration").first()
+
+        if not progress:
+            return None
+
+        return progress.watched_duration if progress.watched_duration > 0 else None
 
 
 class UserProgressUpdateSerializer(serializers.Serializer):

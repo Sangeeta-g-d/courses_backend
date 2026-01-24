@@ -104,6 +104,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
     ),
+    'EXCEPTION_HANDLER': 'courses_backend.api_response.custom_exception_handler',
 }
 
 from datetime import timedelta

@@ -13,6 +13,7 @@ from django.db import transaction
 from django.conf import settings
 import razorpay
 from django.db.models import Sum, Count, Q
+import math
 
 
 
@@ -37,12 +38,52 @@ class BundleListAPIView(APIView, APIResponseMixin):
             user = None
 
         # ---------------------------
+        # PAGINATION PARAMETERS
+        # ---------------------------
+        try:
+            page = int(request.query_params.get('page', 1))
+            if page < 1:
+                page = 1
+        except (ValueError, TypeError):
+            page = 1
+
+        try:
+            page_size = int(request.query_params.get('page_size', 20))
+            if page_size < 1:
+                page_size = 20
+            elif page_size > 100:
+                page_size = 100  # Maximum limit to prevent performance issues
+        except (ValueError, TypeError):
+            page_size = 20
+
+        # ---------------------------
         # FETCH BUNDLES
         # ---------------------------
-        bundles = Bundle.objects.filter(is_published=True)
+        bundles_queryset = Bundle.objects.filter(is_published=True).annotate(
+            total_courses=Count('courses')
+        )
+
+        # Calculate total items
+        total_items = bundles_queryset.count()
+
+        # Calculate pagination values
+        total_pages = math.ceil(total_items / page_size) if total_items > 0 else 0
+
+        # Handle edge cases: page > totalPages or page < 1
+        if page > total_pages and total_pages > 0:
+            page = total_pages
+        if page < 1:
+            page = 1
+
+        # Calculate slice indices
+        start_index = (page - 1) * page_size
+        end_index = start_index + page_size
+
+        # Slice the queryset
+        paginated_bundles = bundles_queryset[start_index:end_index]
 
         serializer = BundleDetailSerializer(
-            bundles,
+            paginated_bundles,
             many=True,
             context={
                 "request": request,
@@ -50,9 +91,22 @@ class BundleListAPIView(APIView, APIResponseMixin):
             }
         )
 
+        # Build pagination metadata
+        pagination = {
+            "current_page": page,
+            "page_size": page_size,
+            "total_items": total_items,
+            "total_pages": total_pages,
+            "has_next_page": page < total_pages,
+            "has_previous_page": page > 1
+        }
+
         return self.success_response(
             message="Bundles fetched successfully",
-            data=serializer.data
+            data={
+                "bundles": serializer.data,
+                "pagination": pagination
+            }
         )
     
 
@@ -321,13 +375,55 @@ class HomeFeaturedAPIView(APIView, APIResponseMixin):
                 .order_by('-created_at')[:5]
             )
 
+            # 🔹 Continue Learning (top 2 for authenticated users)
+            continue_learning = None
+            if request.user.is_authenticated:
+                continue_learning_items = (
+                    UserProgress.objects
+                    .filter(
+                        user=request.user,
+                        completed=False,
+                        watched_duration__gt=0
+                    )
+                    .select_related(
+                        'lecture',
+                        'lecture__section',
+                        'course'
+                    )
+                    .order_by('-last_watched')[:2]
+                )
+                
+                if continue_learning_items.exists():
+                    continue_learning = []
+                    for progress in continue_learning_items:
+                        lecture = progress.lecture
+                        section = lecture.section
+                        course = progress.course
+                        
+                        # Get thumbnail URL
+                        thumbnail_url = None
+                        if lecture.thumbnail:
+                            thumbnail_url = request.build_absolute_uri(lecture.thumbnail.url)
+                        
+                        continue_learning.append({
+                            "lecture_id": lecture.id,
+                            "lecture_title": lecture.title,
+                            "course_id": course.id,
+                            "course_name": course.title,
+                            "section_id": section.id,
+                            "section_title": section.title,
+                            "progress_percentage": progress.progress_percentage,
+                            "thumbnail": thumbnail_url
+                        })
+
             response_data = {
                 "featured_bundles": FeaturedBundleSerializer(
                     featured_bundles, many=True, context={'request': request}
                 ).data,
                 "featured_courses": FeaturedCourseSerializer(
                     featured_courses, many=True, context={'request': request}
-                ).data
+                ).data,
+                "continue_learning": continue_learning
             }
 
             return self.success_response(
@@ -464,6 +560,23 @@ class SectionLectureListAPIView(APIView, APIResponseMixin):
             }
         )
 
+        # 4️⃣ Find last viewed lecture (most recent last_watched)
+        last_viewed_lecture_id = None
+        if is_authenticated:
+            last_viewed = (
+                UserProgress.objects
+                .filter(
+                    user=user,
+                    lecture__section=section,
+                    watched_duration__gt=0
+                )
+                .order_by('-last_watched')
+                .only('lecture_id')
+                .first()
+            )
+            if last_viewed:
+                last_viewed_lecture_id = last_viewed.lecture_id
+
         message = (
             "Lectures fetched successfully"
             if is_authenticated
@@ -478,6 +591,7 @@ class SectionLectureListAPIView(APIView, APIResponseMixin):
                 "total_lectures": lectures.count(),
                 "is_authenticated": is_authenticated,
                 "is_enrolled": is_enrolled,
+                "last_viewed_lecture_id": last_viewed_lecture_id,
                 "lectures": serializer.data
             },
             status_code=drf_status.HTTP_200_OK
@@ -564,7 +678,15 @@ class DashboardRankingAPIView(APIView, APIResponseMixin):
         user = request.user
 
         # 🔹 Top 5 users
-        top_users = get_user_watch_time_rankings()[:5]
+        top_users_raw = get_user_watch_time_rankings()[:5]
+        
+        # Build absolute URLs for profile images
+        top_users = []
+        for user_data in top_users_raw:
+            user_data_copy = user_data.copy()
+            if user_data_copy.get("profile_image"):
+                user_data_copy["profile_image"] = request.build_absolute_uri(user_data_copy["profile_image"])
+            top_users.append(user_data_copy)
 
         # 🔹 Current user rank
         current_user_rank = get_user_rank(user)
@@ -602,24 +724,72 @@ class CourseListAPIView(APIView, APIResponseMixin):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        courses = Course.objects.filter(
+        # Get query parameters with defaults and validation
+        try:
+            page = int(request.query_params.get('page', 1))
+            if page < 1:
+                page = 1
+        except (ValueError, TypeError):
+            page = 1
+
+        try:
+            page_size = int(request.query_params.get('page_size', 20))
+            if page_size < 1:
+                page_size = 20
+            elif page_size > 100:
+                page_size = 100  # Maximum limit to prevent performance issues
+        except (ValueError, TypeError):
+            page_size = 20
+
+        # Get all published courses
+        courses_queryset = Course.objects.filter(
             is_published=True
         ).prefetch_related(
             'course_sections',
             'course_sections__lectures'
         ).order_by('-created_at')
 
+        # Calculate total items
+        total_items = courses_queryset.count()
+
+        # Calculate pagination values
+        total_pages = math.ceil(total_items / page_size) if total_items > 0 else 0
+
+        # Handle edge cases: page > totalPages or page < 1
+        if page > total_pages and total_pages > 0:
+            page = total_pages
+        if page < 1:
+            page = 1
+
+        # Calculate slice indices
+        start_index = (page - 1) * page_size
+        end_index = start_index + page_size
+
+        # Slice the queryset
+        paginated_courses = courses_queryset[start_index:end_index]
+
+        # Serialize the paginated courses
         serializer = CourseListSerializer(
-            courses,
+            paginated_courses,
             many=True,
             context={'request': request}
         )
 
+        # Build pagination metadata
+        pagination = {
+            "current_page": page,
+            "page_size": page_size,
+            "total_items": total_items,
+            "total_pages": total_pages,
+            "has_next_page": page < total_pages,
+            "has_previous_page": page > 1
+        }
+
         return self.success_response(
             message="Courses fetched successfully",
             data={
-                "total_courses": courses.count(),
-                "courses": serializer.data
+                "courses": serializer.data,
+                "pagination": pagination
             },
             status_code=drf_status.HTTP_200_OK
         )
@@ -629,7 +799,25 @@ class EnrolledBundleListAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        enrollments = Enrollment.objects.filter(
+        # Get query parameters with defaults and validation
+        try:
+            page = int(request.query_params.get('page', 1))
+            if page < 1:
+                page = 1
+        except (ValueError, TypeError):
+            page = 1
+
+        try:
+            page_size = int(request.query_params.get('page_size', 20))
+            if page_size < 1:
+                page_size = 20
+            elif page_size > 100:
+                page_size = 100  # Maximum limit to prevent performance issues
+        except (ValueError, TypeError):
+            page_size = 20
+
+        # Get all enrolled bundles for the user
+        enrollments_queryset = Enrollment.objects.filter(
             user=request.user,
             is_active=True
         ).select_related(
@@ -638,17 +826,46 @@ class EnrolledBundleListAPIView(APIView, APIResponseMixin):
             'bundle__courses'
         ).order_by('-enrolled_at')
 
+        # Calculate total items
+        total_items = enrollments_queryset.count()
+
+        # Calculate pagination values
+        total_pages = math.ceil(total_items / page_size) if total_items > 0 else 0
+
+        # Handle edge cases: page > totalPages or page < 1
+        if page > total_pages and total_pages > 0:
+            page = total_pages
+        if page < 1:
+            page = 1
+
+        # Calculate slice indices
+        start_index = (page - 1) * page_size
+        end_index = start_index + page_size
+
+        # Slice the queryset
+        paginated_enrollments = enrollments_queryset[start_index:end_index]
+
         serializer = EnrolledBundleSerializer(
-            enrollments,
+            paginated_enrollments,
             many=True,
             context={'request': request}
         )
 
+        # Build pagination metadata
+        pagination = {
+            "current_page": page,
+            "page_size": page_size,
+            "total_items": total_items,
+            "total_pages": total_pages,
+            "has_next_page": page < total_pages,
+            "has_previous_page": page > 1
+        }
+
         return self.success_response(
             message="Enrolled bundles fetched successfully",
             data={
-                "total_enrolled_bundles": enrollments.count(),
-                "bundles": serializer.data
+                "bundles": serializer.data,
+                "pagination": pagination
             },
             status_code=drf_status.HTTP_200_OK
         )
@@ -712,5 +929,108 @@ class UserProfileStatsAPIView(APIView, APIResponseMixin):
         return self.success_response(
             message="User profile statistics fetched successfully",
             data=data,
+            status_code=drf_status.HTTP_200_OK
+        )
+
+
+class ContinueLearningAPIView(APIView, APIResponseMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        
+        # Get query parameters with defaults and validation
+        try:
+            page = int(request.query_params.get('page', 1))
+            if page < 1:
+                page = 1
+        except (ValueError, TypeError):
+            page = 1
+
+        try:
+            page_size = int(request.query_params.get('page_size', 20))
+            if page_size < 1:
+                page_size = 20
+            elif page_size > 100:
+                page_size = 100  # Maximum limit to prevent performance issues
+        except (ValueError, TypeError):
+            page_size = 20
+
+        # Get all incomplete lectures for the user
+        progress_queryset = (
+            UserProgress.objects
+            .filter(
+                user=user,
+                completed=False,
+                watched_duration__gt=0
+            )
+            .select_related(
+                'lecture',
+                'lecture__section',
+                'course'
+            )
+            .order_by('-last_watched')
+        )
+
+        # Calculate total items
+        total_items = progress_queryset.count()
+
+        # Calculate pagination values
+        total_pages = math.ceil(total_items / page_size) if total_items > 0 else 0
+
+        # Handle edge cases: page > totalPages or page < 1
+        if page > total_pages and total_pages > 0:
+            page = total_pages
+        if page < 1:
+            page = 1
+
+        # Calculate slice indices
+        start_index = (page - 1) * page_size
+        end_index = start_index + page_size
+
+        # Slice the queryset
+        paginated_progress = progress_queryset[start_index:end_index]
+
+        # Build lectures data
+        lectures = []
+        for progress in paginated_progress:
+            lecture = progress.lecture
+            section = lecture.section
+            course = progress.course
+            
+            # Get thumbnail URL
+            thumbnail_url = None
+            if lecture.thumbnail:
+                thumbnail_url = request.build_absolute_uri(lecture.thumbnail.url)
+            
+            lectures.append({
+                "lecture_id": lecture.id,
+                "lecture_title": lecture.title,
+                "course_id": course.id,
+                "course_name": course.title,
+                "section_id": section.id,
+                "section_title": section.title,
+                "progress_percentage": progress.progress_percentage,
+                "watched_duration_seconds": progress.watched_duration,
+                "total_duration_seconds": progress.total_duration,
+                "thumbnail": thumbnail_url
+            })
+
+        # Build pagination metadata
+        pagination = {
+            "current_page": page,
+            "page_size": page_size,
+            "total_items": total_items,
+            "total_pages": total_pages,
+            "has_next_page": page < total_pages,
+            "has_previous_page": page > 1
+        }
+
+        return self.success_response(
+            message="Continue learning lectures fetched successfully",
+            data={
+                "lectures": lectures,
+                "pagination": pagination
+            },
             status_code=drf_status.HTTP_200_OK
         )
