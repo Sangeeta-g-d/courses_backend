@@ -39,7 +39,7 @@ def get_user_watch_time_rankings():
         ranking.append({
             "rank": rank,
             "user_id": user.id,
-            "name": user.get_full_name() or user.username,
+            "name": user.full_name or user.username,
             "completed_courses": user.completed_courses,
             "total_watch_time_minutes": int((user.total_watch_time or 0) / 60),
             "profile_image": profile_image_url,
