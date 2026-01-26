@@ -77,47 +77,57 @@
       throw new Error(data.error || "Signature generation failed");
     }
 
-    async function joinMeeting() {
-      const status = document.getElementById("status");
-      status.textContent = "Loading Zoom SDK...";
+async function joinMeeting() {
+  const status = document.getElementById("status");
+  status.textContent = "Loading Zoom SDK...";
 
-      const ZoomMtg = window.ZoomMtg;
-      ZoomMtg.setZoomJSLib("https://source.zoom.us/4.1.0/lib", "/av");
-      ZoomMtg.preLoadWasm(); 
-      ZoomMtg.prepareWebSDK();
-      ZoomMtg.i18n.load("en-US"); 
-      ZoomMtg.i18n.reload("en-US");
+  const ZoomMtg = window.ZoomMtg;
 
-      try {
-        const signature = await getSignature();
-        ZoomMtg.init({
-          leaveUrl: LEAVE_URL,
-          success: function() {
-            ZoomMtg.join({
-              signature: signature,
-              sdkKey: SDK_KEY,
-              meetingNumber: MEETING_NUMBER,
-              passWord: PASSCODE,
-              userName: DISPLAY_NAME,
-              success: function() {
-                status.textContent = "Joined successfully!";
-              },
-              error: function(e) {
-                console.error(e);
-                status.textContent = "Join failed: " + e.errorMessage;
-              }
-            });
+  ZoomMtg.setZoomJSLib("https://source.zoom.us/4.1.0/lib", "/av");
+  ZoomMtg.preLoadWasm();
+  ZoomMtg.prepareWebSDK();
+
+  ZoomMtg.i18n.load("en-US");
+  ZoomMtg.i18n.reload("en-US");
+
+  // ✅ FORCE LEAVE ANY EXISTING MEETING
+  ZoomMtg.endMeeting({
+    success: function () {
+      console.log("Ended previous meeting if any");
+    }
+  });
+
+  try {
+    const signature = await getSignature();
+
+    ZoomMtg.init({
+      leaveUrl: LEAVE_URL,
+      success: function () {
+        ZoomMtg.join({
+          signature,
+          sdkKey: SDK_KEY,
+          meetingNumber: MEETING_NUMBER,
+          passWord: PASSCODE,
+          userName: DISPLAY_NAME,
+          success: function () {
+            status.textContent = "Joined successfully!";
           },
-          error: function(err) {
-            console.error(err);
-            status.textContent = "Init failed";
+          error: function (e) {
+            console.error(e);
+            status.textContent = e.errorMessage || "Join failed";
           }
         });
-      } catch (error) {
-        console.error(error);
-        status.textContent = "Error: " + error.message;
+      },
+      error: function (err) {
+        console.error(err);
+        status.textContent = "Init failed";
       }
-    }
+    });
+  } catch (error) {
+    status.textContent = error.message;
+  }
+}
+
 
     // ✅ Automatically join on page load
     window.addEventListener("load", joinMeeting);

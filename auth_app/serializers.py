@@ -94,7 +94,7 @@ class FetchUserProfileSerializer(serializers.ModelSerializer):
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
-    profile = FetchUserProfileSerializer(required=False)
+    profile = FetchUserProfileSerializer(required=False, allow_null=True)
     email = serializers.EmailField(read_only=True)
 
     class Meta:
@@ -108,6 +108,16 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "role",
             "profile",
         ]
+
+    def to_representation(self, instance):
+        """Ensure profile is always included in response, even if null"""
+        data = super().to_representation(instance)
+        
+        # Always include profile field (null if doesn't exist)
+        if 'profile' not in data:
+            data['profile'] = None
+        
+        return data
 
     def update(self, instance, validated_data):
         profile_data = validated_data.pop("profile", None)

@@ -527,7 +527,7 @@ class SectionLectureListAPIView(APIView, APIResponseMixin):
     def get(self, request, section_id):
         # 1️⃣ Validate section
         section = get_object_or_404(
-            CourseSection,
+            CourseSection.objects.select_related('course__bundle'),
             id=section_id,
             course__is_published=True
         )
@@ -588,6 +588,7 @@ class SectionLectureListAPIView(APIView, APIResponseMixin):
             data={
                 "section_id": section.id,
                 "section_title": section.title,
+                "bundle_id": section.course.bundle.id if section.course.bundle else None,
                 "total_lectures": lectures.count(),
                 "is_authenticated": is_authenticated,
                 "is_enrolled": is_enrolled,
