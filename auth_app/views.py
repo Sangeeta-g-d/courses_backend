@@ -118,24 +118,36 @@ class FetchUserProfileAPIView(APIView, APIResponseMixin):
     def get(self, request):
         user = request.user
 
-        # 🔹 User profile data
+        # --------------------------------------------------
+        # 🔹 User basic profile
+        # --------------------------------------------------
         serializer = UserDetailSerializer(user)
         user_data = serializer.data
 
+        # --------------------------------------------------
         # 🔹 Profile stats
-        bundles_enrolled = Enrollment.objects.filter(
+        # --------------------------------------------------
+        bundles_enrolled_qs = Enrollment.objects.filter(
             user=user,
             is_active=True,
             payment_status__in=["completed", "free"]
         )
 
-        completed_bundle_ids = bundles_enrolled.filter(
+        completed_bundle_ids = bundles_enrolled_qs.filter(
             progress_percentage=100
         ).values_list("bundle_id", flat=True)
 
+        total_watch_seconds = UserProgress.objects.filter(
+            user=user
+        ).aggregate(
+            total=Sum("watched_duration")
+        )["total"] or 0
+
         profile_stats = {
-            "bundles_enrolled": bundles_enrolled.count(),
-            "bundles_completed": bundles_enrolled.filter(progress_percentage=100).count(),
+            "bundles_enrolled": bundles_enrolled_qs.count(),
+            "bundles_completed": bundles_enrolled_qs.filter(
+                progress_percentage=100
+            ).count(),
             "courses_completed": Course.objects.filter(
                 bundle_id__in=completed_bundle_ids,
                 is_published=True
@@ -144,28 +156,31 @@ class FetchUserProfileAPIView(APIView, APIResponseMixin):
                 user=user,
                 completed=True
             ).count(),
-            "total_learning_hours": round(
-                (UserProgress.objects.filter(user=user)
-                 .aggregate(total=Sum("watched_duration"))["total"] or 0) / 3600,
-                2
-            )
+            "total_learning_hours": round(total_watch_seconds / 3600, 2)
         }
 
+        # --------------------------------------------------
         # 🔹 Rankings
+        # --------------------------------------------------
         top_users_raw = get_user_watch_time_rankings()[:5]
 
         top_users = []
         for item in top_users_raw:
-            item_copy = item.copy()
-            if item_copy.get("profile_image"):
-                item_copy["profile_image"] = request.build_absolute_uri(item_copy["profile_image"])
-            top_users.append(item_copy)
+            data = item.copy()
+            if data.get("profile_image"):
+                data["profile_image"] = request.build_absolute_uri(
+                    data["profile_image"]
+                )
+            top_users.append(data)
 
         current_user_rank = get_user_rank(user)
 
         current_user_stats = user.progress.aggregate(
             total_watched_duration=Sum("watched_duration"),
-            completed_lectures=Count("lecture", filter=Q(completed=True)),
+            completed_lectures=Count(
+                "lecture",
+                filter=Q(completed=True)
+            ),
             total_lectures=Count("lecture"),
         )
 
@@ -180,20 +195,24 @@ class FetchUserProfileAPIView(APIView, APIResponseMixin):
                 "total_lectures": current_user_stats["total_lectures"] or 0,
             }
         }
-    
-        # 🔹 Final response
+
+        # --------------------------------------------------
+        # 🔹 Final response payload
+        # --------------------------------------------------
         response_data = {
             **user_data,
             "profile_stats": profile_stats,
             "rankings": rankings
         }
-    
+
         return self.success_response(
             message="User details fetched successfully",
-            response=response_data
+            data=response_data
         )
-    
 
+    # --------------------------------------------------
+    # 🔹 Update full profile
+    # --------------------------------------------------
     def put(self, request):
         serializer = UserDetailSerializer(
             request.user,
@@ -210,6 +229,9 @@ class FetchUserProfileAPIView(APIView, APIResponseMixin):
 
         return self.error_response(serializer.errors)
 
+    # --------------------------------------------------
+    # 🔹 Partial update
+    # --------------------------------------------------
     def patch(self, request):
         serializer = UserDetailSerializer(
             request.user,
@@ -225,6 +247,3 @@ class FetchUserProfileAPIView(APIView, APIResponseMixin):
             )
 
         return self.error_response(serializer.errors)
-    
-
-# dashboard api view
