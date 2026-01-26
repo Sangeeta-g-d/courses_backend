@@ -327,7 +327,7 @@ class LectureListSerializer(serializers.ModelSerializer):
 
 class UserProgressUpdateSerializer(serializers.Serializer):
     lecture_id = serializers.IntegerField()
-    watched_seconds = serializers.FloatField(min_value=1)
+    current_position = serializers.FloatField(min_value=0)
 
 
 # all courses 

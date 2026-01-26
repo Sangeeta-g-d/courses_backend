@@ -608,7 +608,7 @@ class UpdateUserProgressAPIView(APIView, APIResponseMixin):
             return self.error_response(serializer.errors)
 
         lecture_id = serializer.validated_data["lecture_id"]
-        watched_seconds = serializer.validated_data["watched_seconds"]
+        current_position = serializer.validated_data["current_position"]
         user = request.user
 
         # 1️⃣ Validate lecture
@@ -645,11 +645,13 @@ class UpdateUserProgressAPIView(APIView, APIResponseMixin):
                 }
             )
 
-        # 4️⃣ Increment watched duration (CAP at total duration)
-        progress.watched_duration = min(
-            progress.total_duration,
-            progress.watched_duration + watched_seconds
-        )
+        # 4️⃣ Handle video rewinding: Only update if moving forward (HANDLES SEEK/REWIND)
+        # Cap current_position at total_duration to prevent over-counting
+        new_position = min(current_position, progress.total_duration)
+        
+        # Only update if user has moved forward, ignore rewinds
+        if new_position > progress.watched_duration:
+            progress.watched_duration = new_position
 
         # 5️⃣ Save ONLY required fields (performance critical)
         progress.save(update_fields=[
