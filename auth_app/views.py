@@ -7,6 +7,11 @@ from rest_framework.permissions import IsAuthenticated,AllowAny
 from course_api.utils import get_user_watch_time_rankings, get_user_rank
 from admin_part.models import Enrollment, Course, UserProgress
 from django.db.models import Sum, Count, Q
+from django.utils import timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from admin_part.models import LiveSession
+from django.shortcuts import get_object_or_404  
 
 class RegisterAPIView(APIResponseMixin, APIView):
     permission_classes = []  # AllowAny
@@ -247,3 +252,45 @@ class FetchUserProfileAPIView(APIView, APIResponseMixin):
             )
 
         return self.error_response(serializer.errors)
+    
+
+from rest_framework import status as drf_status
+
+class LiveSessionListAPIView(APIView, APIResponseMixin):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        sessions = LiveSession.objects.all().order_by("-session_date", "-session_time")
+
+        serializer = LiveSessionSerializer(
+            sessions,
+            many=True,
+            context={"request": request}
+        )
+
+        return self.success_response(
+            message="Live sessions fetched successfully",
+            data={
+                "total_sessions": sessions.count(),
+                "sessions": serializer.data
+            },
+            status_code=drf_status.HTTP_200_OK
+        )
+
+
+class LiveSessionDetailAPIView(APIView, APIResponseMixin):
+    permission_classes = [AllowAny]
+
+    def get(self, request, session_id):
+        session = get_object_or_404(LiveSession, id=session_id)
+
+        serializer = LiveSessionSerializer(
+            session,
+            context={"request": request}
+        )
+
+        return self.success_response(
+            message="Live session details fetched successfully",
+            data=serializer.data,
+            status_code=drf_status.HTTP_200_OK
+        )

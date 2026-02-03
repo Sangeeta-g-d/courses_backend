@@ -1,7 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 from .models import CustomUser, UserProfile
-
+from django.utils import timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from admin_part.models import LiveSession
 
 class RegisterSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True)
@@ -135,3 +138,52 @@ class UserDetailSerializer(serializers.ModelSerializer):
             profile.save()
 
         return instance
+
+
+
+class LiveSessionSerializer(serializers.ModelSerializer):
+    is_active = serializers.ReadOnlyField()
+    session_datetime_ist = serializers.SerializerMethodField()
+    session_time_ist = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LiveSession
+        fields = [
+            "id",
+            "title",
+            "agenda",
+            "thumbnail",
+            "meeting_number",
+            "Passcode",
+            "meeting_url",
+            "session_date",
+            "session_time",
+            "session_time_ist",
+            "session_datetime_ist",
+            "is_active",
+            "created_at",
+        ]
+
+    def get_session_datetime_ist(self, obj):
+        """
+        Returns: '03 Feb 2026, 06:00 PM IST'
+        """
+        ist = ZoneInfo("Asia/Kolkata")
+        session_dt = datetime.combine(
+            obj.session_date,
+            obj.session_time
+        ).replace(tzinfo=ist)
+
+        return session_dt.strftime("%d %b %Y, %I:%M %p IST")
+
+    def get_session_time_ist(self, obj):
+        """
+        Returns: '06:00 PM'
+        """
+        ist = ZoneInfo("Asia/Kolkata")
+        session_dt = datetime.combine(
+            obj.session_date,
+            obj.session_time
+        ).replace(tzinfo=ist)
+
+        return session_dt.strftime("%I:%M %p")
