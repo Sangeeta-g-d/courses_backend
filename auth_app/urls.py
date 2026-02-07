@@ -8,4 +8,5 @@ urlpatterns = [
     path('user-profile/', views.FetchUserProfileAPIView.as_view(), name='user_profile'),
     path("live-sessions/", views.LiveSessionListAPIView.as_view(), name="live-session-list"),
     path("live-sessions/<int:session_id>/", views.LiveSessionDetailAPIView.as_view(), name="live-session-detail"),
+    path("zoom-token/", views.ZoomTokenGeneratorAPIView.as_view(), name="zoom-token-generator"),
 ]

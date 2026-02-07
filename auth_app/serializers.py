@@ -187,3 +187,31 @@ class LiveSessionSerializer(serializers.ModelSerializer):
         ).replace(tzinfo=ist)
 
         return session_dt.strftime("%I:%M %p")
+
+
+# Zoom Token Request Serializer
+class ZoomTokenRequestSerializer(serializers.Serializer):
+    meeting_number = serializers.CharField(required=True, help_text="Zoom meeting number")
+    session_id = serializers.IntegerField(required=False, allow_null=True, help_text="Optional session ID")
+    user_display_name = serializers.CharField(required=True, help_text="User's display name for the meeting")
+
+    def validate_meeting_number(self, value):
+        """Validate that the meeting number exists and is active"""
+        if not value.isdigit():
+            raise serializers.ValidationError("Meeting number must contain only digits")
+        
+        # Check if the meeting exists in live sessions
+        try:
+            LiveSession.objects.get(meeting_number=value)
+        except LiveSession.DoesNotExist:
+            raise serializers.ValidationError("Meeting not found")
+        
+        return value
+
+    def validate_user_display_name(self, value):
+        """Validate user display name"""
+        if len(value.strip()) == 0:
+            raise serializers.ValidationError("User display name cannot be empty")
+        if len(value) > 100:
+            raise serializers.ValidationError("User display name is too long (max 100 characters)")
+        return value.strip()

@@ -8,10 +8,14 @@ from course_api.utils import get_user_watch_time_rankings, get_user_rank
 from admin_part.models import Enrollment, Course, UserProgress
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from admin_part.models import LiveSession
-from django.shortcuts import get_object_or_404  
+from django.shortcuts import get_object_or_404
+import jwt
+import time
+import os
+from django.conf import settings  
 
 class RegisterAPIView(APIResponseMixin, APIView):
     permission_classes = []  # AllowAny
@@ -294,3 +298,90 @@ class LiveSessionDetailAPIView(APIView, APIResponseMixin):
             data=serializer.data,
             status_code=drf_status.HTTP_200_OK
         )
+
+
+class ZoomTokenGeneratorAPIView(APIView, APIResponseMixin):
+    """
+    Generate JWT token for Zoom SDK integration in Flutter/Web
+    
+    Endpoint: POST /api/auth/zoom-token/
+    Requires: Authentication with Bearer token
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """
+        Generate Zoom JWT token for meeting access
+        
+        Request body:
+        {
+            "meeting_number": "string",
+            "session_id": "integer (optional)",
+            "user_display_name": "string"
+        }
+        """
+        serializer = ZoomTokenRequestSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return self.error_response(
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Get validated data
+            meeting_number = serializer.validated_data['meeting_number']
+            user_display_name = serializer.validated_data['user_display_name']
+            
+            # Get Zoom credentials from settings/environment
+            sdk_key = settings.ZOOM_SDK_KEY
+            sdk_secret = settings.ZOOM_SDK_SECRET
+            
+            if not sdk_key or not sdk_secret:
+                return self.error_response(
+                    message="Zoom SDK credentials not configured",
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            # Calculate expiration (1 hour from now)
+            now = int(time.time())
+            expiration = now + 3600  # Token expires in 1 hour
+            
+            # Create JWT payload for Zoom
+            payload = {
+                "iss": sdk_key,              # Zoom SDK Key
+                "exp": expiration,            # Expiration timestamp
+                "aud": "zoom",                # Audience
+                "iat": now,                   # Issued at
+                "appKey": sdk_key,            # App key (same as iss)
+                "tokenExp": expiration        # Token expiration
+            }
+            
+            # Generate JWT token using HS256
+            jwt_token = jwt.encode(
+                payload,
+                sdk_secret,
+                algorithm='HS256'
+            )
+            
+            # Format expiration timestamp as ISO 8601
+            expires_at = datetime.fromtimestamp(expiration).isoformat() + 'Z'
+            
+            response_data = {
+                "jwt_token": jwt_token,
+                "expires_in": 3600,           # Expiration in seconds
+                "expires_at": expires_at,     # ISO 8601 timestamp
+                "meeting_number": meeting_number
+            }
+            
+            return self.success_response(
+                message="Zoom token generated successfully",
+                data=response_data,
+                status_code=status.HTTP_200_OK
+            )
+            
+        except Exception as e:
+            return self.error_response(
+                message=f"Error generating Zoom token: {str(e)}",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
