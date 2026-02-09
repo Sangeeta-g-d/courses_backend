@@ -9,6 +9,24 @@
   transform: scale(1.01);
   transition: all 0.3s ease-in-out;
 }
+.course-thumb {
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Mobile specific */
+@media (max-width: 767px) {
+  .course-thumb {
+    height: 220px;
+  }
+}
+
+/* Tablet */
+@media (min-width: 768px) and (max-width: 991px) {
+  .course-thumb {
+    height: 100%;
+  }
+}
 
 </style>
 <!-- Bundle Header -->
@@ -75,48 +93,68 @@
 
 <!-- Courses Grid -->
 <!-- Courses Grid -->
+<!-- Courses Grid -->
 <div class="container-fluid py-5">
   <div class="container">
     <div class="row g-4">
       {% for course in courses %}
         <div class="col-12 wow fadeInUp" data-wow-delay="0.{{ forloop.counter }}s">
-          <div class="card shadow-sm border-0 rounded-4 overflow-hidden d-flex flex-row align-items-stretch">
-            <!-- Thumbnail Section -->
-            <div class="col-md-4 p-0">
-              {% if course.thumbnail %}
-                <img src="{{ course.thumbnail.url }}" class="img-fluid h-100 w-100 object-fit-cover" alt="{{ course.title }}">
-              {% else %}
-                <img src="/static/home_assets/img/default-course.jpg" class="img-fluid h-100 w-100 object-fit-cover" alt="{{ course.title }}">
-              {% endif %}
-            </div>
 
-            <!-- Course Content -->
-            <div class="col-md-8 p-4 d-flex flex-column justify-content-between">
-              <div>
-                <h5 class="text-uppercase fw-bold mb-2">{{ course.title }}</h5>
-                <p class="text-muted small mb-3">{{ course.short_description|truncatewords:25 }}</p>
+          <!-- Card -->
+          <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+            <div class="row g-0">
 
-                <div class="d-flex justify-content-start align-items-center mb-2">
-                  <span class="badge bg-primary me-2">{{ course.level }}</span>
-                  <span class="text-muted small"><i class="bi bi-globe me-1"></i>{{ course.language }}</span>
-                </div>
-
-                {% if course.course_includes %}
-                  <ul class="small text-muted ps-3 mb-0">
-                    {% for item in course.get_course_includes_list|slice:":3" %}
-                      <li>{{ item }}</li>
-                    {% endfor %}
-                  </ul>
+              <!-- Thumbnail -->
+              <div class="col-12 col-md-4">
+                {% if course.thumbnail %}
+                  <img src="{{ course.thumbnail.url }}"
+                       class="img-fluid w-100 course-thumb"
+                       alt="{{ course.title }}">
+                {% else %}
+                  <img src="/static/home_assets/img/default-course.jpg"
+                       class="img-fluid w-100 course-thumb"
+                       alt="{{ course.title }}">
                 {% endif %}
               </div>
 
-              <div class="mt-3">
-                <a class="btn btn-outline-primary w-100" href="/user/course_details/{{ course.id }}/">
-                  View Course <i class="bi bi-chevron-double-right ms-1"></i>
-                </a>
+              <!-- Content -->
+              <div class="col-12 col-md-8 p-4 d-flex flex-column justify-content-between">
+                <div>
+                  <h5 class="text-uppercase fw-bold mb-2">
+                    {{ course.title }}
+                  </h5>
+
+                  <p class="text-muted small mb-3">
+                    {{ course.short_description|truncatewords:25 }}
+                  </p>
+
+                  <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <span class="badge bg-primary">{{ course.level }}</span>
+                    <span class="text-muted small">
+                      <i class="bi bi-globe me-1"></i>{{ course.language }}
+                    </span>
+                  </div>
+
+                  {% if course.course_includes %}
+                    <ul class="small text-muted ps-3 mb-0">
+                      {% for item in course.get_course_includes_list|slice:":3" %}
+                        <li>{{ item }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                </div>
+
+                <div class="mt-3">
+                  <a class="btn btn-outline-primary w-100"
+                     href="/user/course_details/{{ course.id }}/">
+                    View Course <i class="bi bi-chevron-double-right ms-1"></i>
+                  </a>
+                </div>
               </div>
+
             </div>
           </div>
+
         </div>
       {% empty %}
         <div class="text-center">
@@ -126,6 +164,7 @@
     </div>
   </div>
 </div>
+
 
 
 {% endblock %}

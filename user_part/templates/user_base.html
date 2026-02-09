@@ -102,6 +102,21 @@
         <a href="/user/contact_us/" class="nav-item nav-link">Contact Us</a>
          <a href="/user/meetings/" class="nav-item nav-link">Meetings</a>
     </div>
+    
+    <!-- Mobile User Menu -->
+    {% if request.user.is_authenticated %}
+      <div class="navbar-nav d-lg-none border-top mt-3 pt-3">
+        <a href="/user/profile/" class="nav-item nav-link">My Profile</a>
+        <a href="/user/logout/" class="nav-item nav-link text-danger">Logout</a>
+      </div>
+    {% else %}
+      <div class="navbar-nav d-lg-none border-top mt-3 pt-3">
+        <a href="/user/login/" class="nav-item nav-link">Login</a>
+        <a href="/user/user-register/" class="nav-item nav-link">Register</a>
+      </div>
+    {% endif %}
+    
+    <!-- Desktop User Menu -->
     <div class="ms-auto d-none d-lg-flex align-items-center">
       {% if request.user.is_authenticated %}
         <!-- ✅ User Profile Dropdown -->
