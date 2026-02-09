@@ -341,7 +341,7 @@ class ZoomTokenGeneratorAPIView(APIView, APIResponseMixin):
             
             if not sdk_key or not sdk_secret:
                 return self.error_response(
-                    message="Zoom SDK credentials not configured",
+                    errors="Zoom SDK credentials not configured",
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
             
@@ -397,6 +397,6 @@ class ZoomTokenGeneratorAPIView(APIView, APIResponseMixin):
             
         except Exception as e:
             return self.error_response(
-                message=f"Error generating Zoom token: {str(e)}",
+                errors=f"Error generating Zoom token: {str(e)}",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
