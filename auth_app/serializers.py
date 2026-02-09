@@ -194,6 +194,7 @@ class ZoomTokenRequestSerializer(serializers.Serializer):
     meeting_number = serializers.CharField(required=True, help_text="Zoom meeting number")
     session_id = serializers.IntegerField(required=False, allow_null=True, help_text="Optional session ID")
     user_display_name = serializers.CharField(required=True, help_text="User's display name for the meeting")
+    role_type = serializers.IntegerField(required=False, default=0, help_text="User role: 0=attendee, 1=host")
 
     def validate_meeting_number(self, value):
         """Validate that the meeting number exists and is active"""
@@ -206,6 +207,12 @@ class ZoomTokenRequestSerializer(serializers.Serializer):
         except LiveSession.DoesNotExist:
             raise serializers.ValidationError("Meeting not found")
         
+        return value
+
+    def validate_role_type(self, value):
+        """Validate role_type is either 0 (attendee) or 1 (host)"""
+        if value not in [0, 1]:
+            raise serializers.ValidationError("role_type must be 0 (attendee) or 1 (host)")
         return value
 
     def validate_user_display_name(self, value):

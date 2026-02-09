@@ -317,7 +317,8 @@ class ZoomTokenGeneratorAPIView(APIView, APIResponseMixin):
         {
             "meeting_number": "string",
             "session_id": "integer (optional)",
-            "user_display_name": "string"
+            "user_display_name": "string",
+            "role_type": "integer (optional, 0=attendee, 1=host, default=0)"
         }
         """
         serializer = ZoomTokenRequestSerializer(data=request.data)
@@ -332,6 +333,7 @@ class ZoomTokenGeneratorAPIView(APIView, APIResponseMixin):
             # Get validated data
             meeting_number = serializer.validated_data['meeting_number']
             user_display_name = serializer.validated_data['user_display_name']
+            role_type = serializer.validated_data.get('role_type', 0)
             
             # Get Zoom credentials from settings/environment
             sdk_key = settings.ZOOM_SDK_KEY
@@ -354,7 +356,9 @@ class ZoomTokenGeneratorAPIView(APIView, APIResponseMixin):
                 "aud": "zoom",                # Audience
                 "iat": now,                   # Issued at
                 "appKey": sdk_key,            # App key (same as iss)
-                "tokenExp": expiration        # Token expiration
+                "tokenExp": expiration,       # Token expiration
+                "tpc": meeting_number,        # Topic/Session name (required by SDK)
+                "role_type": role_type        # User role: 0=attendee, 1=host (required by SDK)
             }
             
             # Generate JWT token using HS256
@@ -371,7 +375,8 @@ class ZoomTokenGeneratorAPIView(APIView, APIResponseMixin):
                 "jwt_token": jwt_token,
                 "expires_in": 3600,           # Expiration in seconds
                 "expires_at": expires_at,     # ISO 8601 timestamp
-                "meeting_number": meeting_number
+                "meeting_number": meeting_number,
+                "role_type": role_type        # User role used in JWT
             }
             
             return self.success_response(
