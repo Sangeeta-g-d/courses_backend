@@ -46,9 +46,14 @@
 
   
 
+  <div class="meeting-header">
+    <h3>{{ session.title }}</h3>
+  </div>
+
   <div class="meeting-info">
     <strong>Meeting ID:</strong> {{ session.meeting_number }} |
-    <strong>Passcode:</strong> {{ session.Passcode }}
+    <strong>Passcode:</strong> {{ session.Passcode }} |
+    <strong>Role:</strong> <span style="color: #ffc107;">HOST</span>
   </div>
 
   <div id="status">Connecting to meeting...</div>
@@ -67,14 +72,34 @@
     const MEETING_NUMBER = "{{ session.meeting_number }}";
     const PASSCODE = "{{ session.Passcode }}";
     const DISPLAY_NAME = "{{ request.user.full_name|default:'Guest' }}";
-    const ROLE = 0;
-    const LEAVE_URL = "admin_live_sessions/";
+    const ROLE = 1;  // 1 = Host (admin)
+    const LEAVE_URL = "/admin_part/admin_live_sessions/";
 
     async function getSignature() {
       const response = await fetch(`/zoom_signature/?meetingNumber=${MEETING_NUMBER}&role=${ROLE}`);
       const data = await response.json();
       if (data.signature) return data.signature;
       throw new Error(data.error || "Signature generation failed");
+    }
+
+    async function cleanupMeeting() {
+      return new Promise((resolve) => {
+        const ZoomMtg = window.ZoomMtg;
+        if (ZoomMtg && ZoomMtg.endMeeting) {
+          ZoomMtg.endMeeting({
+            success: function() {
+              console.log("✓ Cleaned up previous meeting");
+              resolve();
+            },
+            error: function(e) {
+              console.log("No active meeting to cleanup", e);
+              resolve();
+            }
+          });
+        } else {
+          resolve();
+        }
+      });
     }
 
     async function joinMeeting() {
@@ -88,29 +113,38 @@
       ZoomMtg.i18n.load("en-US"); 
       ZoomMtg.i18n.reload("en-US");
 
+      // Clean up any existing meeting first
+      await cleanupMeeting();
+
       try {
         const signature = await getSignature();
         ZoomMtg.init({
           leaveUrl: LEAVE_URL,
+          disableSetAppContext: false,
           success: function() {
+            console.log("✓ SDK initialized");
             ZoomMtg.join({
               signature: signature,
               sdkKey: SDK_KEY,
               meetingNumber: MEETING_NUMBER,
               passWord: PASSCODE,
               userName: DISPLAY_NAME,
+              userEmail: "{{ request.user.email|default:'' }}",
+              screenshare: true,
+              record: true,
               success: function() {
-                status.textContent = "Joined successfully!";
+                status.textContent = "Joined as HOST!";
+                console.log("✓ Successfully joined as HOST");
               },
               error: function(e) {
-                console.error(e);
-                status.textContent = "Join failed: " + e.errorMessage;
+                console.error("Join error:", e);
+                status.textContent = "Join failed: " + (e.errorMessage || e);
               }
             });
           },
           error: function(err) {
-            console.error(err);
-            status.textContent = "Init failed";
+            console.error("Init error:", err);
+            status.textContent = "SDK initialization failed";
           }
         });
       } catch (error) {

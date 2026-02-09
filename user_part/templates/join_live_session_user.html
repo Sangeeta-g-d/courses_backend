@@ -46,9 +46,14 @@
 
   
 
+  <div class="meeting-header">
+    <h3>{{ session.title }}</h3>
+  </div>
+
   <div class="meeting-info">
     <strong>Meeting ID:</strong> {{ session.meeting_number }} |
-    <strong>Passcode:</strong> {{ session.Passcode }}
+    <strong>Passcode:</strong> {{ session.Passcode }} |
+    <strong>Role:</strong> <span style="color: #28a745;">ATTENDEE</span>
   </div>
 
   <div id="status">Connecting to meeting...</div>
@@ -67,7 +72,8 @@
     const MEETING_NUMBER = "{{ session.meeting_number }}";
     const PASSCODE = "{{ session.Passcode }}";
     const DISPLAY_NAME = "{{ request.user.username|default:'Guest' }}";
-    const ROLE = 0;
+    const ROLE = 0;  // 0 = Attendee (user)
+    const USER_EMAIL = "{{ request.user.email|default:'' }}";
     const LEAVE_URL = "/user/meetings/";
 
     async function getSignature() {
@@ -77,56 +83,75 @@
       throw new Error(data.error || "Signature generation failed");
     }
 
-async function joinMeeting() {
-  const status = document.getElementById("status");
-  status.textContent = "Loading Zoom SDK...";
-
-  const ZoomMtg = window.ZoomMtg;
-
-  ZoomMtg.setZoomJSLib("https://source.zoom.us/4.1.0/lib", "/av");
-  ZoomMtg.preLoadWasm();
-  ZoomMtg.prepareWebSDK();
-
-  ZoomMtg.i18n.load("en-US");
-  ZoomMtg.i18n.reload("en-US");
-
-  // ✅ FORCE LEAVE ANY EXISTING MEETING
-  ZoomMtg.endMeeting({
-    success: function () {
-      console.log("Ended previous meeting if any");
+    async function cleanupMeeting() {
+      return new Promise((resolve) => {
+        const ZoomMtg = window.ZoomMtg;
+        if (ZoomMtg && ZoomMtg.endMeeting) {
+          ZoomMtg.endMeeting({
+            success: function() {
+              console.log("✓ Cleaned up previous meeting");
+              resolve();
+            },
+            error: function(e) {
+              console.log("No active meeting to cleanup", e);
+              resolve();
+            }
+          });
+        } else {
+          resolve();
+        }
+      });
     }
-  });
 
-  try {
-    const signature = await getSignature();
+    async function joinMeeting() {
+      const status = document.getElementById("status");
+      status.textContent = "Loading Zoom SDK...";
 
-    ZoomMtg.init({
-      leaveUrl: LEAVE_URL,
-      success: function () {
-        ZoomMtg.join({
-          signature,
-          sdkKey: SDK_KEY,
-          meetingNumber: MEETING_NUMBER,
-          passWord: PASSCODE,
-          userName: DISPLAY_NAME,
-          success: function () {
-            status.textContent = "Joined successfully!";
+      const ZoomMtg = window.ZoomMtg;
+      ZoomMtg.setZoomJSLib("https://source.zoom.us/4.1.0/lib", "/av");
+      ZoomMtg.preLoadWasm();
+      ZoomMtg.prepareWebSDK();
+      ZoomMtg.i18n.load("en-US");
+      ZoomMtg.i18n.reload("en-US");
+
+      // Clean up any existing meeting first
+      await cleanupMeeting();
+
+      try {
+        const signature = await getSignature();
+
+        ZoomMtg.init({
+          leaveUrl: LEAVE_URL,
+          disableSetAppContext: false,
+          success: function() {
+            console.log("✓ SDK initialized");
+            ZoomMtg.join({
+              signature: signature,
+              sdkKey: SDK_KEY,
+              meetingNumber: MEETING_NUMBER,
+              passWord: PASSCODE,
+              userName: DISPLAY_NAME,
+              userEmail: USER_EMAIL,
+              success: function() {
+                status.textContent = "Joined as ATTENDEE!";
+                console.log("✓ Successfully joined as ATTENDEE");
+              },
+              error: function(e) {
+                console.error("Join error:", e);
+                status.textContent = "Join failed: " + (e.errorMessage || e);
+              }
+            });
           },
-          error: function (e) {
-            console.error(e);
-            status.textContent = e.errorMessage || "Join failed";
+          error: function(err) {
+            console.error("Init error:", err);
+            status.textContent = "SDK initialization failed";
           }
         });
-      },
-      error: function (err) {
-        console.error(err);
-        status.textContent = "Init failed";
+      } catch (error) {
+        console.error(error);
+        status.textContent = "Error: " + error.message;
       }
-    });
-  } catch (error) {
-    status.textContent = error.message;
-  }
-}
+    }
 
 
     // ✅ Automatically join on page load
