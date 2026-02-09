@@ -375,7 +375,12 @@ class ZoomTokenGeneratorAPIView(APIView, APIResponseMixin):
             )
             
             # DEBUG: Decode and verify the token contains the claims
-            decoded = jwt.decode(jwt_token, sdk_secret, algorithms=['HS256'])
+            decoded = jwt.decode(
+                jwt_token, 
+                sdk_secret, 
+                algorithms=['HS256'],
+                audience='zoom'  # Specify the expected audience
+            )
             print(f"🔵 Decoded JWT Claims: {decoded}", file=sys.stderr)
             
             # Format expiration timestamp as ISO 8601
