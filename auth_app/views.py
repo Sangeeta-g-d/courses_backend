@@ -361,12 +361,22 @@ class ZoomTokenGeneratorAPIView(APIView, APIResponseMixin):
                 "role_type": role_type        # User role: 0=attendee, 1=host (required by SDK)
             }
             
+            # DEBUG: Log the payload to verify claims are included
+            import sys
+            print(f"🔵 Zoom JWT Payload: {payload}", file=sys.stderr)
+            print(f"🔵 Meeting Number (tpc): {meeting_number}", file=sys.stderr)
+            print(f"🔵 Role Type: {role_type}", file=sys.stderr)
+            
             # Generate JWT token using HS256
             jwt_token = jwt.encode(
                 payload,
                 sdk_secret,
                 algorithm='HS256'
             )
+            
+            # DEBUG: Decode and verify the token contains the claims
+            decoded = jwt.decode(jwt_token, sdk_secret, algorithms=['HS256'])
+            print(f"🔵 Decoded JWT Claims: {decoded}", file=sys.stderr)
             
             # Format expiration timestamp as ISO 8601
             expires_at = datetime.fromtimestamp(expiration).isoformat() + 'Z'
