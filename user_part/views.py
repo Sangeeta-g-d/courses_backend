@@ -1402,8 +1402,13 @@ def join_live_session_user(request, session_id):
     Render the user meeting page. The template is standalone (doesn't extend base)
     and auto-joins the Zoom Meeting SDK.
     """
+    from django.conf import settings
     session = get_object_or_404(LiveSession, id=session_id)
-    return render(request, 'join_live_session_user.html', {'session': session})
+    context = {
+        'session': session,
+        'zoom_sdk_key': settings.ZOOM_SDK_KEY,
+    }
+    return render(request, 'join_live_session_user.html', context)
 
 
 # Signature endpoint used by client JS to get a JWT signature for the Zoom SDK.

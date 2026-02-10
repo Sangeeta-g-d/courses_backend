@@ -691,8 +691,13 @@ def delete_live_session(request, session_id):
 
 
 def join_live_session(request, session_id):
+    from django.conf import settings
     session = get_object_or_404(LiveSession, id=session_id)
-    return render(request, 'join_zoom_meeting.html', {'session': session})
+    context = {
+        'session': session,
+        'zoom_sdk_key': settings.ZOOM_SDK_KEY,
+    }
+    return render(request, 'join_zoom_meeting.html', context)
 
 
 @require_GET

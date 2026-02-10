@@ -68,7 +68,7 @@
   <script src="https://source.zoom.us/4.1.0/zoom-meeting-4.1.0.min.js"></script>
 
   <script>
-    const SDK_KEY = "{{ settings.ZOOM_SDK_KEY|default:'' }}";
+    const SDK_KEY = "{{ zoom_sdk_key }}";
     const MEETING_NUMBER = "{{ session.meeting_number }}";
     const PASSCODE = "{{ session.Passcode }}";
     const DISPLAY_NAME = "{{ request.user.username|default:'Guest' }}";
@@ -152,15 +152,11 @@
         
         ZoomMtg.init({
           leaveUrl: LEAVE_URL,
-          disablePreview: false,
-          disableSetAppContext: false,
-          disableJoinAudio: false,
-          disableJoinVideo: false,
-          meetingInfo: ['topic', 'host', 'mn', 'pwd', 'telPwd', 'invite', 'participant', 'dc', 'br', 'meetingOption'],
           success: function() {
             console.log("[DEBUG] ✓ SDK init success");
             status.textContent = "Joining meeting as ATTENDEE...";
             console.log("[DEBUG] Calling ZoomMtg.join...");
+            console.log("[DEBUG] Signature:", signature.substring(0, 50) + "...");
             
             ZoomMtg.join({
               signature: signature,
@@ -169,10 +165,6 @@
               passWord: PASSCODE,
               userName: DISPLAY_NAME,
               userEmail: USER_EMAIL,
-              disablePreview: false,
-              disableJoinAudio: false,
-              disableJoinVideo: false,
-              zak: "",
               success: function() {
                 status.textContent = "✓ Successfully joined as ATTENDEE!";
                 console.log("[DEBUG] ✓ Successfully joined meeting");
