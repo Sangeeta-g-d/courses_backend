@@ -43,8 +43,29 @@
   </style>
 </head>
 <body>
-
-  
+  <!-- Display Name Input Modal -->
+  <div id="nameModal" style="display: flex; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999;">
+    <div style="background: #1a1a1a; padding: 40px; border-radius: 10px; text-align: center; max-width: 400px;">
+      <h3 style="color: white; margin-bottom: 20px;">Join Meeting</h3>
+      <p style="color: #ccc; margin-bottom: 20px;">{{ session.title }}</p>
+      
+      <input 
+        type="text" 
+        id="displayNameInput" 
+        placeholder="Enter your name" 
+        style="width: 100%; padding: 12px; border: 1px solid #444; border-radius: 5px; font-size: 16px; background: #222; color: white; box-sizing: border-box; margin-bottom: 20px;"
+      />
+      
+      <button 
+        id="joinBtn" 
+        style="width: 100%; padding: 12px; background: #ffc107; color: black; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.3s;"
+        onmouseover="this.style.background='#ffb300'"
+        onmouseout="this.style.background='#ffc107'"
+      >
+        Join Meeting
+      </button>
+    </div>
+  </div>
 
   <div class="meeting-header">
     <h3>{{ session.title }}</h3>
@@ -68,13 +89,38 @@
   <script src="https://source.zoom.us/4.1.0/zoom-meeting-4.1.0.min.js"></script>
 
   <script>
+    let DISPLAY_NAME = "{{ request.user.full_name|default:'Guest' }}";
     const SDK_KEY = "{{ zoom_sdk_key }}";
     const MEETING_NUMBER = "{{ session.meeting_number }}";
     const PASSCODE = "{{ session.Passcode }}";
-    const DISPLAY_NAME = "{{ request.user.full_name|default:'Guest' }}";
     const USER_EMAIL = "{{ request.user.email|default:'' }}";
     const ROLE = 1;  // 1 = Host (admin)
     const LEAVE_URL = "/admin_part/admin_live_sessions/";
+
+    // Handle display name input
+    document.getElementById('displayNameInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        startMeeting();
+      }
+    });
+
+    document.getElementById('joinBtn').addEventListener('click', startMeeting);
+
+    function startMeeting() {
+      const input = document.getElementById('displayNameInput').value.trim();
+      if (!input) {
+        alert('Please enter your name');
+        return;
+      }
+      DISPLAY_NAME = input;
+      document.getElementById('nameModal').style.display = 'none';
+      joinMeeting();
+    }
+
+    // Focus on input on page load
+    window.addEventListener('load', function() {
+      document.getElementById('displayNameInput').focus();
+    });
 
     async function getSignature() {
       try {
@@ -186,11 +232,8 @@
       }
     }
 
-    // ✅ Automatically join on page load
-    window.addEventListener("load", function() {
-      console.log("[DEBUG] Page loaded, starting joinMeeting in 1 second...");
-      setTimeout(joinMeeting, 1000);
-    });
+    // ✅ Wait for display name to be entered
+    // joinMeeting() will be called after user enters name and clicks Join
   </script>
 
 </body>
