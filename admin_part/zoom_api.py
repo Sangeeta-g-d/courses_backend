@@ -1,11 +1,151 @@
 # zoom_api.py
 import jwt
 import time
+import requests
 from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 import json
+
+class ZoomOAuthManager:
+    """
+    Manages Zoom OAuth token generation and API calls
+    """
+    TOKEN_URL = "https://zoom.us/oauth/token"
+    API_BASE_URL = "https://api.zoom.us/v2"
+    
+    def __init__(self):
+        self.account_id = settings.ZOOM_ACCOUNT_ID
+        self.client_id = settings.ZOOM_CLIENT_ID
+        self.client_secret = settings.ZOOM_CLIENT_SECRET
+        self.access_token = None
+        self.token_expiry = None
+    
+    def get_access_token(self):
+        """Generate OAuth access token"""
+        try:
+            print("[Zoom OAuth] Generating access token...")
+            
+            auth = (self.client_id, self.client_secret)
+            payload = {
+                'grant_type': 'account_credentials',
+                'account_id': self.account_id
+            }
+            
+            response = requests.post(self.TOKEN_URL, auth=auth, data=payload)
+            response.raise_for_status()
+            
+            data = response.json()
+            self.access_token = data['access_token']
+            self.token_expiry = time.time() + data.get('expires_in', 3600)
+            
+            print(f"[Zoom OAuth] ✓ Access token generated (expires in {data.get('expires_in')} seconds)")
+            return self.access_token
+            
+        except Exception as e:
+            print(f"[Zoom OAuth] ❌ Error generating access token: {str(e)}")
+            raise
+    
+    def create_meeting(self, topic, start_time, duration=60, settings_dict=None):
+        """
+        Create a Zoom meeting
+        
+        Args:
+            topic (str): Meeting title
+            start_time (str): ISO format datetime (e.g., "2024-02-10T10:00:00")
+            duration (int): Duration in minutes (default 60)
+            settings_dict (dict): Additional meeting settings
+        
+        Returns:
+            dict: Meeting details including id, join_url, passcode
+        """
+        try:
+            print(f"[Zoom API] Creating meeting: {topic}")
+            print(f"[Zoom API] Start Time: {start_time}")
+            print(f"[Zoom API] Duration: {duration} minutes")
+            
+            token = self.get_access_token()
+            
+            headers = {
+                'Authorization': f'Bearer {token}',
+                'Content-Type': 'application/json'
+            }
+            
+            # Zoom API v2 meeting settings
+            # Only include settings that are explicitly supported
+            meeting_settings = {
+                'host_video': True,
+                'participant_video': True,
+                'join_before_host': False,
+                'mute_upon_entry': False,
+            }
+            
+            if settings_dict:
+                meeting_settings.update(settings_dict)
+            
+            # Build minimal payload that matches Zoom API requirements
+            # Type 2 = Scheduled meeting
+            payload = {
+                'topic': str(topic)[:300],  # Max 300 chars
+                'type': 2,
+                'start_time': start_time,  # ISO 8601: 2024-02-10T10:00:00
+                'duration': int(duration),
+                'timezone': 'UTC',
+                'settings': meeting_settings
+            }
+            
+            print(f"[Zoom API] Sending payload: {payload}")
+            
+            response = requests.post(
+                f"{self.API_BASE_URL}/users/me/meetings",
+                headers=headers,
+                json=payload,
+                timeout=10
+            )
+            
+            # Log all response details
+            print(f"[Zoom API] Response status: {response.status_code}")
+            print(f"[Zoom API] Response headers: {response.headers}")
+            print(f"[Zoom API] Response body: {response.text}")
+            
+            if response.status_code != 201:
+                try:
+                    error_data = response.json()
+                    print(f"[Zoom API] ❌ Error response: {error_data}")
+                    error_msg = error_data.get('message', 'Unknown error')
+                    details = error_data.get('details', [])
+                    if details:
+                        error_msg += f" - {details[0].get('message', '')}"
+                    raise Exception(f"Zoom API Error: {error_msg}")
+                except ValueError:
+                    raise Exception(f"Zoom API Error: {response.text}")
+            
+            meeting_data = response.json()
+            print(f"[Zoom API] ✓ Meeting created successfully")
+            print(f"[Zoom API] Meeting ID: {meeting_data.get('id', 'N/A')}")
+            print(f"[Zoom API] Passcode: {meeting_data.get('password', 'N/A')}")
+            
+            return {
+                'meeting_id': str(meeting_data.get('id', '')),
+                'join_url': meeting_data.get('join_url', ''),
+                'passcode': meeting_data.get('password', ''),
+                'start_time': meeting_data.get('start_time', ''),
+                'duration': meeting_data.get('duration', 0),
+            }
+            
+        except requests.exceptions.Timeout:
+            error_msg = "Timeout: Zoom API request took too long"
+            print(f"[Zoom API] ❌ {error_msg}")
+            raise Exception(error_msg)
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Request error: {str(e)}"
+            print(f"[Zoom API] ❌ {error_msg}")
+            raise Exception(error_msg)
+        except Exception as e:
+            print(f"[Zoom API] ❌ Error creating meeting: {str(e)}")
+            raise
+
 
 class ZoomSignatureAPIView(APIView):
     """
@@ -76,5 +216,70 @@ class ZoomSignatureAPIView(APIView):
             traceback.print_exc()
             return Response(
                 {"error": f"Internal error: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class CreateZoomMeetingAPIView(APIView):
+    """
+    Create a Zoom meeting via OAuth API
+    """
+    def post(self, request):
+        try:
+            print("🔵 [CreateZoomMeetingAPIView] Request received")
+            
+            topic = request.data.get("topic", "").strip()
+            start_time = request.data.get("start_time", "").strip()
+            duration = int(request.data.get("duration", 60))
+            
+            print(f"[CreateZoomMeetingAPIView] Topic: {topic}")
+            print(f"[CreateZoomMeetingAPIView] Start Time: {start_time}")
+            print(f"[CreateZoomMeetingAPIView] Duration: {duration}")
+            
+            if not topic or not start_time:
+                return Response(
+                    {"error": "Topic and start_time are required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Validate start_time format
+            from datetime import datetime
+            try:
+                # Try to parse the datetime
+                meeting_datetime = datetime.fromisoformat(start_time)
+                print(f"[CreateZoomMeetingAPIView] Parsed datetime: {meeting_datetime}")
+                
+                # Check if it's in the future
+                if meeting_datetime <= datetime.now():
+                    return Response(
+                        {"error": "Meeting start time must be in the future"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except ValueError as e:
+                print(f"[CreateZoomMeetingAPIView] Invalid datetime format: {str(e)}")
+                return Response(
+                    {"error": f"Invalid datetime format. Use ISO format (e.g., 2024-02-10T10:00:00): {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Create meeting using OAuth
+            oauth_manager = ZoomOAuthManager()
+            meeting_data = oauth_manager.create_meeting(
+                topic=topic,
+                start_time=start_time,
+                duration=duration
+            )
+            
+            return Response({
+                "success": True,
+                "data": meeting_data
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            print(f"❌ Error in CreateZoomMeetingAPIView: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

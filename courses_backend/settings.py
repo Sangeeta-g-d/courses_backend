@@ -134,6 +134,11 @@ ZOOM_SDK_KEY = config("ZOOM_SDK_KEY")
 ZOOM_SDK_SECRET = config("ZOOM_SDK_SECRET")
 ZOOM_WEBHOOK_TOKEN = config("ZOOM_WEBHOOK_TOKEN", default="")
 
+# Zoom OAuth Server-to-Server Configuration
+ZOOM_ACCOUNT_ID = config("account_id", default="")
+ZOOM_CLIENT_ID = config("client_id", default="")
+ZOOM_CLIENT_SECRET = config("client_secret", default="")
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 

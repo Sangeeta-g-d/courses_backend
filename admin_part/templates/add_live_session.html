@@ -25,30 +25,6 @@
                         <div class="invalid-feedback"></div>
                     </div>
 
-                    <!-- Meeting Number -->
-                    <div class="col-md-6">
-                        <label for="meeting_number" class="form-label">Zoom Meeting ID</label>
-                        <input type="text" class="form-control" id="meeting_number" name="meeting_number" 
-                               placeholder="Enter Zoom Meeting ID (e.g. 123-456-789)" required>
-                        <div class="invalid-feedback"></div>
-                    </div>
-
-                    <!-- Zoom Passcode -->
-                    <div class="col-md-6">
-                        <label for="Passcode" class="form-label">Zoom Passcode</label>
-                        <input type="text" class="form-control" id="Passcode" name="Passcode"
-                               placeholder="Enter Zoom Meeting Passcode" required>
-                        <div class="invalid-feedback"></div>
-                    </div>
-
-                    <!-- Meeting URL (optional) -->
-                    <div class="col-md-6">
-                        <label for="meeting_url" class="form-label">Zoom Meeting URL (Optional)</label>
-                        <input type="url" class="form-control" id="meeting_url" name="meeting_url" 
-                               placeholder="Enter Zoom Meeting URL">
-                        <div class="invalid-feedback"></div>
-                    </div>
-
                     <!-- Date -->
                     <div class="col-md-6">
                         <label for="session_date" class="form-label">Session Date</label>
@@ -60,6 +36,39 @@
                     <div class="col-md-6">
                         <label for="session_time" class="form-label">Session Time</label>
                         <input type="time" class="form-control" id="session_time" name="session_time" required>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Create Meeting Button -->
+                    <div class="col-md-6">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="button" class="btn btn-success w-100" id="createMeetingBtn" onclick="createZoomMeeting()">
+                            <i class="bi bi-plus-circle"></i> Create Zoom Meeting (Auto-Fill ID & Passcode)
+                        </button>
+                        <small class="text-muted d-block mt-2">Click to create meeting or enter manually below</small>
+                    </div>
+
+                    <!-- Meeting Number -->
+                    <div class="col-md-6">
+                        <label for="meeting_number" class="form-label">Zoom Meeting ID</label>
+                        <input type="text" class="form-control" id="meeting_number" name="meeting_number" 
+                               placeholder="Auto-filled or enter manually" required>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Zoom Passcode -->
+                    <div class="col-md-6">
+                        <label for="Passcode" class="form-label">Zoom Passcode</label>
+                        <input type="text" class="form-control" id="Passcode" name="Passcode"
+                               placeholder="Auto-filled or enter manually" required>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Meeting URL (optional) -->
+                    <div class="col-md-6">
+                        <label for="meeting_url" class="form-label">Zoom Meeting URL (Optional)</label>
+                        <input type="url" class="form-control" id="meeting_url" name="meeting_url" 
+                               placeholder="Auto-filled or enter manually">
                         <div class="invalid-feedback"></div>
                     </div>
 
@@ -81,6 +90,79 @@
 </div>
 
 {% include 'notify.html' %}
+
+<script>
+function createZoomMeeting() {
+    const title = document.getElementById('title').value.trim();
+    const session_date = document.getElementById('session_date').value;
+    const session_time = document.getElementById('session_time').value;
+    const createBtn = document.getElementById('createMeetingBtn');
+
+    // Validation
+    if (!title || !session_date || !session_time) {
+        alert('Please fill in Title, Date, and Time first');
+        return;
+    }
+
+    // Combine date and time into ISO format
+    const startDateTime = `${session_date}T${session_time}:00`;
+
+    console.log('[DEBUG] Creating meeting with:', {
+        title: title,
+        startDateTime: startDateTime
+    });
+
+    // Show loading state
+    createBtn.disabled = true;
+    createBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating Meeting...';
+
+    // Call API to create meeting
+    fetch('/api/create_zoom_meeting/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            topic: title,
+            start_time: startDateTime,
+            duration: 60
+        })
+    })
+    .then(response => {
+        console.log('[DEBUG] Response status:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('[DEBUG] Response data:', data);
+        if (data.success) {
+            console.log('✓ Meeting created:', data.data);
+            
+            // Auto-fill the form fields
+            document.getElementById('meeting_number').value = data.data.meeting_id;
+            document.getElementById('Passcode').value = data.data.passcode;
+            document.getElementById('meeting_url').value = data.data.join_url;
+            
+            // Show success message
+            alert(`✓ Zoom Meeting Created!\n\nMeeting ID: ${data.data.meeting_id}\nPasscode: ${data.data.passcode}`);
+            
+            // Reset button
+            createBtn.disabled = false;
+            createBtn.innerHTML = '<i class="bi bi-plus-circle"></i> Create Zoom Meeting (Auto-Fill ID & Passcode)';
+        } else {
+            throw new Error(data.error || 'Failed to create meeting');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(`Error creating meeting: ${error.message}`);
+        
+        // Reset button
+        createBtn.disabled = false;
+        createBtn.innerHTML = '<i class="bi bi-plus-circle"></i> Create Zoom Meeting (Auto-Fill ID & Passcode)';
+    });
+}
+</script>
 
 <script>
 document.getElementById('addLiveSessionForm').addEventListener('submit', function(e) {
