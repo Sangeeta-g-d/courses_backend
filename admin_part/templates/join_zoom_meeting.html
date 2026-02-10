@@ -72,89 +72,133 @@
     const MEETING_NUMBER = "{{ session.meeting_number }}";
     const PASSCODE = "{{ session.Passcode }}";
     const DISPLAY_NAME = "{{ request.user.full_name|default:'Guest' }}";
+    const USER_EMAIL = "{{ request.user.email|default:'' }}";
     const ROLE = 1;  // 1 = Host (admin)
     const LEAVE_URL = "/admin_part/admin_live_sessions/";
 
     async function getSignature() {
-      const response = await fetch(`/zoom_signature/?meetingNumber=${MEETING_NUMBER}&role=${ROLE}`);
-      const data = await response.json();
-      if (data.signature) return data.signature;
-      throw new Error(data.error || "Signature generation failed");
-    }
-
-    async function cleanupMeeting() {
-      return new Promise((resolve) => {
-        const ZoomMtg = window.ZoomMtg;
-        if (ZoomMtg && ZoomMtg.endMeeting) {
-          ZoomMtg.endMeeting({
-            success: function() {
-              console.log("✓ Cleaned up previous meeting");
-              resolve();
-            },
-            error: function(e) {
-              console.log("No active meeting to cleanup", e);
-              resolve();
-            }
-          });
-        } else {
-          resolve();
+      try {
+        console.log("[DEBUG] Fetching signature...");
+        const url = `/zoom_signature/?meetingNumber=${MEETING_NUMBER}&role=${ROLE}`;
+        console.log("[DEBUG] URL:", url);
+        
+        const response = await fetch(url);
+        console.log("[DEBUG] Response status:", response.status);
+        
+        const data = await response.json();
+        console.log("[DEBUG] Response data:", data);
+        
+        if (data.signature) {
+          console.log("[DEBUG] ✓ Signature received, length:", data.signature.length);
+          return data.signature;
         }
-      });
+        throw new Error(data.error || "Signature generation failed");
+      } catch (error) {
+        console.error("[ERROR] Signature generation failed:", error);
+        throw error;
+      }
     }
 
     async function joinMeeting() {
       const status = document.getElementById("status");
-      status.textContent = "Loading Zoom SDK...";
-
-      const ZoomMtg = window.ZoomMtg;
-      ZoomMtg.setZoomJSLib("https://source.zoom.us/4.1.0/lib", "/av");
-      ZoomMtg.preLoadWasm(); 
-      ZoomMtg.prepareWebSDK();
-      ZoomMtg.i18n.load("en-US"); 
-      ZoomMtg.i18n.reload("en-US");
-
-      // Clean up any existing meeting first
-      await cleanupMeeting();
-
+      
       try {
+        status.textContent = "Initializing Zoom SDK...";
+        console.log("[DEBUG] Starting joinMeeting...");
+        console.log("[DEBUG] SDK_KEY:", SDK_KEY ? "✓ Present" : "✗ Missing");
+        console.log("[DEBUG] Meeting Number:", MEETING_NUMBER);
+        console.log("[DEBUG] Role:", ROLE);
+
+        // Wait for ZoomMtg to be available
+        let attempts = 0;
+        while (!window.ZoomMtg && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+
+        if (!window.ZoomMtg) {
+          throw new Error("Zoom SDK failed to load after 5 seconds");
+        }
+
+        const ZoomMtg = window.ZoomMtg;
+        console.log("[DEBUG] ✓ ZoomMtg available");
+
+        // Setup SDK library paths
+        console.log("[DEBUG] Setting up SDK library paths...");
+        ZoomMtg.setZoomJSLib("https://source.zoom.us/4.1.0/lib", "/av");
+        
+        // Preload WebAssembly
+        console.log("[DEBUG] Preloading WebAssembly...");
+        ZoomMtg.preLoadWasm();
+        
+        // Prepare Web SDK
+        console.log("[DEBUG] Preparing Web SDK...");
+        ZoomMtg.prepareWebSDK();
+        
+        // Setup internationalization
+        console.log("[DEBUG] Setting up i18n...");
+        ZoomMtg.i18n.load("en-US");
+        ZoomMtg.i18n.reload("en-US");
+        
+        // Give SDK time to prepare
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        status.textContent = "Generating signature...";
+        console.log("[DEBUG] Getting signature...");
         const signature = await getSignature();
+
+        status.textContent = "Initializing meeting...";
+        console.log("[DEBUG] Calling ZoomMtg.init...");
+        
         ZoomMtg.init({
           leaveUrl: LEAVE_URL,
+          disablePreview: false,
           disableSetAppContext: false,
+          disableJoinAudio: false,
+          disableJoinVideo: false,
+          meetingInfo: ['topic', 'host', 'mn', 'pwd', 'telPwd', 'invite', 'participant', 'dc', 'br', 'meetingOption'],
           success: function() {
-            console.log("✓ SDK initialized");
+            console.log("[DEBUG] ✓ SDK init success");
+            status.textContent = "Joining meeting as HOST...";
+            console.log("[DEBUG] Calling ZoomMtg.join...");
+            
             ZoomMtg.join({
               signature: signature,
               sdkKey: SDK_KEY,
               meetingNumber: MEETING_NUMBER,
               passWord: PASSCODE,
               userName: DISPLAY_NAME,
-              userEmail: "{{ request.user.email|default:'' }}",
-              screenshare: true,
-              record: true,
+              userEmail: USER_EMAIL,
+              disablePreview: false,
+              disableJoinAudio: false,
+              disableJoinVideo: false,
+              zak: "",
               success: function() {
-                status.textContent = "Joined as HOST!";
-                console.log("✓ Successfully joined as HOST");
+                status.textContent = "✓ Successfully joined as HOST!";
+                console.log("[DEBUG] ✓ Successfully joined meeting");
               },
               error: function(e) {
-                console.error("Join error:", e);
-                status.textContent = "Join failed: " + (e.errorMessage || e);
+                console.error("[ERROR] Join failed:", e);
+                status.textContent = "Join failed: " + (e.errorMessage || JSON.stringify(e));
               }
             });
           },
           error: function(err) {
-            console.error("Init error:", err);
-            status.textContent = "SDK initialization failed";
+            console.error("[ERROR] Init failed:", err);
+            status.textContent = "SDK initialization failed: " + (err.errorMessage || JSON.stringify(err));
           }
         });
       } catch (error) {
-        console.error(error);
+        console.error("[ERROR] Critical error:", error);
         status.textContent = "Error: " + error.message;
       }
     }
 
     // ✅ Automatically join on page load
-    window.addEventListener("load", joinMeeting);
+    window.addEventListener("load", function() {
+      console.log("[DEBUG] Page loaded, starting joinMeeting in 1 second...");
+      setTimeout(joinMeeting, 1000);
+    });
   </script>
 
 </body>
