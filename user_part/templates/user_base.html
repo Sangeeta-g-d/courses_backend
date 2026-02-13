@@ -91,28 +91,28 @@
 
   <div class="collapse navbar-collapse" id="navbarCollapse">
     <div class="navbar-nav">
-      <a href="/user/" class="nav-item nav-link active">Home</a>
+      <a href="/" class="nav-item nav-link active">Home</a>
      
      
-      <a href="/user/bundle_list/" class="nav-item nav-link">Bundles</a>
-       <a href="/user/courses/" class="nav-item nav-link">Courses</a>
+      <a href="/bundle_list/" class="nav-item nav-link">Bundles</a>
+       <a href="/courses/" class="nav-item nav-link">Courses</a>
 
       
-        <a href="/user/about_us/" class="nav-item nav-link">About Us</a>
-        <a href="/user/contact_us/" class="nav-item nav-link">Contact Us</a>
-         <a href="/user/meetings/" class="nav-item nav-link">Meetings</a>
+        <a href="/about_us/" class="nav-item nav-link">About Us</a>
+        <a href="/contact_us/" class="nav-item nav-link">Contact Us</a>
+         <a href="/meetings/" class="nav-item nav-link">Meetings</a>
     </div>
     
     <!-- Mobile User Menu -->
     {% if request.user.is_authenticated %}
       <div class="navbar-nav d-lg-none border-top mt-3 pt-3">
-        <a href="/user/profile/" class="nav-item nav-link">My Profile</a>
-        <a href="/user/logout/" class="nav-item nav-link text-danger">Logout</a>
+        <a href="/profile/" class="nav-item nav-link">My Profile</a>
+        <a href="/logout/" class="nav-item nav-link text-danger">Logout</a>
       </div>
     {% else %}
       <div class="navbar-nav d-lg-none border-top mt-3 pt-3">
-        <a href="/user/login/" class="nav-item nav-link">Login</a>
-        <a href="/user/user-register/" class="nav-item nav-link">Register</a>
+        <a href="/login/" class="nav-item nav-link">Login</a>
+        <a href="/user-register/" class="nav-item nav-link">Register</a>
       </div>
     {% endif %}
     
@@ -130,15 +130,15 @@
             <span>{{ request.user.full_name|default:request.user.email }}</span>
           </a>
           <ul class="dropdown-menu dropdown-menu-end shadow-sm mt-2">
-            <li><a class="dropdown-item" href="/user/profile/">My Profile</a></li>
+            <li><a class="dropdown-item" href="/profile/">My Profile</a></li>
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item text-danger" href="/user/logout/">Logout</a></li>
+            <li><a class="dropdown-item text-danger" href="/logout/">Logout</a></li>
           </ul>
         </div>
       {% else %}
         <!-- ✅ Login / Register Buttons -->
-        <a href="/user/login/" class="btn btn-outline-primary py-2 px-3 me-2">Login</a>
-        <a href="/user/user-register/" class="btn btn-primary py-2 px-3">Register</a>
+        <a href="/login/" class="btn btn-outline-primary py-2 px-3 me-2">Login</a>
+        <a href="/user-register/" class="btn btn-primary py-2 px-3">Register</a>
       {% endif %}
     </div>
   </div>

@@ -14,8 +14,19 @@ from admin_part.models import LiveSession
 from django.shortcuts import get_object_or_404
 import jwt
 import time
+from rest_framework import status as drf_status
+from django.contrib.auth import get_user_model
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.conf import settings
+from django.urls import reverse
 import os
 from django.conf import settings  
+
+User = get_user_model()
+
 
 class RegisterAPIView(APIResponseMixin, APIView):
     permission_classes = []  # AllowAny
@@ -405,3 +416,79 @@ class ZoomTokenGeneratorAPIView(APIView, APIResponseMixin):
                 errors=f"Error generating Zoom token: {str(e)}",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+
+# forgot password
+class ForgotPasswordAPI(APIResponseMixin, APIView):
+
+    def post(self, request):
+        email = request.data.get("email")
+
+        if not email:
+            return self.error_response("Email is required")
+
+        try:
+            user = User.objects.get(email=email)
+
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+
+            reset_path = reverse(
+                "reset_password_api",
+                kwargs={"uidb64": uid, "token": token}
+            )
+
+            reset_link = request.build_absolute_uri(reset_path)
+
+            send_mail(
+                subject="Reset Your Password",
+                message=f"""
+Hello {user.full_name or user.email},
+
+Click below link to reset your password:
+
+{reset_link}
+
+If you did not request this, ignore this email.
+                """,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+            )
+
+            return self.success_response(
+                message="Password reset link sent to your email"
+            )
+
+        except User.DoesNotExist:
+            return self.error_response("Email not registered")
+        
+
+class ResetPasswordAPI(APIResponseMixin, APIView):
+
+    def post(self, request, uidb64, token):
+
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except:
+            return self.error_response("Invalid reset link")
+
+        if not default_token_generator.check_token(user, token):
+            return self.error_response("Invalid or expired token")
+
+        password = request.data.get("password")
+        confirm_password = request.data.get("confirm_password")
+
+        if not password or not confirm_password:
+            return self.error_response("Password fields are required")
+
+        if password != confirm_password:
+            return self.error_response("Passwords do not match")
+
+        user.set_password(password)
+        user.save()
+
+        return self.success_response(
+            message="Password reset successful"
+        )

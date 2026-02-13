@@ -9,6 +9,10 @@ from django.core.files.storage import FileSystemStorage
 from django.utils import timezone
 from django.contrib.auth import authenticate, login, logout
 import random
+from django.contrib.auth import get_user_model
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
 from django.db import transaction
 import razorpay
@@ -42,6 +46,11 @@ from django.db import transaction
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.db.models import Avg
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib import messages
+User = get_user_model()
+
 
 
 def home(request):
@@ -198,7 +207,72 @@ def user_login(request):
     return render(request, "user_login.html")
 
 def forgot_password(request):
-    return render(request, 'forgot_password.html')
+    if request.method == "POST":
+        email = request.POST.get("email")
+
+        try:
+            user = User.objects.get(email=email)
+
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+
+            reset_link = request.build_absolute_uri(
+                f"/reset-password/{uid}/{token}/"
+            )
+
+            send_mail(
+                subject="Reset Your Password",
+                message=f"""
+Hello {user.full_name or user.email},
+
+Click the link below to reset your password:
+
+{reset_link}
+
+If you did not request this, ignore this email.
+                """,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+            )
+
+            messages.success(request, "Reset link sent to your email.")
+            return redirect("forgot_password")
+
+        except User.DoesNotExist:
+            messages.error(request, "Email not registered.")
+
+    return render(request, "forgot_password.html")
+
+
+# ===============================
+# RESET PASSWORD VIEW
+# ===============================
+def reset_password(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except:
+        user = None
+
+    if user and default_token_generator.check_token(user, token):
+
+        if request.method == "POST":
+            password1 = request.POST.get("password1")
+            password2 = request.POST.get("password2")
+
+            if password1 != password2:
+                messages.error(request, "Passwords do not match.")
+            else:
+                user.set_password(password1)
+                user.save()
+                messages.success(request, "Password reset successful. Please login.")
+                return redirect("/login/")
+
+        return render(request, "reset_password.html")
+
+    else:
+        messages.error(request, "Invalid or expired reset link.")
+        return redirect("forgot_password")
 
 
 def register(request):
@@ -550,7 +624,7 @@ def bundle_courses(request, bundle_id):
 def logout_view(request):
     logout(request)
     messages.info(request, "You have successfully logged out.")
-    return redirect('/user/')
+    return redirect('/')
 
 
 

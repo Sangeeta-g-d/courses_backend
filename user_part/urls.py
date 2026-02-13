@@ -8,7 +8,7 @@ urlpatterns = [
     path('about_us/', views.about_us, name='about_us'),
     path('contact_us/', views.contact_us, name='contact_us'),
     path('login/',views.user_login,name='login'),
-    path('forgot_password/',views.forgot_password,name='forgot_password'),
+    # path('forgot_password/',views.forgot_password,name='forgot_password'),
     path('user-register/',views.register,name='register'),
     path('user_details/', views.user_details, name='user_details'),
     path('course_details/<int:course_id>/', views.course_details, name='course_details'),
@@ -46,4 +46,9 @@ urlpatterns = [
 
     path('course/<int:course_id>/review/', views.submit_review, name='submit_review'),
     path('meetings/', views.meetings, name='meetings'),
+
+
+    # forgot password
+    path('forgot-password/', views.forgot_password, name='forgot_password'),
+    path('reset-password/<uidb64>/<token>/', views.reset_password, name='reset_password'),
 ]

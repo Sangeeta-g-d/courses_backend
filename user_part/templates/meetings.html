@@ -2,38 +2,36 @@
 {% load static %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container py-2 py-md-4">
 
     <!-- Page Header -->
-    <div class="row mb-4">
+    <div class="row mb-3 mb-md-4">
         <div class="col-12">
-            <h1 class="h2 mb-3">Live Sessions</h1>
-            <p class="text-muted">
+            <h1 class="h3 h2-md mb-2 mb-md-3">Live Sessions</h1>
+            <p class="text-muted small-text">
                 Join our interactive live sessions and enhance your learning experience
             </p>
         </div>
     </div>
 
     <!-- Upcoming Sessions -->
-    <div class="row mb-5">
+    <div class="row mb-4 mb-md-5">
         <div class="col-12">
-            <h3 class="h4 mb-4">Upcoming Sessions</h3>
+            <h3 class="h5 h4-md mb-3 mb-md-4">Upcoming Sessions</h3>
 
             {% if upcoming_sessions %}
                 <div class="row">
                     {% for session in upcoming_sessions %}
-                        <div class="col-lg-6 col-xl-4 mb-4">
+                        <div class="col-12 col-md-6 col-lg-6 col-xl-4 mb-4">
                             <div class="card h-100 shadow-sm">
 
                                 <!-- Thumbnail -->
                                 {% if session.thumbnail %}
                                     <img src="{{ session.thumbnail.url }}"
                                          class="card-img-top"
-                                         alt="{{ session.title }}"
-                                         style="height:200px; object-fit:cover;">
+                                         alt="{{ session.title }}">
                                 {% else %}
-                                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center"
-                                         style="height:200px;">
+                                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center">
                                         <i class="fas fa-video fa-3x text-muted"></i>
                                     </div>
                                 {% endif %}
@@ -70,7 +68,7 @@
 
                                     <!-- Action Button -->
                                     {% if session.is_active or session.can_join_early %}
-                                        <a href="{% url 'join_live_session_user' session.id %}"
+                                        <a target="_blank" href="{% url 'join_live_session_user' session.id %}"
                                            class="btn btn-danger btn-sm w-100">
                                             <i class="fas fa-play-circle me-2"></i>
                                             Join Live Session
@@ -101,22 +99,22 @@
     <!-- Past Sessions -->
     <div class="row">
         <div class="col-12">
-            <h3 class="h4 mb-4">Past Sessions</h3>
+            <h3 class="h5 h4-md mb-3 mb-md-4">Past Sessions</h3>
 
             {% if past_sessions %}
                 <div class="list-group">
                     {% for session in past_sessions %}
-                        <div class="list-group-item">
-                            <div class="row align-items-center">
-                                <div class="col-md-8">
-                                    <h6 class="mb-1">{{ session.title }}</h6>
-                                    <small class="text-muted">
+                        <div class="list-group-item p-3">
+                            <div class="row align-items-start align-items-md-center gy-2">
+                                <div class="col-12 col-md-8">
+                                    <h6 class="mb-1 text-truncate">{{ session.title }}</h6>
+                                    <small class="text-muted d-block">
                                         <i class="fas fa-calendar-alt me-1"></i>
                                         {{ session.session_date|date:"F j, Y" }}
                                         at {{ session.session_time|time:"g:i A" }} IST
                                     </small>
                                 </div>
-                                <div class="col-md-4 text-md-end">
+                                <div class="col-12 col-md-4 d-flex justify-content-start justify-content-md-end">
                                     <span class="badge bg-secondary">Completed</span>
                                 </div>
                             </div>
@@ -139,18 +137,160 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
+/* Card Styles */
 .card {
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: none;
 }
+
 .card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
 }
+
+.card-img-top {
+    object-fit: cover;
+    height: 200px;
+}
+
 .badge {
     font-size: 0.75em;
+    white-space: nowrap;
 }
+
 .btn:disabled {
     cursor: not-allowed;
+}
+
+/* Responsive Typography */
+.h4-md {
+    font-size: 1.1rem;
+}
+
+.small-text {
+    font-size: 0.9rem;
+}
+
+/* List Group Responsive */
+.list-group-item {
+    border: 1px solid #dee2e6;
+    transition: background-color 0.2s ease;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Mobile optimizations */
+@media (max-width: 576px) {
+    .h2-md {
+        font-size: 1.5rem;
+    }
+    
+    .container {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    
+    .card {
+        margin: 0 -0.5px;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .card-title {
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .card-text {
+        font-size: 0.85rem;
+    }
+    
+    .btn-sm {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.85rem;
+    }
+    
+    .badge {
+        padding: 0.35rem 0.5rem;
+        font-size: 0.7em;
+    }
+    
+    .list-group-item {
+        padding: 0.75rem !important;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+        line-height: 1.3;
+    }
+    
+    small {
+        display: inline;
+    }
+    
+    .gy-2 {
+        --bs-gutter-y: 0.5rem;
+    }
+}
+
+/* Tablet optimizations (768px and up) */
+@media (min-width: 768px) {
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .card-body {
+        padding: 1.25rem;
+    }
+    
+    .card-title {
+        font-size: 1rem;
+    }
+}
+
+/* Large screen optimizations */
+@media (min-width: 992px) {
+    .card {
+        transition: all 0.3s ease;
+    }
+    
+    .card {
+        margin: 0;
+    }
+}
+
+/* Extra large screens */
+@media (min-width: 1200px) {
+    .card-img-top {
+        height: 220px;
+    }
+}
+
+/* Ensure buttons don't overflow on small screens */
+.btn {
+    word-break: break-word;
+    margin-bottom: 0.5rem;
+}
+
+/* Improve spacing for empty states */
+.text-center {
+    padding: 1rem;
+}
+
+@media (max-width: 576px) {
+    .text-center {
+        padding: 0.75rem;
+    }
 }
 </style>
 {% endblock %}

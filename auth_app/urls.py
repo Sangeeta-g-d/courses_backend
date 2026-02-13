@@ -9,4 +9,9 @@ urlpatterns = [
     path("live-sessions/", views.LiveSessionListAPIView.as_view(), name="live-session-list"),
     path("live-sessions/<int:session_id>/", views.LiveSessionDetailAPIView.as_view(), name="live-session-detail"),
     path("zoom-token/", views.ZoomTokenGeneratorAPIView.as_view(), name="zoom-token-generator"),
+
+    # forgot password
+
+    path("forgot-password/", views.ForgotPasswordAPI.as_view(), name="forgot_password_api"),
+    path("reset-password/<uidb64>/<token>/",views.ResetPasswordAPI.as_view(),name="reset_password_api"),
 ]
