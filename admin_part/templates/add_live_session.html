@@ -117,7 +117,7 @@ function createZoomMeeting() {
     createBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating Meeting...';
 
     // Call API to create meeting
-    fetch('/api/create_zoom_meeting/', {
+    fetch('/backend/api/create_zoom_meeting/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
