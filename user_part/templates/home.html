@@ -109,7 +109,7 @@
                                         Discover our most popular courses handpicked for your success
                                     </p>
 
-                                    <a href="/user/courses/"
+                                    <a href="/courses/"
                                        class="btn btn-light btn-lg py-3 px-4 rounded-pill">
                                         <i class="bi bi-arrow-right me-2"></i> Explore All Courses
                                     </a>
@@ -136,7 +136,7 @@
                                                 <p class="text-muted small flex-grow-1">
                                                     {{ course.short_description|truncatewords:15 }}
                                                 </p>
-                                                <a href="/user/course_details/{{ course.id }}/"
+                                                <a href="/course_details/{{ course.id }}/"
                                                    class="btn btn-primary btn-sm w-100 mt-2">
                                                     View Course →
                                                 </a>
@@ -175,7 +175,7 @@
                                         Save more with our curated course bundles
                                     </p>
 
-                                    <a href="/user/bundle_list/"
+                                    <a href="/bundle_list/"
                                        class="btn btn-light btn-lg py-3 px-4 rounded-pill">
                                         <i class="bi bi-collection me-2"></i> View All Bundles
                                     </a>
@@ -196,7 +196,7 @@
                                                 <p class="text-muted small flex-grow-1">
                                                     {{ bundle.short_description|truncatewords:15 }}
                                                 </p>
-                                                <a href="/user/bundle/{{ bundle.id }}/"
+                                                <a href="/bundle/{{ bundle.id }}/"
                                                    class="btn btn-primary btn-sm w-100 mt-2">
                                                     Explore Bundle →
                                                 </a>
@@ -475,7 +475,7 @@
                             <img class="img-fluid w-100 bundle-image" src="/static/home_assets/img/service-placeholder.jpg" alt="{{ bundle.name }}" style="height: 250px; object-fit: cover;">
                         {% endif %}
                         <div class="team-social">
-                            <a class="btn btn-dark btn-sm px-3" href="/user/bundle/{{ bundle.id }}/">
+                            <a class="btn btn-dark btn-sm px-3" href="/bundle/{{ bundle.id }}/">
                                 View Courses
                             </a>
                         </div>
@@ -561,7 +561,7 @@
 
               <!-- Button at the bottom with no extra space -->
               <div class="text-center pt-2 mt-10px">
-                <a class="btn btn-light px-3 w-100" href="/user/course_details/{{ item.id }}/">
+                <a class="btn btn-light px-3 w-100" href="/course_details/{{ item.id }}/">
                   View Details <i class="bi bi-chevron-double-right ms-1"></i>
                 </a>
               </div>

@@ -72,7 +72,7 @@
         {# ===== BUTTON LOGIC ===== #}
 
         {% if request.user.is_authenticated %}
-            <a href="/user/enroll/{{ bundle.id }}/"
+            <a href="/enroll/{{ bundle.id }}/"
                class="btn btn-primary btn-lg px-4">
                 Enroll Now
             </a>
@@ -146,7 +146,7 @@
 
                 <div class="mt-3">
                   <a class="btn btn-outline-primary w-100"
-                     href="/user/course_details/{{ course.id }}/">
+                     href="/course_details/{{ course.id }}/">
                     View Course <i class="bi bi-chevron-double-right ms-1"></i>
                   </a>
                 </div>

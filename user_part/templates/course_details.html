@@ -495,17 +495,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     {% if not is_enrolled %}
                         {% if user_is_authenticated %}
                             <!-- User is logged in but not enrolled -->
-                            <a href="/user/enroll/{{ course.bundle.id}}/" class="btn btn-primary w-100 mt-3 py-2 fw-semibold">
+                            <a href="/enroll/{{ course.bundle.id}}/" class="btn btn-primary w-100 mt-3 py-2 fw-semibold">
                                 {% if course.bundle and course.bundle.is_free %}Enroll for Free{% else %}Enroll Now{% endif %}
                             </a>
                         {% else %}
                             <!-- User is not logged in -->
-                            <a href="/user/login/?next={{ request.path }}" class="btn btn-primary w-100 mt-3 py-2 fw-semibold">
+                            <a href="/login/?next={{ request.path }}" class="btn btn-primary w-100 mt-3 py-2 fw-semibold">
                                 Login to Enroll
                             </a>
                             <div class="text-center mt-2">
                                 <small class="text-muted">Don't have an account? 
-                                    <a href="/user/register/?next={{ request.path }}" class="text-primary">Sign up</a>
+                                    <a href="/register/?next={{ request.path }}" class="text-primary">Sign up</a>
                                 </small>
                             </div>
                         {% endif %}

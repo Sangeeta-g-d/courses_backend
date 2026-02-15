@@ -173,7 +173,7 @@
     const PASSCODE = "{{ session.Passcode }}";
     const USER_EMAIL = "{{ request.user.email|default:'' }}";
     const ROLE = 0;  // 0 = Attendee (user)
-    const LEAVE_URL = "/user/meetings/";
+    const LEAVE_URL = "/meetings/";
 
     // Handle display name input
     document.getElementById('displayNameInput').addEventListener('keypress', function(e) {
