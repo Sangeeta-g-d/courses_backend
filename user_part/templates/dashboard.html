@@ -3,40 +3,6 @@
 {% load math_filters %}
 {% load duration_filters %}
 
-<style>
-    /* Ensure all bundle cards have the same height */
-    .service-item {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .service-inner {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-    }
-
-    .service-inner img {
-        height: 250px;
-        object-fit: cover;
-    }
-
-    .service-text {
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .service-text p {
-        flex-grow: 1;
-    }
-
-    .service-item .btn {
-        margin-top: auto;
-    }
-</style>
-
 {% if request.user.is_authenticated %}
 
 
