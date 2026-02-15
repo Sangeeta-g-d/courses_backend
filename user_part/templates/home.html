@@ -118,32 +118,34 @@
 
                             <!-- RIGHT CARDS -->
                             <div class="col-lg-8">
-                                <div class="row g-4">
-                                    {% for course in recent_courses|slice:":3" %}
-                                    <div class="col-md-4">
-                                        <div class="card border-0 shadow-lg h-100 overflow-hidden">
-                                            <div class="position-relative">
-                                              <img src="{{ course.thumbnail_url }}" class="card-img-top course-slide-image" alt="{{ course.title }}" style="height: 180px; object-fit: cover;">
-                                                <span class="badge bg-primary position-absolute top-0 end-0 m-3">
-                                                    Popular
-                                                </span>
-                                            </div>
+                                <div class="horizontal-scroll-container">
+                                    <div class="scroll-wrapper">
+                                        {% for course in recent_courses|slice:":3" %}
+                                        <div class="scroll-card">
+                                            <div class="card border-0 shadow-lg h-100 overflow-hidden">
+                                                <div class="position-relative">
+                                                  <img src="{{ course.thumbnail_url }}" class="card-img-top course-slide-image" alt="{{ course.title }}" style="height: 180px; object-fit: cover;">
+                                                    <span class="badge bg-primary position-absolute top-0 end-0 m-3">
+                                                        Popular
+                                                    </span>
+                                                </div>
 
-                                            <div class="card-body d-flex flex-column">
-                                                <h6 class="mb-2">
-                                                    {{ course.title }}
-                                                </h6>
-                                                <p class="text-muted small flex-grow-1">
-                                                    {{ course.short_description|truncatewords:15 }}
-                                                </p>
-                                                <a href="/course_details/{{ course.id }}/"
-                                                   class="btn btn-primary btn-sm w-100 mt-2">
-                                                    View Course →
-                                                </a>
+                                                <div class="card-body d-flex flex-column">
+                                                    <h6 class="mb-2">
+                                                        {{ course.title }}
+                                                    </h6>
+                                                    <p class="text-muted small flex-grow-1">
+                                                        {{ course.short_description|truncatewords:15 }}
+                                                    </p>
+                                                    <a href="/course_details/{{ course.id }}/"
+                                                       class="btn btn-primary btn-sm w-100 mt-2">
+                                                        View Course →
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
+                                        {% endfor %}
                                     </div>
-                                    {% endfor %}
                                 </div>
                             </div>
 
@@ -184,26 +186,28 @@
 
                             <!-- RIGHT CARDS -->
                             <div class="col-lg-8">
-                                <div class="row g-4">
-                                    {% for bundle in bundles|slice:":3" %}
-                                    <div class="col-md-4">
-                                        <div class="card border-0 shadow-lg h-100 overflow-hidden">
-                                            <img src="{{ bundle.thumbnail.url }}"
-                                                 class="card-img-top"
-                                                 style="height:180px; object-fit:cover;">
-                                            <div class="card-body d-flex flex-column">
-                                                <h6>{{ bundle.name }}</h6>
-                                                <p class="text-muted small flex-grow-1">
-                                                    {{ bundle.short_description|truncatewords:15 }}
-                                                </p>
-                                                <a href="/bundle/{{ bundle.id }}/"
-                                                   class="btn btn-primary btn-sm w-100 mt-2">
-                                                    Explore Bundle →
-                                                </a>
+                                <div class="horizontal-scroll-container">
+                                    <div class="scroll-wrapper">
+                                        {% for bundle in bundles|slice:":3" %}
+                                        <div class="scroll-card">
+                                            <div class="card border-0 shadow-lg h-100 overflow-hidden">
+                                                <img src="{{ bundle.thumbnail.url }}"
+                                                     class="card-img-top"
+                                                     style="height:180px; object-fit:cover;">
+                                                <div class="card-body d-flex flex-column">
+                                                    <h6>{{ bundle.name }}</h6>
+                                                    <p class="text-muted small flex-grow-1">
+                                                        {{ bundle.short_description|truncatewords:15 }}
+                                                    </p>
+                                                    <a href="/bundle/{{ bundle.id }}/"
+                                                       class="btn btn-primary btn-sm w-100 mt-2">
+                                                        Explore Bundle →
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
+                                        {% endfor %}
                                     </div>
-                                    {% endfor %}
                                 </div>
                             </div>
 
@@ -316,6 +320,74 @@
         .d-flex.align-items-center.mt-4.gap-3 {
             flex-direction: column;
             align-items: flex-start;
+        }
+    }
+
+    /* ========== HORIZONTAL SCROLL FOR MOBILE ========== */
+    .horizontal-scroll-container {
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .scroll-wrapper {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding: 0 0 10px 0;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .scroll-wrapper::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .scroll-wrapper::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+    }
+
+    .scroll-wrapper::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
+    }
+
+    .scroll-wrapper::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+    }
+
+    .scroll-card {
+        flex: 0 0 100%;
+        min-width: 280px;
+    }
+
+    @media (min-width: 768px) {
+        .scroll-card {
+            flex: 0 0 calc(50% - 0.5rem);
+            min-width: calc(50% - 0.5rem);
+        }
+    }
+
+    @media (min-width: 992px) {
+        .horizontal-scroll-container {
+            overflow: auto;
+        }
+
+        .scroll-wrapper {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            overflow-x: visible;
+            padding: 0;
+        }
+
+        .scroll-card {
+            flex: none;
+            min-width: auto;
+        }
+
+        .scroll-wrapper::-webkit-scrollbar {
+            display: none;
         }
     }
 </style>
