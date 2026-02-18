@@ -1,6 +1,10 @@
 from rest_framework import serializers
-from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProgress, Lecture
+from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProgress, Lecture, Post
 from django.db.models import Avg
+from django.utils import timezone
+import pytz
+from .models import Post
+
 
 class BundleDetailSerializer(serializers.ModelSerializer):
     thumbnail_url = serializers.SerializerMethodField()
@@ -395,3 +399,39 @@ class EnrolledBundleSerializer(serializers.ModelSerializer):
 
     def get_discounted_price(self, obj):
         return obj.bundle.get_discounted_price()
+    
+
+# fetch post 
+class PostSerializer(serializers.ModelSerializer):
+    images = serializers.SerializerMethodField()
+    created_at = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Post
+        fields = [
+            "id",
+            "title",
+            "caption",
+            "images",
+            "likes",
+            "is_active",
+            "created_at",
+        ]
+
+    def get_images(self, obj):
+        request = self.context.get("request")
+        images = []
+
+        for image in [obj.image1, obj.image2, obj.image3]:
+            if image:
+                images.append(request.build_absolute_uri(image.url))
+
+        return images
+
+    def get_created_at(self, obj):
+        # Convert to IST
+        ist = pytz.timezone("Asia/Kolkata")
+        ist_time = timezone.localtime(obj.created_at, ist)
+
+        # Format date
+        return ist_time.strftime("%d %b %Y, %I:%M %p")

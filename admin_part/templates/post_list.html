@@ -1,0 +1,218 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+
+<div class="page-heading d-flex justify-content-between align-items-center">
+    <h3>All Posts</h3>
+    <a href="{% url 'add_post' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Add New Post
+    </a>
+</div>
+
+<div class="page-content mt-4">
+
+{% if posts %}
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card stat-card-primary shadow-sm border-0">
+            <div class="card-body">
+                <p class="text-muted mb-1 fw-normal">Total Posts</p>
+                <h2 class="mb-0 fw-bold">{{ stats.count }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card stat-card-success shadow-sm border-0">
+            <div class="card-body">
+                <p class="text-muted mb-1 fw-normal">Active Posts</p>
+                <h2 class="mb-0 fw-bold">{{ stats.active_count }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card stat-card-danger shadow-sm border-0">
+            <div class="card-body">
+                <p class="text-muted mb-1 fw-normal">Total Likes</p>
+                <h2 class="mb-0 fw-bold">{{ stats.total_likes }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card stat-card-info shadow-sm border-0">
+            <div class="card-body">
+                <p class="text-muted mb-1 fw-normal">This Month</p>
+                <h2 class="mb-0 fw-bold">{{ stats.this_month_count }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Posts Grid -->
+<div class="row g-4" id="postsContainer">
+{% for post in posts %}
+<div class="col-md-4 post-item">
+    <div class="card post-card h-100 shadow-sm">
+
+        <!-- Header -->
+        <div class="card-header bg-white d-flex justify-content-between align-items-start">
+            <div>
+                <strong>{{ post.title|default:"Untitled" }}</strong><br>
+                <small class="text-muted">{{ post.created_at|date:"M d, Y" }}</small>
+            </div>
+
+            <div class="post-actions">
+                <a href="{% url 'edit_post' post.id %}" class="text-muted me-2">
+                    <i class="bi bi-pencil-square"></i>
+                </a>
+                <form action="{% url 'delete_post' post.id %}" method="POST" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn p-0 text-danger"
+                        onclick="return confirm('Delete this post?');">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Images -->
+        <div class="post-carousel-container">
+            {% if post.image1 %}
+                <img src="{{ post.image1.url }}" class="w-100"
+                     style="height: 220px; object-fit: contain; background: #f8f9fa;">
+            {% elif post.image2 %}
+                <img src="{{ post.image2.url }}" class="w-100"
+                     style="height: 220px; object-fit: contain; background: #f8f9fa;">
+            {% elif post.image3 %}
+                <img src="{{ post.image3.url }}" class="w-100"
+                     style="height: 220px; object-fit: contain; background: #f8f9fa;">
+            {% else %}
+                <div class="bg-light d-flex align-items-center justify-content-center"
+                     style="height: 220px;">
+                    <i class="bi bi-image fs-1 text-muted"></i>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Body -->
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-2">
+                <div>
+                    <i class="bi bi-heart-fill text-danger"></i>
+                    {{ post.likes }} likes
+                </div>
+                <span class="badge {% if post.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                    {{ post.is_active|yesno:"Active,Inactive" }}
+                </span>
+            </div>
+
+            <!-- Scrollable Caption -->
+            <div class="caption-scroll small text-muted">
+                {{ post.caption }}
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endfor %}
+</div>
+
+<!-- Pagination Controls -->
+<div class="d-flex justify-content-between align-items-center mt-4">
+    <div>
+        <span id="pageInfo"></span>
+    </div>
+    <div>
+        <button class="btn btn-sm btn-secondary" id="prevPage">Prev</button>
+        <button class="btn btn-sm btn-secondary" id="nextPage">Next</button>
+    </div>
+</div>
+
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-camera fs-1 text-muted"></i>
+    <h4>No Posts Found</h4>
+</div>
+{% endif %}
+
+</div>
+
+{% include 'notify.html' %}
+
+<!-- Styles -->
+<style>
+.post-card {
+    transition: transform .2s;
+}
+.post-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.post-actions {
+    opacity: 0;
+    transition: opacity .2s;
+}
+.post-card:hover .post-actions {
+    opacity: 1;
+}
+
+.caption-scroll {
+    max-height: 80px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.caption-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+.caption-scroll::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+}
+</style>
+
+<!-- JS Pagination -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    const postsPerPage = 30;
+    const posts = Array.from(document.querySelectorAll('.post-item'));
+    let currentPage = 1;
+    const totalPages = Math.ceil(posts.length / postsPerPage);
+
+    function renderPosts() {
+        posts.forEach((post, index) => {
+            post.style.display =
+                index >= (currentPage - 1) * postsPerPage &&
+                index < currentPage * postsPerPage
+                ? ""
+                : "none";
+        });
+
+        document.getElementById("pageInfo").innerText =
+            posts.length ? `Page ${currentPage} of ${totalPages}` : "";
+    }
+
+    document.getElementById("prevPage").onclick = () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderPosts();
+        }
+    };
+
+    document.getElementById("nextPage").onclick = () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderPosts();
+        }
+    };
+
+    renderPosts();
+});
+</script>
+
+{% endblock %}

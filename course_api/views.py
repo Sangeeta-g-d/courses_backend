@@ -1037,3 +1037,26 @@ class ContinueLearningAPIView(APIView, APIResponseMixin):
             },
             status_code=drf_status.HTTP_200_OK
         )
+
+
+class PostListAPIView(APIView, APIResponseMixin):
+
+    def get(self, request):
+        try:
+            posts = Post.objects.filter(
+                is_active=True
+            ).order_by("-created_at")
+
+            serializer = PostSerializer(
+                posts,
+                many=True,
+                context={"request": request}
+            )
+
+            return self.success_response(
+                message="Posts fetched successfully",
+                data=serializer.data
+            )
+
+        except Exception as e:
+            return self.error_response(str(e))

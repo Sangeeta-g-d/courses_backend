@@ -6,6 +6,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.text import slugify
 from django.contrib.auth import logout
 import json
+from django.db.models import Sum
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
@@ -747,3 +748,89 @@ def zoom_sdk_signature(request):
 def contact_list(request):
     contacts = ContactMessage.objects.all().order_by('-created_at')
     return render(request, 'contact_list.html', {'contacts': contacts})
+
+def add_post(request):
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        caption = request.POST.get("caption", "").strip()
+        is_active = request.POST.get("is_active") == "on"
+
+        image1 = request.FILES.get("image1")
+        image2 = request.FILES.get("image2")
+        image3 = request.FILES.get("image3")
+
+        # 🔒 Validation: at least one image OR caption
+        if not caption and not any([image1, image2, image3]):
+            messages.error(
+                request,
+                "Please add at least one image or a caption."
+            )
+            return redirect("add_post")
+
+        Post.objects.create(
+            title=title,
+            caption=caption,
+            image1=image1,
+            image2=image2,
+            image3=image3,
+            is_active=is_active
+        )
+
+        messages.success(request, "Post added successfully!")
+        return redirect("add_post")
+
+    return render(request, "add_post.html")
+
+
+def post_list(request):
+    posts = Post.objects.order_by('-created_at')
+
+    today = timezone.now()
+    first_day = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    context = {
+        'posts': posts,
+        'stats': {
+            'count': posts.count(),
+            'active_count': posts.filter(is_active=True).count(),
+            'total_likes': posts.aggregate(Sum('likes'))['likes__sum'] or 0,
+            'this_month_count': posts.filter(created_at__gte=first_day).count(),
+        }
+    }
+    return render(request, 'post_list.html', context)
+
+
+def delete_post(request, id):
+    post = get_object_or_404(Post, id=id)
+
+    if request.method == "POST":
+        post.delete()
+        messages.success(request, "Post deleted successfully.")
+    else:
+        messages.error(request, "Invalid request.")
+
+    return redirect(request.META.get('HTTP_REFERER', 'post_list'))
+
+def edit_post(request, id):
+    post = get_object_or_404(Post, id=id)
+
+    if request.method == "POST":
+        post.title = request.POST.get("title", "").strip()
+        post.caption = request.POST.get("caption", "").strip()
+        post.is_active = request.POST.get("is_active") == "on"
+
+        # Update images only if new file is uploaded
+        if request.FILES.get("image1"):
+            post.image1 = request.FILES["image1"]
+
+        if request.FILES.get("image2"):
+            post.image2 = request.FILES["image2"]
+
+        if request.FILES.get("image3"):
+            post.image3 = request.FILES["image3"]
+
+        post.save()
+        messages.success(request, "Post updated successfully!")
+        return redirect("post_list")
+
+    return render(request, "edit_post.html", {"post": post})

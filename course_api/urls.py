@@ -18,4 +18,6 @@ urlpatterns = [
     path('enrolled-bundles/',EnrolledBundleListAPIView.as_view(),name='enrolled-bundles'),
     path('profile-stats/',UserProfileStatsAPIView.as_view(),name='user-profile-stats'),
     path('continue-learning/', ContinueLearningAPIView.as_view(), name='continue-learning'),
+
+    path("posts/", PostListAPIView.as_view(), name="post-list"),
 ]

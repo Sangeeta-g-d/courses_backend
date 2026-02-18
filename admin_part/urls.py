@@ -43,6 +43,12 @@ urlpatterns = [
 
     # is_published toggle API urls
     path('course/<int:course_id>/toggle-publish/',views.toggle_course_publish,name='toggle_course_publish'),
+
+
+    path('add_post/', views.add_post, name='add_post'),
+    path('post_list/', views.post_list, name='post_list'),
+    path('delete_post/<int:id>/', views.delete_post, name='delete_post'),
+    path('edit_post/<int:id>/', views.edit_post, name='edit_post'),
     
     
    
