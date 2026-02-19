@@ -21,6 +21,7 @@ class Bundle(models.Model):  # Keep table name the same
     short_description = models.TextField(max_length=2000, blank=True, null=True)
     full_description = models.TextField(blank=True, null=True)
     thumbnail = models.ImageField(upload_to='bundle_thumbnails/', blank=True, null=True)
+    preview_video = models.FileField(upload_to='bundle_videos/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_published = models.BooleanField(default=True)

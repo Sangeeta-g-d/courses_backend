@@ -3,7 +3,6 @@ from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProg
 from django.db.models import Avg
 from django.utils import timezone
 import pytz
-from .models import Post
 
 
 class BundleDetailSerializer(serializers.ModelSerializer):

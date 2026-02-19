@@ -9,31 +9,112 @@
 </div>
 
 <div class="page-content mt-4">
+
+  <!-- ============================= -->
+  <!-- ✅ BUNDLE DETAILS SECTION -->
+  <!-- ============================= -->
+  {% if selected_bundle %}
+  <div class="card mb-5 shadow-sm">
+    <div class="row g-0">
+
+      <!-- Preview Video -->
+      {% if selected_bundle.preview_video %}
+      <div class="col-md-5">
+        <video class="w-100 h-100 rounded-start" controls style="object-fit:cover;">
+          <source src="{{ selected_bundle.preview_video.url }}" type="video/mp4">
+        </video>
+      </div>
+
+      {% elif selected_bundle.thumbnail %}
+      <div class="col-md-5">
+        <img src="{{ selected_bundle.thumbnail.url }}"
+             class="img-fluid h-100 w-100 rounded-start"
+             style="object-fit:cover;">
+      </div>
+      {% endif %}
+
+      <!-- Bundle Info -->
+      <div class="col-md-7">
+        <div class="card-body">
+
+          <h3 class="card-title mb-2">
+            {{ selected_bundle.name }}
+          </h3>
+
+          {% if selected_bundle.short_description %}
+          <p class="text-muted">
+            {{ selected_bundle.short_description }}
+          </p>
+          {% endif %}
+
+          <!-- Pricing -->
+          {% if selected_bundle.is_free %}
+            <h5 class="text-success fw-bold">Free</h5>
+          {% else %}
+            <h5 class="fw-bold">
+              ₹{{ selected_bundle.get_discounted_price }}
+              {% if selected_bundle.discount > 0 %}
+                <small class="text-muted text-decoration-line-through ms-2">
+                  ₹{{ selected_bundle.price }}
+                </small>
+                <span class="badge bg-danger ms-2">
+                  {{ selected_bundle.discount }}% OFF
+                </span>
+              {% endif %}
+            </h5>
+          {% endif %}
+
+          {% if selected_bundle.full_description %}
+          <p class="mt-3">
+            {{ selected_bundle.full_description }}
+          </p>
+          {% endif %}
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <h4 class="mb-4">Courses in this Bundle</h4>
+  {% endif %}
+
+
+  <!-- ============================= -->
+  <!-- ✅ COURSES GRID -->
+  <!-- ============================= -->
   <div class="row g-4" id="courseContainer">
     {% for course in courses %}
-    <div class="col-12 col-md-6 col-lg-4 course-card" data-bundle="{{ course.Bundle.id }}">
-      <div class="card h-100 shadow-sm hover-shadow">
-        
-        <!-- Make thumbnail clickable separately -->
+    <div class="col-12 col-md-6 col-lg-4 course-card" data-bundle="{{ course.bundle.id }}">
+      <div class="card h-100 shadow-sm">
+
+        <!-- Thumbnail -->
         <a href="{% url 'course_detail' course.id %}" class="text-decoration-none text-dark">
           {% if course.thumbnail %}
-          <img src="{{ course.thumbnail.url }}" class="card-img-top" style="height:180px; object-fit:cover;">
+          <img src="{{ course.thumbnail.url }}"
+               class="card-img-top"
+               style="height:180px; object-fit:cover;">
           {% else %}
-          <img src="/static/assets/images/default-course.jpg" class="card-img-top" style="height:180px; object-fit:cover;">
+          <img src="/static/assets/images/default-course.jpg"
+               class="card-img-top"
+               style="height:180px; object-fit:cover;">
           {% endif %}
         </a>
 
         <div class="card-body d-flex flex-column">
-          <!-- Make title clickable separately -->
+
+          <!-- Title -->
           <a href="{% url 'course_detail' course.id %}" class="text-decoration-none text-dark">
             <h5 class="card-title">{{ course.title }}</h5>
-            <p class="card-text text-truncate">{{ course.short_description }}</p>
+            <p class="card-text text-truncate">
+              {{ course.short_description }}
+            </p>
           </a>
 
           <p class="mb-1"><strong>Level:</strong> {{ course.level }}</p>
           <p class="mb-2"><strong>Language:</strong> {{ course.language }}</p>
 
-          <!-- ✅ PUBLISH TOGGLE - Now isolated from navigation -->
+          <!-- Publish Toggle -->
           <div class="form-check form-switch mb-2">
             <input
               class="form-check-input publish-toggle"
@@ -46,6 +127,7 @@
             </label>
           </div>
 
+          <!-- Action Buttons -->
           <div class="mt-auto d-flex gap-2">
             <a href="{% url 'edit_course' course.id %}" class="btn btn-sm btn-warning">
               <i class="bi bi-pencil-square"></i>
@@ -56,141 +138,69 @@
               <i class="bi bi-trash"></i>
             </a>
           </div>
+
         </div>
       </div>
     </div>
     {% empty %}
     <div class="col-12 text-center">
-      <div class="alert alert-info">No courses found.</div>
+      <div class="alert alert-info">
+        No courses found.
+      </div>
     </div>
     {% endfor %}
   </div>
+
 </div>
 
-{% include 'notify.html' %}
 
-<!-- ✅ SAFE JS -->
+<!-- ============================= -->
+<!-- ✅ PUBLISH TOGGLE SCRIPT -->
+<!-- ============================= -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-  /* ===============================
-     BUNDLE FILTER (SAFE)
-     =============================== */
-  const bundleFilter = document.getElementById('bundleFilter');
-  if (bundleFilter) {
-    bundleFilter.addEventListener('change', function () {
-      const selectedBundle = this.value;
-      const cards = document.querySelectorAll('.course-card');
-      let visible = 0;
-
-      cards.forEach(card => {
-        const bundleId = card.dataset.bundle;
-        if (selectedBundle === 'all' || bundleId === selectedBundle) {
-          card.style.display = 'block';
-          visible++;
-        } else {
-          card.style.display = 'none';
-        }
-      });
-
-      const container = document.getElementById('courseContainer');
-      const existing = document.getElementById('noResultsMsg');
-
-      if (visible === 0 && !existing) {
-        const msg = document.createElement('div');
-        msg.id = 'noResultsMsg';
-        msg.className = 'col-12 text-center text-muted py-5';
-        msg.innerHTML = `
-          <i class="bi bi-journal-x display-5 mb-3 d-block"></i>
-          <h5>No courses found for this bundle</h5>
-        `;
-        container.appendChild(msg);
-      } else if (existing) {
-        existing.remove();
-      }
-    });
-  }
-
-  /* ===============================
-     PUBLISH TOGGLE - FIXED VERSION
-     =============================== */
   document.querySelectorAll('.publish-toggle').forEach(toggle => {
-    
-    // Prevent click from bubbling to parent anchor
-    toggle.addEventListener('click', function(e) {
-      e.stopPropagation();
-    });
-    
-    // Add mousedown handler to prevent default behavior
-    toggle.addEventListener('mousedown', function(e) {
-      e.stopPropagation();
-    });
-    
-    // Handle the actual toggle
+
     toggle.addEventListener('change', function(e) {
-      e.stopPropagation();
-      
+
       const courseId = this.dataset.courseId;
       const isPublished = this.checked;
-      const originalState = !isPublished; // Save original state for rollback
-      
-      // Get CSRF token
-      const csrftoken = getCSRFToken();
-      
-      // Construct the full URL
-      const url = `/course/${courseId}/toggle-publish/`;
-      
-      // Update label immediately for better UX
-      const label = this.closest('.form-check').querySelector('.form-check-label');
+      const originalState = !isPublished;
+
+      const label = this.closest('.form-check')
+                        .querySelector('.form-check-label');
+
       label.textContent = isPublished ? 'Published' : 'Unpublished';
-      
-      fetch(url, {
+
+      fetch(`/course/${courseId}/toggle-publish/`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrftoken,
-          'X-Requested-With': 'XMLHttpRequest'
+          'X-CSRFToken': getCSRFToken(),
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ is_published: isPublished })
       })
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        if (data.success) {
-          // Success - label already updated
-          console.log('Course publish status updated successfully');
-          // Optional: Show toast notification
-          if (typeof showToast === 'function') {
-            showToast(data.message || 'Course status updated', 'success');
-          }
-        } else {
-          // Revert toggle on failure
+        if (!data.success) {
           this.checked = originalState;
           label.textContent = originalState ? 'Published' : 'Unpublished';
-          alert(data.error || 'Update failed');
+          alert(data.error || "Update failed");
         }
       })
-      .catch(error => {
-        // Revert toggle on error
+      .catch(() => {
         this.checked = originalState;
         label.textContent = originalState ? 'Published' : 'Unpublished';
-        console.error('Error:', error);
-        alert('Server error. Please try again.');
+        alert("Server error");
       });
+
     });
   });
 
 });
 
-/* ===============================
-   IMPROVED CSRF TOKEN FUNCTION
-   =============================== */
 function getCSRFToken() {
-  // Try to get token from cookie
   let cookieValue = null;
   const name = 'csrftoken';
   if (document.cookie && document.cookie !== '') {
@@ -203,15 +213,6 @@ function getCSRFToken() {
       }
     }
   }
-  
-  // If not found in cookie, try to get from meta tag
-  if (!cookieValue) {
-    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-    if (csrfMeta) {
-      cookieValue = csrfMeta.getAttribute('content');
-    }
-  }
-  
   return cookieValue;
 }
 </script>

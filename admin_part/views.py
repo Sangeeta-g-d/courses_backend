@@ -113,6 +113,7 @@ def add_bundle(request):
         is_published = bool(request.POST.get('is_published'))
 
         thumbnail = request.FILES.get('thumbnail')
+        preview_video = request.FILES.get('preview_video')
         # ✅ Validation
         if not name:
             messages.error(request, "Name is required.")
@@ -127,6 +128,7 @@ def add_bundle(request):
             short_description=short_description,
             full_description=full_description,
             thumbnail=thumbnail,
+            preview_video=preview_video,
             is_published=is_published,
             created_at=timezone.now()
         )
@@ -158,6 +160,7 @@ def edit_bundle(request, bundle_id):
         full_description = request.POST.get('full_description', '').strip()
         is_published = bool(request.POST.get('is_published'))
         thumbnail = request.FILES.get('thumbnail')
+        preview_video = request.FILES.get('preview_video')
         # Update fields
         bundle.name = name
         bundle.slug = slugify(name)
@@ -171,6 +174,10 @@ def edit_bundle(request, bundle_id):
         # Replace thumbnail only if new file uploaded
         if thumbnail:
             bundle.thumbnail = thumbnail
+        
+        # Replace preview video only if new file uploaded
+        if preview_video:
+            bundle.preview_video = preview_video
         try:
             bundle.save()
             messages.success(request, "Bundle updated successfully!")
@@ -225,12 +232,18 @@ def add_course(request):
 def view_courses(request):
     bundles = Bundle.objects.all()
     bundle_id = request.GET.get('bundle_id')
+
+    selected_bundle = None
     courses = Course.objects.select_related("bundle").all()
+
     if bundle_id:
+        selected_bundle = Bundle.objects.filter(id=bundle_id).first()
         courses = courses.filter(bundle_id=bundle_id)
+
     return render(request, "view_course.html", {
         "bundles": bundles,
         "courses": courses,
+        "selected_bundle": selected_bundle,
     })
 
 
