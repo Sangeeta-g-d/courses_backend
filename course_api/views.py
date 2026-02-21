@@ -1,11 +1,11 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError, PostLike, Post
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from django.shortcuts import get_object_or_404
 from .pagination import PostPagination
 from rest_framework import status as drf_status
-from admin_part.models import Bundle, Enrollment, Course
+from admin_part.models import Bundle, Enrollment, Course, PostLike, Post
 from user_part.utils import get_user_rank, get_user_watch_time_rankings
 from .serializers import *
 from courses_backend.api_response import APIResponseMixin
