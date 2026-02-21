@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProgress, Lecture,, Post
+from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProgress, Lecture,PostLike, Post
 from django.db.models import Avg
 from django.utils import timezone
 import pytz
