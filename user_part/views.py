@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect,reverse
-from admin_part.models import Course, CourseSection, Lecture,Bundle, Enrollment, PaymentTransaction,Wishlist,UserProgress,LiveSession, ContactMessage ,Review
+from admin_part.models import Course, CourseSection, Lecture,Bundle, Enrollment, PaymentTransaction,Wishlist,UserProgress,LiveSession, ContactMessage ,Review, Post
 from auth_app.models import CustomUser, UserProfile
 from django.contrib.auth import login
 from django.contrib import messages
@@ -1543,3 +1543,59 @@ def meetings(request):
         'past_sessions': past_sessions,
     }
     return render(request, 'meetings.html', context)
+
+
+
+from django.core.paginator import Paginator
+def feeds(request):
+    posts = Post.objects.filter(is_active=True).order_by('-created_at')
+    live_sessions = LiveSession.objects.order_by('-created_at')[:3]
+
+    feed_items = []
+
+    # Add posts
+    for post in posts:
+        post.type = 'post'
+        feed_items.append(post)
+
+    # Add live sessions
+    for session in live_sessions:
+        session.type = 'live'
+        feed_items.append(session)
+
+    # Sort everything by created_at (latest first)
+    feed_items.sort(key=lambda x: x.created_at, reverse=True)
+
+    # ✅ PAGINATION (ADDED)
+    paginator = Paginator(feed_items, 5)  # show 5 items per page
+    page_number = request.GET.get('page')
+    feed_items = paginator.get_page(page_number)
+
+    return render(request, 'feeds.html', {
+        'feed_items': feed_items
+    })
+
+
+def like_post(request, post_id):
+    post = Post.objects.get(id=post_id)
+
+    session_key = f"liked_post_{post_id}"
+
+    if request.session.get(session_key):
+        # Unlike
+        post.likes = max(0, post.likes - 1)
+        request.session.pop(session_key)
+        liked = False
+    else:
+        # Like
+        post.likes += 1
+        request.session[session_key] = True
+        liked = True
+
+    post.save()
+
+    return JsonResponse({
+        "success": True,
+        "liked": liked,
+        "likes_count": post.likes
+    })

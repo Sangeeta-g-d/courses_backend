@@ -1,0 +1,295 @@
+{% extends 'user_base.html' %}
+{% block content %}
+
+<style>
+    .feed-card {
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        margin-bottom: 25px;
+        background: white;
+        overflow: hidden;
+    }
+    .feed-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    .card-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid #f0f0f0;
+        background: white;
+    }
+    .post-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+        color: #333;
+    }
+    .post-date {
+        font-size: 0.85rem;
+        color: #888;
+        margin-top: 5px;
+    }
+
+    .carousel-container {
+        width: 100%;
+        height: 400px;
+        background: #f8f9fa;
+        overflow: hidden;
+    }
+    .carousel-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .no-image-placeholder {
+        height: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: #fff;
+        font-size: 1.2rem;
+    }
+
+    .card-body {
+        padding: 20px;
+    }
+    .caption {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: #555;
+        max-height: 80px;
+        overflow: hidden;
+    }
+    .caption.expanded {
+        max-height: none;
+    }
+    .read-more {
+        color: #007bff;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        display: none;
+        margin-top: 6px;
+    }
+
+    .post-stats {
+        display: flex;
+        align-items: center;
+        padding-top: 15px;
+        border-top: 1px solid #f0f0f0;
+        margin-top: 15px;
+    }
+    .likes-count {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1rem;
+        color: #555;
+    }
+    .like-button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.2rem;
+    }
+</style>
+
+<div class="container-fluid py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+
+{% for item in feed_items %}
+<div class="feed-card">
+
+    <!-- HEADER -->
+    <div class="card-header">
+        <h3 class="post-title">
+            {% if item.type == "live" %}
+                🔴 Live Zoom Session
+            {% else %}
+                {{ item.title|default:"Untitled Post" }}
+            {% endif %}
+        </h3>
+        <div class="post-date">
+            {% if item.type == "live" %}
+                {{ item.session_date|date:"F j, Y" }} • {{ item.session_time|time:"g:i A" }}
+            {% else %}
+                {{ item.created_at|date:"F j, Y" }} • {{ item.created_at|time:"g:i A" }}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- IMAGE -->
+    <div class="carousel-container">
+        {% if item.type == "live" and item.thumbnail %}
+            <img src="{{ item.thumbnail.url }}" class="carousel-image">
+        {% elif item.image1 %}
+            <img src="{{ item.image1.url }}" class="carousel-image">
+        {% else %}
+            <div class="no-image-placeholder">No Image Available</div>
+        {% endif %}
+    </div>
+
+    <!-- BODY -->
+    <div class="card-body">
+
+        {% if item.type == "live" %}
+        <div class="caption expanded">
+            <strong>Agenda:</strong> {{ item.agenda }}<br><br>
+
+            <strong>Date & Time:</strong>
+            {{ item.session_date|date:"F j, Y" }} •
+            {{ item.session_time|time:"g:i A" }}<br><br>
+
+            <strong>Meeting URL:</strong>
+            <a href="{{ item.meeting_url }}" target="_blank"
+               style="color:#58a4f5; text-decoration:underline;">
+                {{ item.meeting_url }}
+            </a>
+            <br><br>
+
+            {% if item.is_active %}
+                <a href="{{ item.meeting_url }}"
+                   target="_blank"
+                   class="btn btn-success btn-sm">
+                    🔗 Join Now
+                </a>
+          {% else %}
+<div style="display:flex; align-items:center; justify-content:space-between;">
+    <span class="text-muted">⏰ Meeting not active</span>
+
+    <button class="like-button"
+            onclick="sharePost({{ item.id }})">
+        <span style="font-size:0.95rem;margin-right:6px;">Share</span>
+        <i class="far fa-share-square"></i>
+    </button>
+</div>
+{% endif %}
+
+        </div>
+
+        {% else %}
+        {% if item.caption %}
+            <div class="caption" id="caption-{{ item.id }}">
+                {{ item.caption }}
+            </div>
+            <span class="read-more"
+                  id="read-more-{{ item.id }}"
+                  onclick="toggleCaption({{ item.id }})">
+                More
+            </span>
+        {% endif %}
+        {% endif %}
+
+        {% if item.type == "post" %}
+        <div class="post-stats">
+            <div class="likes-count">
+                <button class="like-button" onclick="likePost({{ item.id }})">
+                    <i class="far fa-heart" id="like-icon-{{ item.id }}"></i>
+                </button>
+                <span id="likes-count-{{ item.id }}">{{ item.likes }}</span> likes
+            </div>
+
+            <button class="like-button"
+                    onclick="sharePost({{ item.id }})"
+                    style="margin-left:auto;">
+                <span style="font-size:0.95rem;margin-right:6px;">Share</span>
+                <i class="far fa-share-square"></i>
+            </button>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endfor %}
+
+<!-- PAGINATION -->
+<div class="d-flex justify-content-center mt-4">
+    <nav>
+        <ul class="pagination">
+
+            {% if feed_items.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ feed_items.previous_page_number }}">
+                    Previous
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in feed_items.paginator.page_range %}
+                {% if feed_items.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > feed_items.number|add:'-2' and num < feed_items.number|add:'2' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if feed_items.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ feed_items.next_page_number }}">
+                    Next
+                </a>
+            </li>
+            {% endif %}
+
+        </ul>
+    </nav>
+</div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll('.caption').forEach(caption => {
+        if (caption.scrollHeight > 80) {
+            const id = caption.id?.split('-')[1];
+            if (id) {
+                document.getElementById(`read-more-${id}`).style.display = 'inline-block';
+            }
+        }
+    });
+});
+
+function toggleCaption(id) {
+    const caption = document.getElementById(`caption-${id}`);
+    const btn = document.getElementById(`read-more-${id}`);
+    caption.classList.toggle('expanded');
+    btn.innerText = caption.classList.contains('expanded') ? 'Less' : 'More';
+}
+
+function likePost(postId) {
+    fetch(`/like-post/${postId}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById(`likes-count-${postId}`).innerText = data.likes_count;
+            document.getElementById(`like-icon-${postId}`).className =
+                data.liked ? 'fas fa-heart' : 'far fa-heart';
+        }
+    });
+}
+
+function sharePost(postId) {
+    const url = window.location.origin + `/feeds/?post=${postId}`;
+    navigator.share
+        ? navigator.share({ title: 'Check this post', url })
+        : navigator.clipboard.writeText(url).then(() => alert('Link copied'));
+}
+</script>
+
+{% endblock %}

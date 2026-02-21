@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProgress, Lecture, Post
+from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProgress, Lecture,, Post
 from django.db.models import Avg
 from django.utils import timezone
 import pytz
@@ -434,3 +434,58 @@ class PostSerializer(serializers.ModelSerializer):
 
         # Format date
         return ist_time.strftime("%d %b %Y, %I:%M %p")
+    
+class PostSerializer(serializers.ModelSerializer):
+    image1 = serializers.SerializerMethodField()
+    image2 = serializers.SerializerMethodField()
+    image3 = serializers.SerializerMethodField()
+    created_at = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Post
+        fields = [
+            "id",
+            "title",
+            "caption",
+            "image1",
+            "image2",
+            "image3",
+            "likes",
+            "is_liked",
+            "created_at",
+        ]
+
+    def get_image1(self, obj):
+        request = self.context.get("request")
+        if obj.image1:
+            return request.build_absolute_uri(obj.image1.url)
+        return None
+
+    def get_image2(self, obj):
+        request = self.context.get("request")
+        if obj.image2:
+            return request.build_absolute_uri(obj.image2.url)
+        return None
+
+    def get_image3(self, obj):
+        request = self.context.get("request")
+        if obj.image3:
+            return request.build_absolute_uri(obj.image3.url)
+        return None
+
+    def get_created_at(self, obj):
+        if not obj.created_at:
+            return None
+
+        ist_time = obj.created_at.astimezone(ZoneInfo("Asia/Kolkata"))
+        return ist_time.strftime("%d %b %Y, %I:%M %p")
+
+    def get_is_liked(self, obj):
+        request = self.context.get("request")
+        if request.user.is_authenticated:
+            return PostLike.objects.filter(
+                user=request.user,
+                post=obj
+            ).exists()
+        return False

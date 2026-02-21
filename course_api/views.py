@@ -1,8 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError, PostLike
 from django.shortcuts import get_object_or_404
+from .pagination import PostPagination
 from rest_framework import status as drf_status
 from admin_part.models import Bundle, Enrollment, Course
 from user_part.utils import get_user_rank, get_user_watch_time_rankings
@@ -1056,6 +1057,82 @@ class PostListAPIView(APIView, APIResponseMixin):
             return self.success_response(
                 message="Posts fetched successfully",
                 data=serializer.data
+            )
+
+        except Exception as e:
+            return self.error_response(str(e))
+        
+
+
+class PostListAPIView(APIView, APIResponseMixin):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        try:
+            posts = Post.objects.filter(is_active=True).order_by("-created_at")
+
+            paginator = PostPagination()
+            paginated_posts = paginator.paginate_queryset(posts, request)
+
+            serializer = PostSerializer(
+                paginated_posts,
+                many=True,
+                context={"request": request}
+            )
+
+            return paginator.get_paginated_response(
+                {
+                    "status": drf_status.HTTP_200_OK,
+                    "message": "Post list fetched successfully",
+                    "response": serializer.data,
+                }
+            )
+
+        except Exception as e:
+            return self.error_response(str(e))
+        
+
+class TogglePostLikeAPIView(APIView, APIResponseMixin):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, post_id):
+        try:
+            post = Post.objects.filter(id=post_id, is_active=True).first()
+
+            if not post:
+                return self.error_response("Post not found", drf_status.HTTP_404_NOT_FOUND)
+
+            with transaction.atomic():
+                like_obj = PostLike.objects.filter(
+                    user=request.user,
+                    post=post
+                ).first()
+
+                if like_obj:
+                    # Unlike
+                    like_obj.delete()
+                    post.likes = max(0, post.likes - 1)
+                    post.save()
+                    is_liked = False
+                    message = "Post unliked successfully"
+                else:
+                    # Like
+                    PostLike.objects.create(
+                        user=request.user,
+                        post=post
+                    )
+                    post.likes += 1
+                    post.save()
+                    is_liked = True
+                    message = "Post liked successfully"
+
+            return self.success_response(
+                message=message,
+                data={
+                    "post_id": post.id,
+                    "likes": post.likes,
+                    "is_liked": is_liked
+                }
             )
 
         except Exception as e:
