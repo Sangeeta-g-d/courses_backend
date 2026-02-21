@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError, PostLike
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError, PostLike, Post
 from django.shortcuts import get_object_or_404
 from .pagination import PostPagination
 from rest_framework import status as drf_status
