@@ -142,6 +142,13 @@
                                     {% else %}
                                         <p class="fw-bold text-primary">₹{{ bundle.price|floatformat:2 }}</p>
                                     {% endif %}
+                                    
+                                    <!-- PDF Price Display -->
+                                    {% if bundle.bundle_pdf and bundle.bundle_pdf_price %}
+                                        <small class="text-muted d-block mt-2">
+                                            <i class="bi bi-file-pdf text-danger me-1"></i>PDF: <strong class="text-primary">₹{{ bundle.bundle_pdf_price|floatformat:2 }}</strong>
+                                        </small>
+                                    {% endif %}
                                 </div>
 
                                 <a class="btn btn-light px-3" href="/bundle/{{ bundle.id }}/">

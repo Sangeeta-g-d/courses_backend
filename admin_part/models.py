@@ -22,6 +22,8 @@ class Bundle(models.Model):  # Keep table name the same
     full_description = models.TextField(blank=True, null=True)
     thumbnail = models.ImageField(upload_to='bundle_thumbnails/', blank=True, null=True)
     preview_video = models.FileField(upload_to='bundle_videos/', blank=True, null=True)
+    bundle_pdf = models.FileField(upload_to='bundle_pdfs/', blank=True, null=True)
+    bundle_pdf_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_published = models.BooleanField(default=True)
@@ -374,6 +376,12 @@ class Enrollment(models.Model):
         ('refunded', 'Refunded'),
     ]
     
+    PURCHASE_TYPE_CHOICES = [
+        ('bundle', 'Bundle/Course Only'),
+        ('pdf', 'PDF Only'),
+        ('both', 'Bundle + PDF'),
+    ]
+    
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='enrollments')
     bundle = models.ForeignKey('Bundle', on_delete=models.CASCADE, related_name='enrollments')
     enrolled_at = models.DateTimeField(auto_now_add=True)
@@ -381,6 +389,10 @@ class Enrollment(models.Model):
     # Payment Information
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    # Purchase Type Tracking
+    purchase_type = models.CharField(max_length=20, choices=PURCHASE_TYPE_CHOICES, default='bundle')
+    has_pdf = models.BooleanField(default=False)  # Quick flag for PDF access
     
     # Progress Tracking
     progress_percentage = models.PositiveIntegerField(default=0)
@@ -396,16 +408,18 @@ class Enrollment(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        unique_together = ('user', 'bundle')
         ordering = ['-enrolled_at']
 
     def __str__(self):
-        return f"{self.user.username} - {self.bundle.name}"
+        return f"{self.user.username} - {self.bundle.name} ({self.purchase_type})"
 
     def save(self, *args, **kwargs):
         # Set completed_at when progress reaches 100%
         if self.progress_percentage == 100 and not self.completed_at:
             self.completed_at = timezone.now()
+        
+        # Update has_pdf based on purchase_type
+        self.has_pdf = self.purchase_type in ['pdf', 'both']
         super().save(*args, **kwargs)
 
     def update_progress(self):

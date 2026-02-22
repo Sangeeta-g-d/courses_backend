@@ -24,12 +24,34 @@
         background: linear-gradient(45deg, #28a745, #20c997);
         color: white;
     }
+    
+    /* Disabled purchase option styling */
+    #disabledBundleOption,
+    #disabledPdfOption,
+    #disabledBothOption {
+        opacity: 0.6;
+        background-color: #f0f0f0 !important;
+        cursor: not-allowed;
+    }
+    
+    #disabledBundleOption input:disabled,
+    #disabledPdfOption input:disabled,
+    #disabledBothOption input:disabled {
+        cursor: not-allowed;
+    }
+    
+    #disabledBundleOption label,
+    #disabledPdfOption label,
+    #disabledBothOption label {
+        cursor: not-allowed;
+        color: #999;
+    }
 </style>
 
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            {% if is_enrolled %}
+            {% if is_enrolled and not is_upgrade %}
             <!-- Already Enrolled Message -->
             <div class="card enrollment-card border-0 mb-4 already-enrolled">
                 <div class="card-body text-center p-5">
@@ -39,9 +61,24 @@
                     <h2 class="mb-3">You're Already Enrolled!</h2>
                     <p class="mb-4">You have successfully enrolled in this bundle. You can start learning right away.</p>
                     <div class="d-flex justify-content-center gap-3">
-                        <a href="" class="btn btn-light btn-lg">Go to My Courses</a>
-                        <a href="" class="btn btn-outline-light btn-lg">Dashboard</a>
+                        <a href="/bundle/{{ bundle.id }}/" class="btn btn-light btn-lg">Start Learning</a>
+                        <a href="/profile/" class="btn btn-outline-light btn-lg">Dashboard</a>
                     </div>
+                </div>
+            </div>
+            {% elif is_upgrade %}
+            <!-- Upgrade Plan Message -->
+            <div class="card enrollment-card border-0 mb-4" style="background: linear-gradient(45deg, #ffc107, #ff9800);">
+                <div class="card-body text-center p-4">
+                    <h4 class="mb-2">Upgrade Your Plan</h4>
+                    <p class="mb-1"><small>You currently have:</small></p>
+                    {% if enrollment.purchase_type == 'bundle' %}
+                        <p class="fw-bold">Bundle/Course Only</p>
+                        <small class="text-muted">Add PDF guide to enhance your learning experience</small>
+                    {% elif enrollment.purchase_type == 'pdf' %}
+                        <p class="fw-bold">PDF Guide Only</p>
+                        <small class="text-muted">Add courses to unlock the complete learning path</small>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
@@ -57,31 +94,109 @@
                     </p>
                     
                     <!-- Pricing Information -->
-                    <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded">
-                        <div>
-                            {% if bundle.is_free %}
-                                <span class="price-highlight text-success">Free</span>
-                            {% elif bundle.discount > 0 %}
-                                <div>
-                                    <span class="text-decoration-line-through text-muted me-2">₹{{ bundle.price }}</span>
-                                    <span class="price-highlight text-primary">₹{{ bundle.get_discounted_price|floatformat:2 }}</span>
-                                </div>
-                                <span class="badge bg-warning text-dark">{{ bundle.discount }}% Off</span>
-                            {% else %}
-                                <span class="price-highlight text-primary">₹{{ bundle.price|floatformat:2 }}</span>
-                            {% endif %}
+                    <div class="mb-4 p-4 bg-light rounded">
+                        <h5 class="mb-4">Select Your Purchase Option:</h5>
+                        
+                        {% if bundle.bundle_pdf and bundle.bundle_pdf_price %}
+                            <!-- Option 1: Bundle Only -->
+                            <div class="form-check mb-3 p-3 border rounded" style="background-color: #fff;" 
+                                 {% if is_upgrade and enrollment.purchase_type == 'bundle' %}id="disabledBundleOption"{% endif %}>
+                                <input class="form-check-input purchase-option" type="radio" name="purchaseType" 
+                                       id="bundleOnly" value="bundle" 
+                                       {% if is_upgrade and enrollment.purchase_type == 'bundle' %}disabled{% endif %}
+                                       {% if not is_upgrade %}checked{% elif is_upgrade and enrollment.purchase_type == 'pdf' %}checked{% endif %}
+                                       data-price="{{ bundle.get_discounted_price|floatformat:2 }}">
+                                <label class="form-check-label w-100" for="bundleOnly">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>Bundle/Course Only</strong>
+                                            <small class="text-muted d-block">Get access to all courses in this bundle</small>
+                                            {% if is_upgrade and enrollment.purchase_type == 'bundle' %}<small class="text-success fw-bold">✓ Already Purchased</small>{% endif %}
+                                        </div>
+                                        <span class="price-highlight text-primary">₹{{ bundle.get_discounted_price|floatformat:2 }}</span>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <!-- Option 2: PDF Only -->
+                            <div class="form-check mb-3 p-3 border rounded" style="background-color: #fff;"
+                                 {% if is_upgrade and enrollment.purchase_type == 'pdf' %}id="disabledPdfOption"{% endif %}>
+                                <input class="form-check-input purchase-option" type="radio" name="purchaseType" 
+                                       id="pdfOnly" value="pdf" 
+                                       {% if is_upgrade and enrollment.purchase_type == 'pdf' %}disabled{% endif %}
+                                       {% if is_upgrade and enrollment.purchase_type == 'bundle' %}checked{% endif %}
+                                       data-price="{{ bundle.bundle_pdf_price|floatformat:2 }}">
+                                <label class="form-check-label w-100" for="pdfOnly">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="bi bi-file-pdf text-danger"></i> <strong>PDF Guide Only</strong>
+                                            <small class="text-muted d-block">Get the complete PDF guide without course access</small>
+                                            {% if is_upgrade and enrollment.purchase_type == 'pdf' %}<small class="text-success fw-bold">✓ Already Purchased</small>{% endif %}
+                                        </div>
+                                        <span class="price-highlight text-primary">₹{{ bundle.bundle_pdf_price|floatformat:2 }}</span>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <!-- Option 3: Bundle + PDF -->
+                            <div class="form-check p-3 border rounded" style="background-color: #e7f3ff; border: 2px solid #0d6efd;"
+                                 {% if is_upgrade %}id="disabledBothOption"{% endif %}>
+                                <input class="form-check-input purchase-option" type="radio" name="purchaseType" 
+                                       id="bundlePdf" value="both" 
+                                       {% if is_upgrade %}disabled{% endif %}
+                                       {% if not is_upgrade %}checked{% endif %}
+                                       data-price="{{ bundle.get_discounted_price|add:bundle.bundle_pdf_price|floatformat:2 }}">
+                                <label class="form-check-label w-100" for="bundlePdf">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="bi bi-star-fill text-warning"></i> <strong>Bundle + PDF (Best Value!)</strong>
+                                            <small class="text-muted d-block">Get courses AND the complete PDF guide</small>
+                                            {% if is_upgrade %}<small class="text-muted fw-bold">Available for new purchases only</small>{% endif %}
+                                        </div>
+                                        <div>
+                                            <span class="price-highlight text-primary">₹{{ bundle.get_discounted_price|add:bundle.bundle_pdf_price|floatformat:2 }}</span>
+                                            <small class="text-success d-block">Save Now!</small>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        
+                        {% else %}
+                            <!-- No PDF available, show bundle price only -->
+                            <div class="price-highlight mb-3">
+                                {% if bundle.is_free %}
+                                    <span class="text-success">Free</span>
+                                {% elif bundle.discount > 0 %}
+                                    <div>
+                                        <span class="text-decoration-line-through text-muted me-2">₹{{ bundle.price }}</span>
+                                        <span class="text-primary">₹{{ bundle.get_discounted_price|floatformat:2 }}</span>
+                                    </div>
+                                    <span class="badge bg-warning text-dark">{{ bundle.discount }}% Off</span>
+                                {% else %}
+                                    <span class="text-primary">₹{{ bundle.price|floatformat:2 }}</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Total Price Display -->
+                        <div class="mt-4 p-3 bg-white rounded border-2 border-primary">
+                            <small class="text-muted d-block">Total Amount to Pay:</small>
+                            <span class="price-highlight text-primary" id="totalPrice">
+                                ₹{{ bundle.get_discounted_price|floatformat:2 }}
+                            </span>
                         </div>
                         
                         <!-- Enroll Button -->
-                        <div>
-                            {% if not is_enrolled %}
-                                {% if bundle.is_free %}
+                        <div class="mt-4">
+                            {% if not is_enrolled or is_upgrade %}
+                                {% if bundle.is_free and not is_upgrade %}
                                     <form method="post" action="{% url 'free_enroll' bundle.id %}">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-success btn-lg px-4">Enroll for Free</button>
+                                        <input type="hidden" name="purchaseType" value="bundle">
+                                        <button type="submit" class="btn btn-success btn-lg px-4 w-100">Enroll for Free</button>
                                     </form>
                                 {% else %}
-                                    <button type="button" class="btn btn-primary btn-lg px-4" id="pay-now-btn">Pay Now</button>
+                                    <button type="button" class="btn btn-primary btn-lg px-4 w-100" id="pay-now-btn">{% if is_upgrade %}Upgrade{% else %}Pay Now{% endif %}</button>
                                 {% endif %}
                             {% else %}
                                 <span class="badge bg-success fs-6 p-2">Already Enrolled</span>
@@ -149,17 +264,35 @@
                 <h5 class="modal-title" id="paymentModalLabel">Complete Your Payment</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-center">
-                <h6 class="mb-3">{{ bundle.name }}</h6>
-                {% if bundle.discount > 0 %}
-                    <p class="mb-2">
-                        <span class="text-decoration-line-through text-muted me-2">₹{{ bundle.price }}</span>
-                        <span class="text-primary fw-bold">₹{{ bundle.get_discounted_price|floatformat:2 }}</span>
-                    </p>
-                {% else %}
-                    <p class="text-primary fw-bold mb-2">₹{{ bundle.price|floatformat:2 }}</p>
-                {% endif %}
-                <button type="button" class="btn btn-primary mt-3" id="proceed-payment">Proceed to Payment</button>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <h6 class="fw-bold mb-3">{{ bundle.name }}</h6>
+                    
+                    <!-- Purchase Type Display -->
+                    <div class="mb-3 p-3 bg-light rounded">
+                        <small class="text-muted d-block mb-2">Selected Purchase:</small>
+                        <span id="modalPurchaseType" class="fw-bold text-primary d-block">Bundle/Course Only</span>
+                    </div>
+                    
+                    <!-- Price Breakdown -->
+                    <div class="mb-3 p-3 bg-white border rounded">
+                        <div class="d-flex justify-content-between mb-2" id="bundlePriceLine" style="display: none;">
+                            <span>Bundle/Course:</span>
+                            <span id="bundlePriceValue">₹{{ bundle.get_discounted_price|floatformat:2 }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2" id="pdfPriceLine" style="display: none;">
+                            <span>PDF Guide:</span>
+                            <span id="pdfPriceValue">₹{{ bundle.bundle_pdf_price|floatformat:2 }}</span>
+                        </div>
+                        <hr class="my-2" id="priceDivider" style="display: none;">
+                        <div class="d-flex justify-content-between">
+                            <strong>Total Amount:</strong>
+                            <span class="h5 text-primary mb-0" id="modalTotalPrice">₹{{ bundle.get_discounted_price|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-primary w-100" id="proceed-payment">Proceed to Payment</button>
             </div>
         </div>
     </div>
@@ -173,10 +306,110 @@ document.addEventListener('DOMContentLoaded', function() {
     const payNowBtn = document.getElementById('pay-now-btn');
     const proceedPaymentBtn = document.getElementById('proceed-payment');
     const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+    const purchaseOptions = document.querySelectorAll('.purchase-option');
+    const totalPriceDisplay = document.getElementById('totalPrice');
+    
+    const bundlePrice = parseFloat('{{ bundle.get_discounted_price|floatformat:2 }}');
+    const pdfPrice = parseFloat('{{ bundle.bundle_pdf_price|floatformat:2 }}') || 0;
+    
+    // Purchase type descriptions
+    const purchaseDescriptions = {
+        'bundle': 'Bundle/Course Only',
+        'pdf': 'PDF Guide Only',
+        'both': 'Bundle + PDF (Best Value!)'
+    };
+
+    // Check for upgrade parameter in URL
+    function handleUpgradeParameter() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const upgradeType = urlParams.get('upgrade');
+        
+        if (upgradeType) {
+            let targetValue = 'bundle';
+            
+            if (upgradeType === 'pdf') {
+                targetValue = 'pdf';
+            } else if (upgradeType === 'course') {
+                // If user is upgrading from PDF to course, select 'both'
+                targetValue = 'both';
+            }
+            
+            // Find and check the appropriate radio button
+            const targetRadio = document.querySelector(`input[name="purchaseType"][value="${targetValue}"]`);
+            if (targetRadio) {
+                targetRadio.checked = true;
+                // Trigger change event to update display
+                targetRadio.dispatchEvent(new Event('change', { bubbles: true }));
+                
+                // Show visual highlight
+                const parentDiv = targetRadio.closest('.form-check');
+                if (parentDiv) {
+                    parentDiv.style.backgroundColor = '#fff3cd';
+                    parentDiv.style.borderColor = '#ffc107';
+                }
+            }
+        }
+    }
+
+    // Update modal display when selection changes
+    function updateModalDisplay() {
+        const selectedOption = document.querySelector('input[name="purchaseType"]:checked');
+        const purchaseType = selectedOption ? selectedOption.value : 'bundle';
+        
+        // Update modal title
+        const modalPurchaseType = document.getElementById('modalPurchaseType');
+        modalPurchaseType.textContent = purchaseDescriptions[purchaseType];
+        
+        // Update price breakdown
+        const bundlePriceLine = document.getElementById('bundlePriceLine');
+        const pdfPriceLine = document.getElementById('pdfPriceLine');
+        const priceDivider = document.getElementById('priceDivider');
+        const modalTotalPrice = document.getElementById('modalTotalPrice');
+        
+        let totalAmount = 0;
+        
+        // Reset display
+        bundlePriceLine.style.display = 'none';
+        pdfPriceLine.style.display = 'none';
+        priceDivider.style.display = 'none';
+        
+        // Show relevant prices
+        if (purchaseType === 'bundle') {
+            bundlePriceLine.style.display = 'flex';
+            totalAmount = bundlePrice;
+        } else if (purchaseType === 'pdf') {
+            pdfPriceLine.style.display = 'flex';
+            totalAmount = pdfPrice;
+        } else if (purchaseType === 'both') {
+            bundlePriceLine.style.display = 'flex';
+            pdfPriceLine.style.display = 'flex';
+            priceDivider.style.display = 'block';
+            totalAmount = bundlePrice + pdfPrice;
+        }
+        
+        // Update total
+        modalTotalPrice.textContent = '₹' + totalAmount.toFixed(2);
+    }
+
+    // Update total price when purchase option changes
+    purchaseOptions.forEach(option => {
+        option.addEventListener('change', function() {
+            // Ignore disabled options
+            if (this.disabled) {
+                return;
+            }
+            
+            const price = parseFloat(this.dataset.price);
+            if (totalPriceDisplay) {
+                totalPriceDisplay.textContent = '₹' + price.toFixed(2);
+            }
+        });
+    });
 
     // Show payment modal when Pay Now is clicked
     if (payNowBtn) {
         payNowBtn.addEventListener('click', function() {
+            updateModalDisplay();
             paymentModal.show();
         });
     }
@@ -188,13 +421,20 @@ document.addEventListener('DOMContentLoaded', function() {
             proceedPaymentBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
             proceedPaymentBtn.disabled = true;
 
+            // Get selected purchase type
+            const selectedOption = document.querySelector('input[name="purchaseType"]:checked');
+            const purchaseType = selectedOption ? selectedOption.value : 'bundle';
+
             // Create payment order via AJAX
             fetch('{% url "create_payment_order" bundle.id %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}'
-                }
+                },
+                body: JSON.stringify({
+                    purchase_type: purchaseType
+                })
             })
             .then(response => response.json())
             .then(data => {
@@ -214,10 +454,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         amount: data.amount,
                         currency: data.currency,
                         name: "Your Learning Platform",
-                        description: "Bundle Enrollment: {{ bundle.name }}",
+                        description: "Purchase: " + getDescriptionText(purchaseType),
                         order_id: data.order_id,
                         handler: function(response) {
-                            handlePaymentSuccess(response);
+                            handlePaymentSuccess(response, purchaseType);
                         },
                         prefill: {
                             name: userName,
@@ -250,9 +490,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 proceedPaymentBtn.disabled = false;
             });
         });
-    } // This was the missing closing brace
+    }
 
-    function handlePaymentSuccess(response) {
+    function getDescriptionText(purchaseType) {
+        const descriptions = {
+            'bundle': '{{ bundle.name }} - Course Only',
+            'pdf': '{{ bundle.name }} - PDF Guide Only',
+            'both': '{{ bundle.name }} - Course + PDF Bundle'
+        };
+        return descriptions[purchaseType] || '{{ bundle.name }}';
+    }
+
+    function handlePaymentSuccess(response, purchaseType) {
         console.log('Payment successful, verifying...', response);
         
         // Show loading state
@@ -272,7 +521,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
-                bundle_id: {{ bundle.id }}
+                bundle_id: {{ bundle.id }},
+                purchase_type: purchaseType
             })
         })
         .then(response => response.json())
@@ -295,6 +545,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Store bundle ID in session storage for payment failed page
     localStorage.setItem('last_attempted_bundle', '{{ bundle.id }}');
+    
+    // Handle upgrade parameter on page load
+    handleUpgradeParameter();
 });
 </script>
 {% endblock %}

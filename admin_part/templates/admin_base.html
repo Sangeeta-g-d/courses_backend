@@ -115,9 +115,9 @@
     </a>
 
     <!-- Right: User profile dropdown -->
-    <div class="dropdown ms-auto">
-        <a href="#" class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle"
-           id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+    <div class="dropdown ms-auto" style="position: relative;">
+        <button class="btn d-flex align-items-center text-dark text-decoration-none dropdown-toggle" 
+                type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background: none; border: none; cursor: pointer;">
             <img src="/static/assets/images/faces/1.jpg" alt="user" width="40" height="40"
                  class="rounded-circle me-2">
             <span class="fw-semibold">
@@ -127,9 +127,9 @@
                     Admin
                 {% endif %}
             </span>
-        </a>
+        </button>
 
-        <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userDropdown">
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userDropdown" style="min-width: 200px;">
             <li>
                 <h6 class="dropdown-header">
                     {{ request.user.email }}
@@ -161,7 +161,6 @@ window.USE_DIRECT_S3_UPLOAD = true;
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script src="/static/assets/vendors/perfect-scrollbar/perfect-scrollbar.min.js"></script>
-    <script src="/static/assets/js/bootstrap.bundle.min.js"></script>
 
     <script src="/static/assets/vendors/apexcharts/apexcharts.js"></script>
     <script src="/static/assets/js/pages/dashboard.js"></script>

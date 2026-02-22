@@ -39,6 +39,21 @@
                                 {% endif %}
                             {% endif %}
                         </span>
+                        
+                        <!-- PDF Details if present -->
+                        {% if bundle.bundle_pdf %}
+                            <div class="mt-2 p-2 bg-light rounded">
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-file-pdf"></i> Bundle PDF Included
+                                </small>
+                                {% if bundle.bundle_pdf_price %}
+                                    <small class="text-primary font-weight-bold">
+                                        +₹{{ bundle.bundle_pdf_price }} (Optional)
+                                    </small>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        
                         <p class="mt-2 small bundle-description flex-grow-1">{{ bundle.short_description|truncatewords:20 }}</p>
                     </div>
                 </div>

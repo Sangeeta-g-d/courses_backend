@@ -111,9 +111,11 @@ def add_bundle(request):
         short_description = request.POST.get('short_description')
         full_description = request.POST.get('full_description')
         is_published = bool(request.POST.get('is_published'))
+        bundle_pdf_price = request.POST.get('bundle_pdf_price') or None
 
         thumbnail = request.FILES.get('thumbnail')
         preview_video = request.FILES.get('preview_video')
+        bundle_pdf = request.FILES.get('bundle_pdf')
         # ✅ Validation
         if not name:
             messages.error(request, "Name is required.")
@@ -129,6 +131,8 @@ def add_bundle(request):
             full_description=full_description,
             thumbnail=thumbnail,
             preview_video=preview_video,
+            bundle_pdf=bundle_pdf,
+            bundle_pdf_price=bundle_pdf_price,
             is_published=is_published,
             created_at=timezone.now()
         )
@@ -159,8 +163,12 @@ def edit_bundle(request, bundle_id):
         short_description = request.POST.get('short_description', '').strip()
         full_description = request.POST.get('full_description', '').strip()
         is_published = bool(request.POST.get('is_published'))
+        bundle_pdf_price = request.POST.get('bundle_pdf_price') or None
+        
         thumbnail = request.FILES.get('thumbnail')
         preview_video = request.FILES.get('preview_video')
+        bundle_pdf = request.FILES.get('bundle_pdf')
+        
         # Update fields
         bundle.name = name
         bundle.slug = slugify(name)
@@ -170,6 +178,7 @@ def edit_bundle(request, bundle_id):
         bundle.short_description = short_description
         bundle.full_description = full_description
         bundle.is_published = is_published
+        bundle.bundle_pdf_price = bundle_pdf_price
 
         # Replace thumbnail only if new file uploaded
         if thumbnail:
@@ -178,6 +187,11 @@ def edit_bundle(request, bundle_id):
         # Replace preview video only if new file uploaded
         if preview_video:
             bundle.preview_video = preview_video
+        
+        # Replace PDF only if new file uploaded
+        if bundle_pdf:
+            bundle.bundle_pdf = bundle_pdf
+        
         try:
             bundle.save()
             messages.success(request, "Bundle updated successfully!")

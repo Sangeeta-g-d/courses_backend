@@ -68,6 +68,22 @@
             <div class="invalid-feedback"></div>
           </div>
 
+          <!-- Bundle PDF -->
+          <div class="col-md-6">
+            <label for="bundle_pdf" class="form-label">Bundle PDF (Optional)</label>
+            <input type="file" class="form-control" id="bundle_pdf" name="bundle_pdf" accept=".pdf">
+            <small class="text-muted d-block mt-1">Upload a PDF file for the bundle (optional)</small>
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <!-- Bundle PDF Price -->
+          <div class="col-md-6">
+            <label for="bundle_pdf_price" class="form-label">PDF Price (Optional)</label>
+            <input type="number" class="form-control" id="bundle_pdf_price" name="bundle_pdf_price" min="0" step="0.01" placeholder="Leave empty if no PDF">
+            <small class="text-muted d-block mt-1">Set a separate price for the PDF (optional)</small>
+            <div class="invalid-feedback"></div>
+          </div>
+
           <!-- Is Published -->
           <div class="col-md-6 d-flex align-items-center mt-3">
             <div class="form-check form-switch">

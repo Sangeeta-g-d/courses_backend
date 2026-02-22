@@ -603,13 +603,17 @@ def bundle_courses(request, bundle_id):
 
     # Default for not logged-in users
     is_enrolled = False
+    enrollment = None
 
     # ✅ Check enrollment only if user is authenticated
     if request.user.is_authenticated:
-        is_enrolled = Enrollment.objects.filter(
+        enrollment = Enrollment.objects.filter(
             user=request.user,
-            bundle=bundle
-        ).exists()
+            bundle=bundle,
+            payment_status__in=['completed', 'free'],
+            is_active=True
+        ).first()
+        is_enrolled = enrollment is not None
 
     return render(
         request,
@@ -618,6 +622,7 @@ def bundle_courses(request, bundle_id):
             'bundle': bundle,
             'courses': courses,
             'is_enrolled': is_enrolled,
+            'enrollment': enrollment,
         }
     )
 
@@ -640,16 +645,26 @@ def enroll(request, bundle_id):
     courses = bundle.courses.all()
     
     # Check if user is already enrolled
-    is_enrolled = Enrollment.objects.filter(
+    enrollment = Enrollment.objects.filter(
         user=request.user, 
         bundle=bundle, 
-        payment_status__in=['completed', 'free']
-    ).exists()
+        payment_status__in=['completed', 'free'],
+        is_active=True
+    ).first()
+    
+    is_enrolled = enrollment is not None
+    
+    # Check for upgrade parameter
+    upgrade_type = request.GET.get('upgrade', None)
+    is_upgrade = upgrade_type and is_enrolled
     
     return render(request, 'enroll.html', {
         'bundle': bundle, 
         'courses': courses,
-        'is_enrolled': is_enrolled
+        'is_enrolled': is_enrolled,
+        'enrollment': enrollment,
+        'is_upgrade': is_upgrade,
+        'upgrade_type': upgrade_type,
     })
 
 @login_required
@@ -659,43 +674,97 @@ def create_payment_order(request, bundle_id):
             bundle = get_object_or_404(Bundle, id=bundle_id)
             user = request.user
             
+            # Get purchase_type from request
+            data = json.loads(request.body) if request.body else {}
+            purchase_type = data.get('purchase_type', 'bundle')  # 'bundle', 'pdf', or 'both'
+            
             # Check if user is already enrolled
             existing_enrollment = Enrollment.objects.filter(
                 user=user, 
                 bundle=bundle, 
-                payment_status__in=['completed', 'free']
+                payment_status__in=['completed', 'free'],
+                is_active=True
             ).first()
             
+            # Handle upgrades
+            is_upgrade = False
             if existing_enrollment:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'You are already enrolled in this bundle'
-                })
+                # Check if purchase_type is different (upgrade) or same (already has it)
+                if existing_enrollment.purchase_type == purchase_type:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'You already have {purchase_type} in this bundle'
+                    })
+                is_upgrade = True
             
-            # Calculate amount in paise
-            if bundle.is_free:
+            # Calculate amount based on purchase_type
+            if bundle.is_free and purchase_type == 'bundle' and not is_upgrade:
                 amount = 0
-            elif bundle.discount > 0:
-                amount = int(bundle.get_discounted_price() * 100)
             else:
-                amount = int(bundle.price * 100)
+                total_price = 0.00
+                
+                # For upgrades: only charge for missing items
+                if is_upgrade:
+                    if existing_enrollment.purchase_type == 'bundle' and purchase_type == 'pdf':
+                        # User has bundle, adding PDF -> charge PDF only
+                        if bundle.bundle_pdf and bundle.bundle_pdf_price:
+                            total_price = float(bundle.bundle_pdf_price)
+                        else:
+                            return JsonResponse({
+                                'success': False,
+                                'error': 'PDF pricing not available for this bundle'
+                            })
+                    elif existing_enrollment.purchase_type == 'pdf' and purchase_type == 'bundle':
+                        # User has PDF, adding bundle -> charge bundle only
+                        if bundle.discount > 0:
+                            total_price = float(bundle.get_discounted_price())
+                        else:
+                            total_price = float(bundle.price)
+                    else:
+                        # Invalid upgrade request
+                        return JsonResponse({
+                            'success': False,
+                            'error': 'Invalid upgrade request. Please refresh and try again.'
+                        })
+                else:
+                    # New purchase: charge full amount
+                    if purchase_type in ['bundle', 'both']:
+                        if bundle.discount > 0:
+                            total_price += float(bundle.get_discounted_price())
+                        else:
+                            total_price += float(bundle.price)
+                    
+                    # Add PDF price if purchasing PDF
+                    if purchase_type in ['pdf', 'both'] and bundle.bundle_pdf and bundle.bundle_pdf_price:
+                        total_price += float(bundle.bundle_pdf_price)
+                
+                amount = int(total_price * 100)
+                
+                # Razorpay minimum is ₹1 (100 paise)
+                if amount < 100:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Minimum order amount is ₹1. Please check your selection.'
+                    })
             
             # For free bundles, enroll directly
-            if bundle.is_free:
+            if bundle.is_free and purchase_type == 'bundle' and not is_upgrade:
                 with transaction.atomic():
                     enrollment = Enrollment.objects.create(
                         user=user,
                         bundle=bundle,
                         payment_status='free',
-                        amount_paid=0
+                        amount_paid=0,
+                        purchase_type='bundle',
+                        has_pdf=False
                     )
                 return JsonResponse({
                     'success': True,
                     'free_enrollment': True,
-                    'redirect_url': '/user/payment-success/'
+                    'redirect_url': '/payment-success/'
                 })
             
-            # Create Razorpay order for paid bundles
+            # Create Razorpay order for paid purchases
             order_data = {
                 'amount': amount,
                 'currency': 'INR',
@@ -704,23 +773,44 @@ def create_payment_order(request, bundle_id):
                     'bundle_id': bundle.id,
                     'bundle_name': bundle.name,
                     'user_id': user.id,
-                    'user_email': user.email  # Use email instead of username
+                    'user_email': user.email,
+                    'purchase_type': purchase_type,
+                    'is_upgrade': is_upgrade,
+                    'existing_purchase_type': existing_enrollment.purchase_type if is_upgrade else None
                 }
             }
             
             order = client.order.create(data=order_data)
+            
+            # Calculate final amount paid for transaction record
+            final_amount = 0.00
+            if is_upgrade:
+                if existing_enrollment.purchase_type == 'bundle' and purchase_type == 'pdf':
+                    # User has bundle, adding PDF -> charge PDF only
+                    if bundle.bundle_pdf and bundle.bundle_pdf_price:
+                        final_amount = float(bundle.bundle_pdf_price)
+                elif existing_enrollment.purchase_type == 'pdf' and purchase_type == 'bundle':
+                    # User has PDF, adding bundle -> charge bundle only
+                    final_amount = float(bundle.get_discounted_price() if bundle.discount > 0 else bundle.price)
+            else:
+                # New purchase
+                if purchase_type in ['bundle', 'both']:
+                    final_amount += float(bundle.get_discounted_price() if bundle.discount > 0 else bundle.price)
+                if purchase_type in ['pdf', 'both'] and bundle.bundle_pdf and bundle.bundle_pdf_price:
+                    final_amount += float(bundle.bundle_pdf_price)
             
             # Create payment transaction record
             payment_transaction = PaymentTransaction.objects.create(
                 user=user,
                 bundle=bundle,
                 razorpay_order_id=order['id'],
-                order_amount=bundle.get_discounted_price() if bundle.discount > 0 else bundle.price,
-                payment_status='created'
+                order_amount=final_amount,
+                payment_status='created',
+                metadata={'purchase_type': purchase_type}
             )
             
             # Log with email instead of username
-            logger.info(f"Payment order created for user {user.email}, bundle {bundle.name}")
+            logger.info(f"Payment order created for user {user.email}, bundle {bundle.name}, purchase_type={purchase_type}")
             
             return JsonResponse({
                 'success': True,
@@ -743,7 +833,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 @login_required
 @csrf_exempt
-@csrf_exempt
 def verify_payment(request):
     if request.method == 'POST':
         try:
@@ -752,8 +841,9 @@ def verify_payment(request):
             order_id = data.get('razorpay_order_id')
             signature = data.get('razorpay_signature')
             bundle_id = data.get('bundle_id')
+            purchase_type = data.get('purchase_type', 'bundle')
             
-            print(f"Verifying payment: order_id={order_id}, payment_id={payment_id}")
+            print(f"Verifying payment: order_id={order_id}, payment_id={payment_id}, purchase_type={purchase_type}")
             
             # Get the payment transaction
             try:
@@ -786,31 +876,52 @@ def verify_payment(request):
                     # Update payment transaction
                     payment_transaction.razorpay_payment_id = payment_id
                     payment_transaction.payment_status = 'completed'
+                    payment_transaction.metadata = {'purchase_type': purchase_type}
                     payment_transaction.save()
                     
-                    # Create or update enrollment
-                    enrollment, created = Enrollment.objects.get_or_create(
+                    # Check if enrollment exists
+                    existing_enrollment = Enrollment.objects.filter(
                         user=request.user,
                         bundle=bundle,
-                        defaults={
-                            'payment_status': 'completed',
-                            'razorpay_order_id': order_id,
-                            'razorpay_payment_id': payment_id,
-                            'amount_paid': payment_transaction.order_amount
-                        }
-                    )
+                        payment_status__in=['completed', 'free'],
+                        is_active=True
+                    ).first()
                     
-                    if not created:
-                        enrollment.payment_status = 'completed'
-                        enrollment.razorpay_order_id = order_id
-                        enrollment.razorpay_payment_id = payment_id
-                        enrollment.amount_paid = payment_transaction.order_amount
-                        enrollment.save()
+                    if existing_enrollment:
+                        # Update existing enrollment for upgrade
+                        # Merge purchase types intelligently
+                        if existing_enrollment.purchase_type != purchase_type:
+                            # Different types = combine to 'both'
+                            final_purchase_type = 'both'
+                        else:
+                            # Same type, keep it
+                            final_purchase_type = purchase_type
+                        
+                        existing_enrollment.payment_status = 'completed'
+                        existing_enrollment.razorpay_order_id = order_id
+                        existing_enrollment.razorpay_payment_id = payment_id
+                        existing_enrollment.amount_paid += payment_transaction.order_amount
+                        existing_enrollment.purchase_type = final_purchase_type
+                        existing_enrollment.has_pdf = final_purchase_type in ['pdf', 'both']
+                        existing_enrollment.save()
+                        enrollment = existing_enrollment
+                    else:
+                        # Create new enrollment
+                        enrollment = Enrollment.objects.create(
+                            user=request.user,
+                            bundle=bundle,
+                            payment_status='completed',
+                            razorpay_order_id=order_id,
+                            razorpay_payment_id=payment_id,
+                            amount_paid=payment_transaction.order_amount,
+                            purchase_type=purchase_type,
+                            has_pdf=purchase_type in ['pdf', 'both']
+                        )
                 
                 # FIXED: Use email instead of username for logging
                 user_identifier = request.user.email
-                logger.info(f"Payment successful for user {user_identifier}, bundle {bundle.name}")
-                print(f"Payment successful for user {user_identifier}, bundle {bundle.name}")
+                logger.info(f"Payment successful for user {user_identifier}, bundle {bundle.name}, purchase_type={purchase_type}")
+                print(f"Payment successful for user {user_identifier}, bundle {bundle.name}, purchase_type={purchase_type}")
                 
                 # Clear session data
                 if 'last_attempted_bundle' in request.session:
@@ -819,7 +930,7 @@ def verify_payment(request):
                 return JsonResponse({
                     'success': True,
                     'message': 'Payment verified and enrollment successful',
-                    'redirect_url': '/user/payment-success/'
+                    'redirect_url': '/payment-success/'
                 })
                 
             except razorpay.errors.SignatureVerificationError as e:
@@ -838,7 +949,7 @@ def verify_payment(request):
             import traceback
             traceback.print_exc()  # This will print the full traceback
             
-            bundle_id = data.get('bundle_id', '')
+            bundle_id = data.get('bundle_id', '') if 'data' in locals() else ''
             return JsonResponse({
                 'success': False,
                 'error': 'An error occurred during payment verification.',
@@ -913,6 +1024,9 @@ def free_enroll(request, bundle_id):
         try:
             bundle = get_object_or_404(Bundle, id=bundle_id)
             
+            # Get purchase_type from request
+            purchase_type = request.POST.get('purchaseType', 'bundle')
+            
             if not bundle.is_free:
                 return redirect('enroll', bundle_id=bundle_id)
             
@@ -922,7 +1036,9 @@ def free_enroll(request, bundle_id):
                     bundle=bundle,
                     defaults={
                         'payment_status': 'free',
-                        'amount_paid': 0
+                        'amount_paid': 0,
+                        'purchase_type': purchase_type,
+                        'has_pdf': purchase_type in ['pdf', 'both']
                     }
                 )
             
