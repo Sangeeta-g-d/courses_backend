@@ -1193,41 +1193,24 @@ def calculate_course_progress(enrollment):
 def calculate_total_learning_hours(user):
     """
     Calculate total learning hours based on user progress
+    Duration fields are stored in SECONDS (FloatField)
     """
     try:
-        # Calculate based on completed lectures and their durations
-        total_minutes = 0
+        total_seconds = 0.0
         
         # Get all completed user progress records
+        # Completed = watched 90% or more of the lecture
         completed_progress = UserProgress.objects.filter(
             user=user,
             completed=True
         ).select_related('lecture')
         
         for progress in completed_progress:
-            if progress.lecture.duration:
-                # Parse duration (assuming format like "05:05" or "10min")
-                duration = progress.lecture.duration
-                if ':' in duration:
-                    # Format: "05:05" (minutes:seconds)
-                    parts = duration.split(':')
-                    if len(parts) == 2:
-                        minutes = int(parts[0]) if parts[0].isdigit() else 0
-                        seconds = int(parts[1]) if parts[1].isdigit() else 0
-                        total_minutes += minutes + (seconds / 60)
-                elif 'min' in duration.lower():
-                    # Format: "10min"
-                    minutes_str = duration.lower().replace('min', '').strip()
-                    if minutes_str.isdigit():
-                        total_minutes += int(minutes_str)
-                else:
-                    # Try to parse as plain number (minutes)
-                    try:
-                        total_minutes += float(duration)
-                    except ValueError:
-                        pass
+            if progress.lecture and progress.lecture.duration:
+                # Duration is already in seconds (FloatField)
+                total_seconds += float(progress.lecture.duration)
         
-        # Add some estimated time for partially watched videos
+        # Add time from partially watched videos
         partial_progress = UserProgress.objects.filter(
             user=user,
             completed=False,
@@ -1235,22 +1218,19 @@ def calculate_total_learning_hours(user):
         )
         
         for progress in partial_progress:
-            if progress.total_duration > 0:
-                # Add 50% of the watched time as learning time
-                watched_minutes = progress.watched_duration / 60
-                total_minutes += watched_minutes * 0.5
+            if progress.watched_duration > 0:
+                # watched_duration is already in seconds
+                # Add the actual watched time
+                total_seconds += float(progress.watched_duration)
         
-        total_hours = total_minutes / 60
+        # Convert seconds to hours
+        total_hours = total_seconds / 3600  # 3600 seconds = 1 hour
         return round(total_hours, 1)  # Round to 1 decimal place
         
     except Exception as e:
+        logger.error(f"Error calculating learning hours: {e}")
         print(f"Error calculating learning hours: {e}")
-        # Return a default value or calculate based on completed courses
-        completed_courses_count = Enrollment.objects.filter(
-            user=user,
-            progress_percentage=100
-        ).count()
-        return completed_courses_count * 10  # Estimate 10 hours per completed course
+        return 0
 
 def get_completed_lectures_count(user, course):
     """

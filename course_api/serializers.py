@@ -475,10 +475,8 @@ class PostSerializer(serializers.ModelSerializer):
         return None
 
     def get_created_at(self, obj):
-        if not obj.created_at:
-            return None
-
-        ist_time = obj.created_at.astimezone(ZoneInfo("Asia/Kolkata"))
+        ist = pytz.timezone("Asia/Kolkata")
+        ist_time = timezone.localtime(obj.created_at, ist)
         return ist_time.strftime("%d %b %Y, %I:%M %p")
 
     def get_is_liked(self, obj):

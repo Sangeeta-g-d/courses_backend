@@ -220,67 +220,99 @@
                     <div class="card-body">
                         <h6 class="card-title">{{ enrollment.bundle.name }}</h6>
                         
-                        <!-- Bundle Info -->
+                        <!-- Purchase Type Badge -->
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <small class="text-muted">Enrolled: {{ enrollment.enrolled_at|date:"M d, Y" }}</small>
-                            <span class="badge {% if enrollment.payment_status == 'completed' %}bg-success{% else %}bg-warning{% endif %}">
-                                {{ enrollment.payment_status|title }}
-                            </span>
-                        </div>
-                        
-                        <!-- Progress -->
-                        <div class="progress course-progress mb-3">
-                            <div class="progress-bar bg-success" role="progressbar" 
-                                 style="width: {{ enrollment.progress_percentage }}%" 
-                                 aria-valuenow="{{ enrollment.progress_percentage }}" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="100"></div>
-                        </div>
-                        <small class="text-muted">{{ enrollment.progress_percentage }}% Complete</small>
-                        
-                        <!-- Courses in this Bundle - Larger and Clickable -->
-                        <div class="mt-4">
-                            <h6 class="text-muted mb-3">Courses in this bundle:</h6>
-                            <div class="courses-list" style="max-height: 200px; overflow-y: auto;">
-                                {% for course in enrollment.current_bundle_courses %}
-                                    <a href="{% url 'course_details' course.id %}" class="text-decoration-none">
-                                        <div class="d-flex align-items-center mb-3 p-3 bg-light rounded hover-shadow" 
-                                             style="transition: all 0.3s ease; cursor: pointer;">
-                                            {% if course.thumbnail %}
-                                                <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" 
-                                                     class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
-                                            {% else %}
-                                                <div class="bg-secondary rounded me-3 d-flex align-items-center justify-content-center" 
-                                                     style="width: 50px; height: 50px;">
-                                                    <i class="bi bi-play-circle text-white" style="font-size: 1.2rem;"></i>
-                                                </div>
-                                            {% endif %}
-                                            <div class="flex-grow-1">
-                                                <h6 class="mb-1 text-dark fw-medium">{{ course.title }}</h6>
-                                                <div class="d-flex align-items-center">
-                                                    <small class="text-muted">
-                                                        {% if course in enrollment.completed_courses %}
-                                                            <span class="text-success">
-                                                                <i class="bi bi-check-circle-fill me-1"></i>Completed
-                                                            </span>
-                                                        {% else %}
-                                                            <span class="text-primary">
-                                                                <i class="bi bi-play-circle me-1"></i>Start Learning
-                                                            </span>
-                                                        {% endif %}
-                                                    </small>
-                                                </div>
-                                            </div>
-                                            <i class="bi bi-chevron-right text-muted"></i>
-                                        </div>
-                                    </a>
-                                {% endfor %}
+                            <div>
+                                <span class="badge {% if enrollment.payment_status == 'completed' %}bg-success{% else %}bg-warning{% endif %} me-2">
+                                    {{ enrollment.payment_status|title }}
+                                </span>
+                                <span class="badge {% if enrollment.purchase_type == 'both' %}bg-info{% elif enrollment.purchase_type == 'bundle' %}bg-primary{% elif enrollment.purchase_type == 'pdf' %}bg-warning{% endif %}">
+                                    {% if enrollment.purchase_type == 'bundle' %}📚 Bundle{% elif enrollment.purchase_type == 'pdf' %}📄 PDF{% elif enrollment.purchase_type == 'both' %}📚 Bundle + 📄 PDF{% endif %}
+                                </span>
                             </div>
                         </div>
                         
-                        {% if enrollment.completed_at %}
+                        <!-- Show Courses Section (only if user has bundle or both) -->
+                        {% if enrollment.purchase_type == 'bundle' or enrollment.purchase_type == 'both' %}
+                            <!-- Progress -->
+                            <div class="progress course-progress mb-3">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ enrollment.progress_percentage }}%" 
+                                     aria-valuenow="{{ enrollment.progress_percentage }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100"></div>
+                            </div>
+                            <small class="text-muted">{{ enrollment.progress_percentage }}% Complete</small>
+                            
+                            <!-- Courses in this Bundle -->
+                            <div class="mt-4">
+                                <h6 class="text-muted mb-3"><i class="bi bi-book me-2"></i>Courses in this bundle:</h6>
+                                <div class="courses-list" style="max-height: 200px; overflow-y: auto;">
+                                    {% for course in enrollment.current_bundle_courses %}
+                                        <a href="{% url 'course_details' course.id %}" class="text-decoration-none">
+                                            <div class="d-flex align-items-center mb-3 p-3 bg-light rounded hover-shadow" 
+                                                 style="transition: all 0.3s ease; cursor: pointer;">
+                                                {% if course.thumbnail %}
+                                                    <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" 
+                                                         class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                                {% else %}
+                                                    <div class="bg-secondary rounded me-3 d-flex align-items-center justify-content-center" 
+                                                         style="width: 50px; height: 50px;">
+                                                        <i class="bi bi-play-circle text-white" style="font-size: 1.2rem;"></i>
+                                                    </div>
+                                                {% endif %}
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1 text-dark fw-medium">{{ course.title }}</h6>
+                                                    <div class="d-flex align-items-center">
+                                                        <small class="text-muted">
+                                                            {% if course in enrollment.completed_courses %}
+                                                                <span class="text-success">
+                                                                    <i class="bi bi-check-circle-fill me-1"></i>Completed
+                                                                </span>
+                                                            {% else %}
+                                                                <span class="text-primary">
+                                                                    <i class="bi bi-play-circle me-1"></i>Start Learning
+                                                                </span>
+                                                            {% endif %}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                                <i class="bi bi-chevron-right text-muted"></i>
+                                            </div>
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            {% if enrollment.completed_at %}
+                                <div class="mt-3">
+                                    <span class="badge bg-success">Completed on {{ enrollment.completed_at|date:"M d, Y" }}</span>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                        
+                        <!-- Show PDF Section (only if user has pdf or both) -->
+                        {% if enrollment.purchase_type == 'pdf' or enrollment.purchase_type == 'both' %}
+                            <div class="mt-4 p-3 bg-light rounded">
+                                <h6 class="text-muted mb-3"><i class="bi bi-file-pdf text-danger me-2"></i>PDF Guide</h6>
+                                {% if enrollment.bundle.bundle_pdf %}
+                                    <p class="mb-3 text-muted small">Download and view your exclusive PDF guide</p>
+                                    <a href="{{ enrollment.bundle.bundle_pdf.url }}" class="btn btn-sm btn-danger w-100" download>
+                                        <i class="bi bi-download me-2"></i>Download PDF
+                                    </a>
+                                {% else %}
+                                    <p class="text-muted small">PDF guide is not available for this bundle.</p>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        
+                        <!-- If PDF Only Purchase, show upgrade option -->
+                        {% if enrollment.purchase_type == 'pdf' %}
                             <div class="mt-3">
-                                <span class="badge bg-success">Completed on {{ enrollment.completed_at|date:"M d, Y" }}</span>
+                                <a href="/enroll/{{ enrollment.bundle.id }}/?upgrade=course" class="btn btn-sm btn-primary w-100">
+                                    <i class="bi bi-plus-circle me-2"></i>Add Courses
+                                </a>
                             </div>
                         {% endif %}
                     </div>
@@ -293,7 +325,7 @@
             <i class="bi bi-journals display-1 text-muted"></i>
             <h5 class="mt-3 text-muted">No Courses Yet</h5>
             <p class="text-muted">Start your learning journey by enrolling in courses.</p>
-            <a href="/courses/" class="btn btn-primary">Browse Courses</a>
+            <a href="/bundle_list/" class="btn btn-primary">Browse Bundles</a>
         </div>
     {% endif %}
 </div>
