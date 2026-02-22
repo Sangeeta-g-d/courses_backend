@@ -91,16 +91,16 @@
 
   <div class="collapse navbar-collapse" id="navbarCollapse">
     <div class="navbar-nav">
-      <a href="/" class="nav-item nav-link active">Home</a>
+      <a href="/" class="nav-item nav-link {% if request.path == '/' %}active{% endif %}">feed</a>
+      <a href="/home" class="nav-item nav-link {% if request.path == '/home' or request.path == '/home/' %}active{% endif %}">Home</a>
      
      
-      <a href="/bundle_list/" class="nav-item nav-link">Bundles</a>
-       <a href="/courses/" class="nav-item nav-link">Courses</a>
-
+      <a href="/bundle_list/" class="nav-item nav-link {% if request.path == '/bundle_list/' or '/bundle' in request.path %}active{% endif %}">Courses</a>
+        <a href="/meetings/" class="nav-item nav-link {% if request.path == '/meetings/' %}active{% endif %}">Meetings</a>
       
-        <a href="/about_us/" class="nav-item nav-link">About Us</a>
-        <a href="/contact_us/" class="nav-item nav-link">Contact Us</a>
-         <a href="/meetings/" class="nav-item nav-link">Meetings</a>
+        <a href="/about_us/" class="nav-item nav-link {% if request.path == '/about_us/' %}active{% endif %}">About Us</a>
+        <a href="/contact_us/" class="nav-item nav-link {% if request.path == '/contact_us/' %}active{% endif %}">Contact Us</a>
+       
     </div>
     
     <!-- Mobile User Menu -->

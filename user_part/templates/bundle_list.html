@@ -8,7 +8,7 @@
   <div class="container-fluid team pt-5 pb-6" id="bundles">
     <div class="container">
         <div class="text-center mx-auto wow fadeInUp" data-wow-delay="0.1s" style="max-width: 600px;">
-            <h1 class="display-6 text-uppercase mb-5">Explore Our Professional Course Bundles</h1>
+            <h1 class="display-6 text-uppercase mb-5">Explore Our Professional Courses</h1>
         </div>
         <div class="row g-4">
             {% for bundle in bundles %}
@@ -22,7 +22,7 @@
                         {% endif %}
                         <div class="team-social">
                             <a class="btn btn-dark btn-sm px-3" href="/bundle/{{ bundle.id }}/">
-                                View Courses
+                                View Sub Courses
                             </a>
                         </div>
                     </div>
@@ -44,7 +44,7 @@
                         {% if bundle.bundle_pdf %}
                             <div class="mt-2 p-2 bg-light rounded">
                                 <small class="text-muted d-block">
-                                    <i class="bi bi-file-pdf"></i> Bundle PDF Included
+                                    <i class="bi bi-file-pdf"></i> Course PDF Included
                                 </small>
                                 {% if bundle.bundle_pdf_price %}
                                     <small class="text-primary font-weight-bold">

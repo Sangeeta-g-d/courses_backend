@@ -83,7 +83,7 @@
             </div>
             {% endif %}
 
-            <!-- Bundle Details Card -->
+            <!-- Course Details Card -->
             <div class="card enrollment-card border-0 mb-4">
                 <div class="card-header bg-primary text-white py-3">
                     <h2 class="h4 mb-0">{{ bundle.name }}</h2>
@@ -130,7 +130,7 @@
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
                                             <i class="bi bi-file-pdf text-danger"></i> <strong>PDF Guide Only</strong>
-                                            <small class="text-muted d-block">Get the complete PDF guide without course access</small>
+                                            <small class="text-muted d-block\">Get the PDF guide without sub course access</small>
                                             {% if is_upgrade and enrollment.purchase_type == 'pdf' %}<small class="text-success fw-bold">✓ Already Purchased</small>{% endif %}
                                         </div>
                                         <span class="price-highlight text-primary">₹{{ bundle.bundle_pdf_price|floatformat:2 }}</span>
@@ -138,7 +138,7 @@
                                 </label>
                             </div>
                             
-                            <!-- Option 3: Bundle + PDF -->
+                            <!-- Option 3: Course + PDF -->
                             <div class="form-check p-3 border rounded" style="background-color: #e7f3ff; border: 2px solid #0d6efd;"
                                  {% if is_upgrade %}id="disabledBothOption"{% endif %}>
                                 <input class="form-check-input purchase-option" type="radio" name="purchaseType" 
@@ -149,8 +149,8 @@
                                 <label class="form-check-label w-100" for="bundlePdf">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <i class="bi bi-star-fill text-warning"></i> <strong>Bundle + PDF (Best Value!)</strong>
-                                            <small class="text-muted d-block">Get courses AND the complete PDF guide</small>
+                                            <i class="bi bi-star-fill text-warning"></i> <strong>Course + PDF (Best Value!)</strong>
+                                            <small class="text-muted d-block">Get all sub courses AND the complete PDF guide</small>
                                             {% if is_upgrade %}<small class="text-muted fw-bold">Available for new purchases only</small>{% endif %}
                                         </div>
                                         <div>
@@ -206,10 +206,10 @@
                 </div>
             </div>
             
-            <!-- Courses in this Bundle -->
+            <!-- Sub Courses in this Course -->
             <div class="card enrollment-card border-0">
                 <div class="card-header bg-light py-3">
-                    <h3 class="h5 mb-0">Courses Included in this Bundle</h3>
+                    <h3 class="h5 mb-0">Sub Courses Included in this Course</h3>
                 </div>
                 <div class="card-body p-4">
                     {% if courses %}
@@ -248,7 +248,7 @@
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p class="text-muted text-center py-3">No courses found for this bundle.</p>
+                        <p class="text-muted text-center py-3">No sub courses found for this course.</p>
                     {% endif %}
                 </div>
             </div>

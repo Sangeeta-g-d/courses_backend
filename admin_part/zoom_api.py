@@ -47,21 +47,22 @@ class ZoomOAuthManager:
             print(f"[Zoom OAuth] ❌ Error generating access token: {str(e)}")
             raise
     
-    def create_meeting(self, topic, start_time, duration=60, settings_dict=None):
+    def create_meeting(self, topic, start_time, duration=60, settings_dict=None, session_type='webinar'):
         """
-        Create a Zoom meeting
+        Create a Zoom meeting or webinar
         
         Args:
-            topic (str): Meeting title
+            topic (str): Meeting/Webinar title
             start_time (str): ISO format datetime (e.g., "2024-02-10T10:00:00")
             duration (int): Duration in minutes (default 60)
             settings_dict (dict): Additional meeting settings
+            session_type (str): 'meeting' or 'webinar' (default 'webinar')
         
         Returns:
             dict: Meeting details including id, join_url, passcode
         """
         try:
-            print(f"[Zoom API] Creating meeting: {topic}")
+            print(f"[Zoom API] Creating {session_type}: {topic}")
             print(f"[Zoom API] Start Time: {start_time}")
             print(f"[Zoom API] Duration: {duration} minutes")
             
@@ -97,8 +98,16 @@ class ZoomOAuthManager:
             
             print(f"[Zoom API] Sending payload: {payload}")
             
+            # Route to correct endpoint based on session_type
+            if session_type.lower() == 'meeting':
+                endpoint = f"{self.API_BASE_URL}/users/me/meetings"
+                print(f"[Zoom API] Using MEETING endpoint: {endpoint}")
+            else:
+                endpoint = f"{self.API_BASE_URL}/users/me/webinars"
+                print(f"[Zoom API] Using WEBINAR endpoint: {endpoint}")
+            
             response = requests.post(
-                f"{self.API_BASE_URL}/users/me/meetings",
+                endpoint,
                 headers=headers,
                 json=payload,
                 timeout=10
@@ -122,8 +131,8 @@ class ZoomOAuthManager:
                     raise Exception(f"Zoom API Error: {response.text}")
             
             meeting_data = response.json()
-            print(f"[Zoom API] ✓ Meeting created successfully")
-            print(f"[Zoom API] Meeting ID: {meeting_data.get('id', 'N/A')}")
+            print(f"[Zoom API] ✓ {session_type.capitalize()} created successfully")
+            print(f"[Zoom API] ID: {meeting_data.get('id', 'N/A')}")
             print(f"[Zoom API] Passcode: {meeting_data.get('password', 'N/A')}")
             
             return {
@@ -132,6 +141,7 @@ class ZoomOAuthManager:
                 'passcode': meeting_data.get('password', ''),
                 'start_time': meeting_data.get('start_time', ''),
                 'duration': meeting_data.get('duration', 0),
+                'session_type': session_type,
             }
             
         except requests.exceptions.Timeout:
@@ -143,7 +153,7 @@ class ZoomOAuthManager:
             print(f"[Zoom API] ❌ {error_msg}")
             raise Exception(error_msg)
         except Exception as e:
-            print(f"[Zoom API] ❌ Error creating meeting: {str(e)}")
+            print(f"[Zoom API] ❌ Error creating {session_type}: {str(e)}")
             raise
 
 

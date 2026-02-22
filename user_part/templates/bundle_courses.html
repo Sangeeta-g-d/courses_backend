@@ -45,92 +45,6 @@
                     {{ bundle.full_description|default:bundle.short_description|truncatewords:40 }}
                 </p>
 
-                <!-- PRICE + ENROLL SECTION -->
-                <div class="d-flex flex-wrap align-items-center gap-3 mt-3">
-
-                    {% if is_enrolled %}
-                        <button class="btn btn-secondary btn-lg px-4" disabled>
-                            Enrolled
-                        </button>
-                        
-                        <!-- PDF DOWNLOAD SECTION -->
-                        {% if enrollment.has_pdf and bundle.bundle_pdf %}
-                            <div class="d-flex gap-2">
-                                <a href="{{ bundle.bundle_pdf.url }}" 
-                                   class="btn btn-success btn-lg px-4"
-                                   download>
-                                    <i class="bi bi-download me-2"></i>Download PDF
-                                </a>
-                                <!-- <button class="btn btn-info btn-lg px-4"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#pdfViewerModal">
-                                    <i class="bi bi-eye me-2"></i>View PDF
-                                </button> -->
-                            </div>
-                        {% endif %}
-                        
-                        <!-- PURCHASE REMAINING ITEMS SECTION -->
-                        {% if enrollment.purchase_type == 'bundle' and bundle.bundle_pdf %}
-                            <a href="/enroll/{{ bundle.id }}/?upgrade=pdf"
-                               class="btn btn-warning btn-lg px-4">
-                                <i class="bi bi-plus-circle me-2"></i>Add PDF (₹{{ bundle.bundle_pdf_price|floatformat:2 }})
-                            </a>
-                        {% elif enrollment.purchase_type == 'pdf' %}
-                            <a href="/enroll/{{ bundle.id }}/?upgrade=course"
-                               class="btn btn-warning btn-lg px-4">
-                                <i class="bi bi-plus-circle me-2"></i>Add Course (₹{% if bundle.discount > 0 %}{{ bundle.get_discounted_price|floatformat:2 }}{% else %}{{ bundle.price|floatformat:2 }}{% endif %})
-                            </a>
-                        {% endif %}
-
-                    {% else %}
-
-                        {% if bundle.is_free %}
-                            <span class="badge bg-success fs-6">Free Bundle</span>
-
-                        {% elif bundle.discount > 0 %}
-                            <h5 class="mb-0">
-                                <span class="text-decoration-line-through text-muted">
-                                    ₹{{ bundle.price }}
-                                </span>
-                                <span class="text-primary fw-bold">
-                                    ₹{{ bundle.get_discounted_price|floatformat:2 }}
-                                </span>
-                                <span class="badge bg-warning text-dark ms-2">
-                                    {{ bundle.discount }}% Off
-                                </span>
-                            </h5>
-
-                        {% else %}
-                            <h5 class="text-primary fw-bold mb-0">
-                                ₹{{ bundle.price|floatformat:2 }}
-                            </h5>
-                        {% endif %}
-                        
-                        <!-- PDF Price Display -->
-                        {% if bundle.bundle_pdf and bundle.bundle_pdf_price %}
-                            <div class="mt-2">
-                                <small class="text-muted">
-                                    <i class="bi bi-file-pdf text-danger me-1"></i>PDF Guide: <strong class="text-primary">₹{{ bundle.bundle_pdf_price|floatformat:2 }}</strong> (Optional)
-                                </small>
-                            </div>
-                        {% endif %}
-
-                        {% if request.user.is_authenticated %}
-                            <a href="/enroll/{{ bundle.id }}/"
-                               class="btn btn-primary btn-lg px-4">
-                                Enroll Now
-                            </a>
-                        {% else %}
-                            <a href="{% url 'login' %}?next={{ request.path }}"
-                               class="btn btn-primary btn-lg px-4">
-                                Login to Enroll
-                            </a>
-                        {% endif %}
-
-                    {% endif %}
-
-                </div>
-
             </div>
 
             <!-- ================= RIGHT COLUMN ================= -->
@@ -154,7 +68,7 @@
                     <img src="/static/home_assets/img/default-course.jpg"
                          class="img-fluid rounded-4 shadow-sm"
                          style="max-height: 400px; object-fit: cover;"
-                         alt="Default Bundle Image">
+                         alt="Default Course Image">
                 {% endif %}
 
             </div>
@@ -244,6 +158,125 @@
         </a>
       </div>
     {% endif %}
+  </div>
+</div>
+
+<!-- PRICE + ENROLL SECTION AT BOTTOM -->
+<div class="container-fluid py-5 bg-light">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      
+      <!-- Left: Price Details -->
+      <div class="col-lg-6">
+        <h3 class="mb-4">{{ bundle.name }} - Pricing & Enrollment</h3>
+
+        <div class="d-flex flex-wrap align-items-center gap-3">
+
+          {% if is_enrolled %}
+            <button class="btn btn-secondary btn-lg px-4" disabled>
+              ✓ Enrolled
+            </button>
+            
+            <!-- PDF DOWNLOAD SECTION -->
+            {% if enrollment.has_pdf and bundle.bundle_pdf %}
+              <div class="d-flex gap-2">
+                <a href="{{ bundle.bundle_pdf.url }}" 
+                   class="btn btn-success btn-lg px-4"
+                   download>
+                  <i class="bi bi-download me-2"></i>Download PDF
+                </a>
+              </div>
+            {% endif %}
+            
+            <!-- PURCHASE REMAINING ITEMS SECTION -->
+            {% if enrollment.purchase_type == 'bundle' and bundle.bundle_pdf %}
+              <a href="/enroll/{{ bundle.id }}/?upgrade=pdf"
+                 class="btn btn-warning btn-lg px-4">
+                <i class="bi bi-plus-circle me-2"></i>Add PDF (₹{{ bundle.bundle_pdf_price|floatformat:2 }})
+              </a>
+            {% elif enrollment.purchase_type == 'pdf' %}
+              <a href="/enroll/{{ bundle.id }}/?upgrade=course"
+                 class="btn btn-warning btn-lg px-4">
+                <i class="bi bi-plus-circle me-2"></i>Add Course (₹{% if bundle.discount > 0 %}{{ bundle.get_discounted_price|floatformat:2 }}{% else %}{{ bundle.price|floatformat:2 }}{% endif %})
+              </a>
+            {% endif %}
+
+          {% else %}
+
+            {% if bundle.is_free %}
+              <span class="badge bg-success fs-6 p-3">Free Course</span>
+
+            {% elif bundle.discount > 0 %}
+              <div>
+                <h5 class="mb-2">
+                  <span class="text-decoration-line-through text-muted me-2">
+                    ₹{{ bundle.price }}
+                  </span>
+                  <span class="text-primary fw-bold" style="font-size: 1.5rem;">
+                    ₹{{ bundle.get_discounted_price|floatformat:2 }}
+                  </span>
+                </h5>
+                <span class="badge bg-warning text-dark">
+                  {{ bundle.discount }}% Off
+                </span>
+              </div>
+
+            {% else %}
+              <h5 class="text-primary fw-bold mb-0" style="font-size: 1.5rem;">
+                ₹{{ bundle.price|floatformat:2 }}
+              </h5>
+            {% endif %}
+            
+            <!-- PDF Price Display -->
+            {% if bundle.bundle_pdf and bundle.bundle_pdf_price %}
+              <div class="mt-3 p-3 bg-white rounded border">
+                <small class="text-muted">
+                  <i class="bi bi-file-pdf text-danger me-2"></i><strong>PDF Guide:</strong> <span class="text-primary fw-bold">₹{{ bundle.bundle_pdf_price|floatformat:2 }}</span> (Optional Add-on)
+                </small>
+              </div>
+            {% endif %}
+
+            {% if request.user.is_authenticated %}
+              <a href="/enroll/{{ bundle.id }}/"
+                 class="btn btn-primary btn-lg px-5 mt-3">
+                <i class="bi bi-cart-plus me-2"></i>Enroll Now
+              </a>
+            {% else %}
+              <a href="{% url 'login' %}?next={{ request.path }}"
+                 class="btn btn-primary btn-lg px-5 mt-3">
+                <i class="bi bi-box-arrow-right me-2"></i>Login to Enroll
+              </a>
+            {% endif %}
+
+          {% endif %}
+
+        </div>
+      </div>
+
+      <!-- Right: Key Benefits -->
+      <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body p-4">
+            <h5 class="card-title mb-4"><i class="bi bi-check-circle text-success me-2"></i>What You'll Get</h5>
+            <ul class="list-unstyled">
+              <li class="mb-3">
+                <i class="bi bi-play-circle text-primary me-2"></i>
+                <strong>{{ courses.count }} Professional Sub Courses</strong>
+              </li>
+             
+              {% if bundle.bundle_pdf %}
+              <li class="mb-3">
+                <i class="bi bi-file-pdf text-danger me-2"></i>
+                <strong>Comprehensive PDF Guide</strong> <span class="badge bg-info bg-opacity-75">Optional</span>
+              </li>
+              {% endif %}
+              
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>
 

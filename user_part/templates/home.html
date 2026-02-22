@@ -170,16 +170,16 @@
                             <div class="col-lg-4">
                                 <div class="text-white py-5">
                                     <h1 class="display-6 text-uppercase mb-5">
-                                        <span class="text-primary">Course Bundles</span>
+                                        <span class="text-primary">Courses</span>
                                     </h1>
 
                                     <p class="lead mb-4">
-                                        Save more with our curated course bundles
+                                        Explore our curated collection of professional courses
                                     </p>
 
                                     <a href="/bundle_list/"
                                        class="btn btn-light btn-lg py-3 px-4 rounded-pill">
-                                        <i class="bi bi-collection me-2"></i> View All Bundles
+                                        <i class="bi bi-collection me-2"></i> View All Courses
                                     </a>
                                 </div>
                             </div>
@@ -534,7 +534,7 @@
   <div class="container-fluid team pt-3 pb-6" id="bundles">
     <div class="container">
         <div class="text-center mx-auto wow fadeInUp" data-wow-delay="0.1s" style="max-width: 600px;">
-            <h1 class="display-6 text-uppercase mb-5">Explore Our Professional Course Bundles</h1>
+            <h1 class="display-6 text-uppercase mb-5">Explore Our Professional Courses</h1>
         </div>
         <div class="row g-4">
             {% for bundle in bundles %}
@@ -578,75 +578,6 @@
     </div>
 </div>
     <!-- Bundle End -->
-
-
-
-
-<!-- Course Start -->
-<!-- Course Start -->
-<div class="container-fluid service pt-3 pb-6" id="courses">
-  <div class="container">
-    <div class="text-center mx-auto wow fadeInUp" style="max-width:600px;">
-      <h1 class="display-6 text-uppercase mb-5">Featured Courses</h1>
-    </div>
-    <div class="row g-4">
-      {% for item in recent_courses %}
-      <div class="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.1s">
-        <div class="service-item shadow-sm rounded-3 overflow-hidden h-100 d-flex flex-column">
-          <div class="service-inner flex-grow-1 d-flex flex-column">
-            <!-- Consistent image size -->
-            <img class="img-fluid w-100 course-image" src="{{ item.thumbnail_url }}" alt="{{ item.title|escape }}" style="height: 200px; object-fit: cover;">
-            
-            <div class="service-text px-4 pt-4 flex-grow-1 d-flex flex-column">
-              
-              <!-- 2-line title -->
-              <h5 class="text-uppercase mb-2" style="
-                display: -webkit-box;
-                -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                min-height: 3.2em;
-                line-height: 1.6em;
-              ">
-                {{ item.title }}
-              </h5>
-
-              <div class="d-flex justify-content-between text-muted small mb-2">
-                <span><i class="bi bi-translate me-1"></i>{{ item.language }}</span>
-                <span><i class="bi bi-bar-chart me-1"></i>{{ item.level }}</span>
-              </div>
-
-              <!-- 2-line short description - FIXED -->
-              <div class="mb-3" style="min-height: 2.8em;">
-                <p class="text-muted small m-0" style="
-                  display: -webkit-box;
-                  -webkit-line-clamp: 2;
-                  -webkit-box-orient: vertical;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  line-height: 1.4em;
-                ">
-                  {{ item.short_description }}
-                </p>
-              </div>
-
-              <!-- Button at the bottom with no extra space -->
-              <div class="text-center pt-2 mt-10px">
-                <a class="btn btn-light px-3 w-100" href="/course_details/{{ item.id }}/">
-                  View Details <i class="bi bi-chevron-double-right ms-1"></i>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</div>
-<!-- Course End -->
-<!-- Course End -->
 
 
  <!-- Features Start -->

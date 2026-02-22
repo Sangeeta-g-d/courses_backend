@@ -137,7 +137,7 @@ def add_bundle(request):
             created_at=timezone.now()
         )
         category.save()
-        messages.success(request, f'Bundle "{category.name}" added successfully!')
+        messages.success(request, f'Course "{category.name}" added successfully!')
         return redirect('bundles')
     return render(request, 'add_bundle.html')
 
@@ -149,7 +149,7 @@ def bundles(request):
 def delete_bundle(request, bundle_id):
     bundle = get_object_or_404(Bundle, id=bundle_id)
     bundle.delete()
-    messages.success(request, f'Bundle "{bundle.name}" has been deleted successfully.')
+    messages.success(request, f'Course "{bundle.name}" has been deleted successfully.')
     return redirect('bundles')
 
 def edit_bundle(request, bundle_id):
