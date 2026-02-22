@@ -1,7 +1,7 @@
 {% extends 'admin_base.html' %}
 {% block content %}
 <div class="page-heading d-flex justify-content-between align-items-center">
-  <h3>Edit Bundle</h3>
+  <h3>Edit Course</h3>
 </div>
 
 <div class="page-content mt-4">
@@ -12,7 +12,7 @@
         <div class="row g-3">
           <!-- Name -->
           <div class="col-md-6">
-            <label for="name" class="form-label">Bundle Name</label>
+            <label for="name" class="form-label">Course Name</label>
             <input type="text" class="form-control" id="name" name="name" value="{{ bundle.name }}" required>
             <div class="invalid-feedback"></div>
           </div>
@@ -38,7 +38,7 @@
                 Current: <a href="{{ bundle.preview_video.url }}" target="_blank">View Video</a>
               </small>
             {% endif %}
-            <small class="text-muted d-block mt-1">Upload a video file for bundle preview (MP4, WebM, etc.)</small>
+            <small class="text-muted d-block mt-1">Upload a video file for course preview (MP4, WebM, etc.)</small>
             <div class="invalid-feedback"></div>
           </div>
 
@@ -46,7 +46,7 @@
           <div class="col-md-6 d-flex align-items-center">
             <div class="form-check mt-4">
               <input type="checkbox" class="form-check-input" id="is_free" name="is_free" {% if bundle.is_free %}checked{% endif %}>
-              <label class="form-check-label" for="is_free">Free Bundle</label>
+              <label class="form-check-label" for="is_free">Free Course</label>
             </div>
           </div>
 
@@ -80,7 +80,7 @@
 
           <!-- Bundle PDF -->
           <div class="col-md-6">
-            <label for="bundle_pdf" class="form-label">Bundle PDF (Optional)</label>
+            <label for="bundle_pdf" class="form-label">Course PDF (Optional)</label>
             <input type="file" class="form-control" id="bundle_pdf" name="bundle_pdf" accept=".pdf">
             {% if bundle.bundle_pdf %}
               <small class="text-muted d-block mt-1">
@@ -103,14 +103,14 @@
           <div class="col-md-6 d-flex align-items-center mt-3">
             <div class="form-check form-switch">
               <input type="checkbox" class="form-check-input" id="is_published" name="is_published" {% if bundle.is_published %}checked{% endif %} style="width: 3em; height: 1.5em; cursor: pointer;">
-              <label class="form-check-label" for="is_published" style="cursor: pointer; margin-left: 0.5rem;">Publish Bundle</label>
+              <label class="form-check-label" for="is_published" style="cursor: pointer; margin-left: 0.5rem;">Publish Course</label>
             </div>
           </div>
         </div>
 
         <div class="mt-4 d-flex justify-content-between">
           <a href="{% url 'bundles' %}" class="btn btn-secondary">Back</a>
-          <button type="submit" class="btn btn-primary">Update Bundle</button>
+          <button type="submit" class="btn btn-primary">Update Course</button>
         </div>
       </form>
     </div>

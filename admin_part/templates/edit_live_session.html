@@ -41,6 +41,16 @@
           <div class="invalid-feedback">Please enter the meeting passcode.</div>
         </div>
 
+        <!-- Session Type -->
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Session Type</label>
+          <select name="session_type" class="form-select" required>
+            <option value="webinar" {% if session.session_type == 'webinar' %}selected{% endif %}>Webinar (Privacy - Only host sees attendees)</option>
+            <option value="meeting" {% if session.session_type == 'meeting' %}selected{% endif %}>Meeting (Everyone sees attendees)</option>
+          </select>
+          <div class="invalid-feedback">Please select a session type.</div>
+        </div>
+
         <!-- Date -->
         <div class="col-md-6">
           <label class="form-label fw-semibold">Session Date</label>

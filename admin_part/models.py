@@ -341,6 +341,11 @@ class Tag(models.Model):
 
 
 class LiveSession(models.Model):
+    SESSION_TYPE_CHOICES = [
+        ('webinar', 'Webinar (Privacy - Only host sees attendees)'),
+        ('meeting', 'Meeting (Everyone sees attendees)'),
+    ]
+    
     title = models.CharField(max_length=255)
     agenda = models.TextField()
     thumbnail = models.ImageField(upload_to='live_sessions/thumbnails/')
@@ -349,6 +354,7 @@ class LiveSession(models.Model):
     meeting_url = models.CharField(max_length=800, blank=True, null=True)
     session_date = models.DateField()
     session_time = models.TimeField()
+    session_type = models.CharField(max_length=20, choices=SESSION_TYPE_CHOICES, default='webinar')
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property

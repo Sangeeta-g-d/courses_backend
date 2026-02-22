@@ -22,10 +22,31 @@ class ZoomOAuthManager:
         self.access_token = None
         self.token_expiry = None
     
-    def get_access_token(self):
-        """Generate OAuth access token"""
+    def is_token_expired(self):
+        """Check if token is expired (with 60 second buffer)"""
+        if not self.access_token or not self.token_expiry:
+            return True
+        
+        # Refresh if expires in less than 60 seconds
+        return time.time() >= (self.token_expiry - 60)
+    
+    def get_access_token(self, force_refresh=False):
+        """
+        Get OAuth access token with automatic caching and refresh
+        
+        Args:
+            force_refresh (bool): Force token refresh regardless of expiry
+        
+        Returns:
+            str: Valid access token
+        """
         try:
-            print("[Zoom OAuth] Generating access token...")
+            # Return cached token if still valid
+            if not force_refresh and self.access_token and not self.is_token_expired():
+                print("[Zoom OAuth] ✓ Using cached access token")
+                return self.access_token
+            
+            print("[Zoom OAuth] Generating new access token...")
             
             auth = (self.client_id, self.client_secret)
             payload = {
@@ -40,26 +61,36 @@ class ZoomOAuthManager:
             self.access_token = data['access_token']
             self.token_expiry = time.time() + data.get('expires_in', 3600)
             
-            print(f"[Zoom OAuth] ✓ Access token generated (expires in {data.get('expires_in')} seconds)")
+            # Log scopes if available
+            scopes = data.get('scope', '').split(' ') if data.get('scope') else []
+            print(f"[Zoom OAuth] ✓ New token generated (expires in {data.get('expires_in')} seconds)")
+            if scopes:
+                print(f"[Zoom OAuth] Available scopes: {', '.join(scopes)}")
+            
             return self.access_token
             
         except Exception as e:
             print(f"[Zoom OAuth] ❌ Error generating access token: {str(e)}")
             raise
     
+    def refresh_token(self):
+        """Force token refresh (use after adding new scopes)"""
+        print("[Zoom OAuth] 🔄 Force refreshing token with new scopes...")
+        return self.get_access_token(force_refresh=True)
+    
     def create_meeting(self, topic, start_time, duration=60, settings_dict=None, session_type='webinar'):
         """
-        Create a Zoom meeting or webinar
+        Create a Zoom webinar or meeting
         
         Args:
-            topic (str): Meeting/Webinar title
+            topic (str): Webinar/Meeting title
             start_time (str): ISO format datetime (e.g., "2024-02-10T10:00:00")
             duration (int): Duration in minutes (default 60)
-            settings_dict (dict): Additional meeting settings
-            session_type (str): 'meeting' or 'webinar' (default 'webinar')
+            settings_dict (dict): Additional webinar settings
+            session_type (str): 'webinar' or 'meeting' (default 'webinar' - privacy-first)
         
         Returns:
-            dict: Meeting details including id, join_url, passcode
+            dict: Webinar details including id, join_url, passcode
         """
         try:
             print(f"[Zoom API] Creating {session_type}: {topic}")
@@ -73,9 +104,9 @@ class ZoomOAuthManager:
                 'Content-Type': 'application/json'
             }
             
-            # Zoom API v2 meeting settings
+            # Zoom API v2 webinar/meeting settings
             # Only include settings that are explicitly supported
-            meeting_settings = {
+            webinar_settings = {
                 'host_video': True,
                 'participant_video': True,
                 'join_before_host': False,
@@ -83,17 +114,17 @@ class ZoomOAuthManager:
             }
             
             if settings_dict:
-                meeting_settings.update(settings_dict)
+                webinar_settings.update(settings_dict)
             
             # Build minimal payload that matches Zoom API requirements
-            # Type 2 = Scheduled meeting
+            # Type 2 = Scheduled webinar/meeting
             payload = {
                 'topic': str(topic)[:300],  # Max 300 chars
                 'type': 2,
                 'start_time': start_time,  # ISO 8601: 2024-02-10T10:00:00
                 'duration': int(duration),
                 'timezone': 'UTC',
-                'settings': meeting_settings
+                'settings': webinar_settings
             }
             
             print(f"[Zoom API] Sending payload: {payload}")
@@ -159,7 +190,7 @@ class ZoomOAuthManager:
 
 class ZoomSignatureAPIView(APIView):
     """
-    Generate JWT signature for Zoom Web SDK
+    Generate JWT signature for Zoom Web SDK (webinars and meetings)
     """
     def post(self, request):
         try:
@@ -174,7 +205,7 @@ class ZoomSignatureAPIView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            print(f"🟢 Generating signature for meeting {meeting_number}, role {role}")
+            print(f"🟢 Generating signature for webinar/meeting {meeting_number}, role {role}")
 
             sdk_key = settings.ZOOM_SDK_KEY
             sdk_secret = settings.ZOOM_SDK_SECRET
@@ -232,7 +263,7 @@ class ZoomSignatureAPIView(APIView):
 
 class CreateZoomMeetingAPIView(APIView):
     """
-    Create a Zoom meeting via OAuth API
+    Create a Zoom webinar or meeting via OAuth API
     """
     def post(self, request):
         try:
@@ -241,14 +272,23 @@ class CreateZoomMeetingAPIView(APIView):
             topic = request.data.get("topic", "").strip()
             start_time = request.data.get("start_time", "").strip()
             duration = int(request.data.get("duration", 60))
+            session_type = request.data.get("session_type", "webinar").strip().lower()
             
             print(f"[CreateZoomMeetingAPIView] Topic: {topic}")
             print(f"[CreateZoomMeetingAPIView] Start Time: {start_time}")
             print(f"[CreateZoomMeetingAPIView] Duration: {duration}")
+            print(f"[CreateZoomMeetingAPIView] Session Type: {session_type}")
             
             if not topic or not start_time:
                 return Response(
                     {"error": "Topic and start_time are required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Validate session_type
+            if session_type not in ['webinar', 'meeting']:
+                return Response(
+                    {"error": "session_type must be 'webinar' or 'meeting'"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
@@ -272,12 +312,13 @@ class CreateZoomMeetingAPIView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Create meeting using OAuth
+            # Create webinar/meeting using OAuth
             oauth_manager = ZoomOAuthManager()
             meeting_data = oauth_manager.create_meeting(
                 topic=topic,
                 start_time=start_time,
-                duration=duration
+                duration=duration,
+                session_type=session_type
             )
             
             return Response({
@@ -291,5 +332,31 @@ class CreateZoomMeetingAPIView(APIView):
             traceback.print_exc()
             return Response(
                 {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class RefreshZoomTokenAPIView(APIView):
+    """
+    Manually refresh Zoom OAuth token
+    Use this after adding new scopes to your Zoom app
+    """
+    def post(self, request):
+        try:
+            print("🔄 [RefreshZoomTokenAPIView] Token refresh requested")
+            
+            oauth_manager = ZoomOAuthManager()
+            new_token = oauth_manager.refresh_token()
+            
+            return Response({
+                "success": True,
+                "message": "Zoom OAuth token refreshed successfully with new scopes",
+                "token_expires_in": oauth_manager.token_expiry - time.time()
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            print(f"❌ Error refreshing token: {str(e)}")
+            return Response(
+                {"success": False, "error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

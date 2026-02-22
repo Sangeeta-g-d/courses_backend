@@ -668,6 +668,7 @@ def add_live_session(request):
         meeting_url = request.POST.get('meeting_url')  # Optional field
         session_date = request.POST.get('session_date')
         session_time = request.POST.get('session_time')
+        session_type = request.POST.get('session_type', 'webinar')
         thumbnail = request.FILES.get('thumbnail')
 
         LiveSession.objects.create(
@@ -678,6 +679,7 @@ def add_live_session(request):
             meeting_url=meeting_url,
             session_date=session_date,
             session_time=session_time,
+            session_type=session_type,
             thumbnail=thumbnail
         )
         messages.success(request, "Live session added successfully.")
@@ -696,6 +698,7 @@ def edit_live_session(request, session_id):
         session.Passcode = request.POST.get('passcode')
         session.session_date = request.POST.get('session_date')
         session.session_time = request.POST.get('session_time')
+        session.session_type = request.POST.get('session_type', 'webinar')
 
         if request.FILES.get('thumbnail'):
             session.thumbnail = request.FILES.get('thumbnail')

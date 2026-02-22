@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .zoom_api import ZoomSignatureAPIView, CreateZoomMeetingAPIView
+from .zoom_api import ZoomSignatureAPIView, CreateZoomMeetingAPIView, RefreshZoomTokenAPIView
 
 urlpatterns = [
     path('admin_dashboard/', views.admin_dashboard, name='admin_dashboard'),
@@ -34,6 +34,7 @@ urlpatterns = [
     path('join_live_session/<int:session_id>/', views.join_live_session, name='join_live_session'),
     path('zoom_signature/', views.zoom_sdk_signature, name='zoom_sdk_signature'),
     path('api/create_zoom_meeting/', CreateZoomMeetingAPIView.as_view(), name='create_zoom_meeting'),
+    path('api/refresh_zoom_token/', RefreshZoomTokenAPIView.as_view(), name='refresh_zoom_token'),
 
     path('bundle-enrollments/<int:bundle_id>/', views.bundle_enrollment_details, name='bundle_enrollment_details'),
     path('total_enrollments/', views.total_enrollments, name='total_enrollments'),
