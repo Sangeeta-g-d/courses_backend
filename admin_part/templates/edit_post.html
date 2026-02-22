@@ -1,0 +1,112 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+
+<div class="page-heading">
+    <h3>Edit Post</h3>
+</div>
+
+<div class="page-content mt-4">
+    <div class="card">
+        <div class="card-body">
+
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Title -->
+    <div class="mb-3">
+        <label class="form-label">
+            Title <small class="text-muted">(optional)</small>
+        </label>
+        <input type="text"
+               class="form-control"
+               name="title"
+               value="{{ post.title }}">
+    </div>
+
+    <!-- Image 1 -->
+    <div class="mb-3">
+        <label class="form-label">Image 1</label>
+
+        {% if post.image1 %}
+            <div class="mb-2">
+                <img src="{{ post.image1.url }}"
+                     class="img-thumbnail"
+                     style="height:100px;">
+            </div>
+        {% endif %}
+
+        <input type="file"
+               class="form-control"
+               name="image1"
+               accept="image/*">
+    </div>
+
+    <!-- Image 2 -->
+    <div class="mb-3">
+        <label class="form-label">Image 2</label>
+
+        {% if post.image2 %}
+            <div class="mb-2">
+                <img src="{{ post.image2.url }}"
+                     class="img-thumbnail"
+                     style="height:100px;">
+            </div>
+        {% endif %}
+
+        <input type="file"
+               class="form-control"
+               name="image2"
+               accept="image/*">
+    </div>
+
+    <!-- Image 3 -->
+    <div class="mb-3">
+        <label class="form-label">Image 3</label>
+
+        {% if post.image3 %}
+            <div class="mb-2">
+                <img src="{{ post.image3.url }}"
+                     class="img-thumbnail"
+                     style="height:100px;">
+            </div>
+        {% endif %}
+
+        <input type="file"
+               class="form-control"
+               name="image3"
+               accept="image/*">
+    </div>
+
+    <!-- Caption -->
+    <div class="mb-3">
+        <label class="form-label">Caption</label>
+        <textarea class="form-control"
+                  name="caption"
+                  rows="4">{{ post.caption }}</textarea>
+    </div>
+
+    <!-- Active -->
+    <div class="form-check mb-3">
+        <input class="form-check-input"
+               type="checkbox"
+               name="is_active"
+               {% if post.is_active %}checked{% endif %}>
+        <label class="form-check-label">Active</label>
+    </div>
+
+    <button class="btn btn-primary">
+        Update Post
+    </button>
+
+    <a href="{% url 'post_list' %}" class="btn btn-secondary ms-2">
+        Cancel
+    </a>
+
+</form>
+
+        </div>
+    </div>
+</div>
+
+{% include 'notify.html' %}
+{% endblock %}
