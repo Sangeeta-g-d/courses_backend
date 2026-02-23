@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMTA - Access Denied</title>
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/assets/css/bootstrap.css">
+    <link rel="stylesheet" href="/static/assets/vendors/iconly/bold.css">
+    <link rel="stylesheet" href="/static/assets/vendors/perfect-scrollbar/perfect-scrollbar.css">
+    <link rel="stylesheet" href="/static/assets/vendors/bootstrap-icons/bootstrap-icons.css">
+    <link rel="stylesheet" href="/static/assets/css/app.css">
+    <link rel="shortcut icon" href="/static/assets/images/logo/smta-final-logo.png" type="image/x-icon">
+    
+    <style>
+        /* Custom styles for 403 page */
+        .access-denied-container {
+            min-height: calc(100vh - 200px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .error-card {
+            border: none;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            animation: slideInUp 0.6s ease-out;
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .error-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .error-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .error-code {
+            font-size: 120px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 10px;
+            text-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .error-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .error-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .error-body {
+            padding: 40px 30px;
+            background: white;
+        }
+        
+        .alert-custom {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: none;
+            border-left: 4px solid #dc3545;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .alert-custom .alert-heading {
+            color: #dc3545;
+            font-weight: 700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .alert-custom .alert-heading i {
+            font-size: 24px;
+        }
+        
+        .alert-custom p {
+            color: #6c757d;
+            margin-bottom: 15px;
+            line-height: 1.7;
+        }
+        
+        .alert-custom hr {
+            background-color: rgba(220, 53, 69, 0.2);
+            opacity: 1;
+            margin: 20px 0;
+        }
+        
+        .alert-custom .mb-0 {
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn-custom {
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+        }
+        
+        .btn-custom i {
+            font-size: 18px;
+        }
+        
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        
+        .btn-outline-custom {
+            background: white;
+            color: #6c757d;
+            border: 2px solid #e9ecef;
+        }
+        
+        .btn-outline-custom:hover {
+            background: #f8f9fa;
+            color: #495057;
+            border-color: #dee2e6;
+            transform: translateY(-2px);
+        }
+        
+        .breadcrumb-custom {
+            background: transparent;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .breadcrumb-custom .breadcrumb-item a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .breadcrumb-custom .breadcrumb-item a:hover {
+            color: #764ba2;
+        }
+        
+        .breadcrumb-custom .breadcrumb-item.active {
+            color: #6c757d;
+        }
+        
+        .breadcrumb-custom .breadcrumb-item + .breadcrumb-item::before {
+            color: #adb5bd;
+        }
+        
+        .page-heading {
+            background: white;
+            padding: 20px 0;
+            margin-bottom: 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        @media (max-width: 768px) {
+            .error-code {
+                font-size: 80px;
+            }
+            
+            .error-title {
+                font-size: 22px;
+            }
+            
+            .error-body {
+                padding: 30px 20px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn-custom {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
+        /* Additional decorative elements */
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #dc3545;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        .permission-list {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+        
+        .permission-list li {
+            padding: 10px 0;
+            border-bottom: 1px dashed #e9ecef;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #6c757d;
+        }
+        
+        .permission-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .permission-list li i.bi-check-circle {
+            color: #28a745;
+        }
+        
+        .permission-list li i.bi-x-circle {
+            color: #dc3545;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>Access Denied</h3>
+                </div>
+                <div class="col-12 col-md-6 order-md-2 order-first">
+                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                        <ol class="breadcrumb breadcrumb-custom">
+                            <li class="breadcrumb-item"><a href="/backend/admin_dashboard/"><i class="bi bi-house"></i> Dashboard</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Access Denied</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="access-denied-container">
+        <div class="error-card">
+            <div class="error-header">
+                <div class="error-code">403</div>
+                <div class="error-title">Forbidden</div>
+                <div class="error-subtitle">Access to this resource is restricted</div>
+            </div>
+            
+            <div class="error-body">
+                <div class="alert-custom" role="alert">
+                    <h4 class="alert-heading">
+                        <i class="bi bi-shield-lock"></i>
+                        Permission Denied
+                    </h4>
+                    
+                    <div class="error-icon text-center">
+                        <i class="bi bi-exclamation-octagon"></i>
+                    </div>
+                    
+                    <p class="text-center">
+                        <strong>You don't have permission to access this page!</strong>
+                    </p>
+                    
+                    <p>
+                        <i class="bi bi-info-circle"></i>
+                        Sorry, you are not authorized to access this area. Only superusers (administrators) with elevated privileges are allowed to view this content.
+                    </p>
+                    
+                    <div class="permission-requirements">
+                        <h6 class="mb-3">Required permissions:</h6>
+                        <ul class="permission-list">
+                            <li>
+                                <i class="bi bi-check-circle"></i>
+                                Superuser status
+                            </li>
+                            <li>
+                                <i class="bi bi-check-circle"></i>
+                                Admin access
+                            </li>
+                            <li>
+                                <i class="bi bi-x-circle text-danger"></i>
+                                Your current role
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <hr>
+                    
+                    <p class="mb-0">
+                        <i class="bi bi-envelope"></i>
+                        If you believe this is a mistake, please contact the system administrator for assistance.
+                    </p>
+                </div>
+                
+                <div class="action-buttons">
+                    <a href="/dashboard/" class="btn-custom btn-primary-custom">
+                        <i class="bi bi-house"></i> Go to Dashboard
+                    </a>
+                    <a href="/logout/" class="btn-custom btn-outline-custom">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </div>
+                
+                <!-- <div class="text-center mt-4">
+                    <small class="text-muted">
+                        <i class="bi bi-clock-history"></i>
+                        You will be redirected to the dashboard in <span id="countdown">10</span> seconds
+                    </small>
+                </div> -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-redirect countdown
+        let seconds = 10;
+        const countdownElement = document.getElementById('countdown');
+        
+        const countdown = setInterval(function() {
+            seconds--;
+            countdownElement.textContent = seconds;
+            
+            if (seconds <= 0) {
+                clearInterval(countdown);
+                window.location.href = '/backend/admin_dashboard/';
+            }
+        }, 1000);
+        
+        // Optional: Add some interactive effects
+        document.querySelectorAll('.btn-custom').forEach(btn => {
+            btn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+            
+            btn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+</body>
+
+</html>

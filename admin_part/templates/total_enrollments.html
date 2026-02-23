@@ -1,7 +1,7 @@
 {% extends 'admin_base.html' %}
 {% block content %}
 <div class="page-heading">
-    <h3>All Bundles</h3>
+    <h3>All Courses</h3>
     <p class="text-muted">Total {{ bundles|length }} bundles with enrollments</p>
 </div>
 
@@ -30,6 +30,12 @@
                                     {% else %}
                                     <span class="badge bg-primary">₹{{ bundle.price }}</span>
                                     {% endif %}
+                                    {% if bundle.bundle_pdf %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-file-pdf me-1"></i>
+                                            {% if bundle.bundle_pdf_price %}₹{{ bundle.bundle_pdf_price }}{% else %}Free PDF{% endif %}
+                                        </span>
+                                    {% endif %}
                                     <span class="badge bg-success">
                                         <i class="bi bi-people-fill me-1"></i>
                                         {{ bundle.enrollment_count }} Enrolled
@@ -41,7 +47,7 @@
                               <div class="d-flex gap-2">
                                 <span class="badge bg-light text-dark border">
                                     <i class="bi bi-journals me-1"></i>
-                                    {{ bundle.courses.count }} Course{{ bundle.courses.count|pluralize }}
+                                    {{ bundle.courses.count }} Sub Course{{ bundle.courses.count|pluralize }}
                                 </span>
                               </div>
                                 <a href="{% url 'view_bundle_candidates' bundle.id %}" class="btn btn-outline-primary btn-sm">

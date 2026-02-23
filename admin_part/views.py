@@ -22,7 +22,7 @@ import re
 import time
 import jwt  # PyJWT
 from django.conf import settings
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from .utils import get_video_duration,convert_to_hls 
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -31,8 +31,49 @@ import json
 from django.views.decorators.http import require_GET
 from .tasks import process_lecture_video
 from django.conf import settings
+from functools import wraps
 
 # Create your views here.
+
+# ============================================================================
+# AUTHENTICATION & AUTHORIZATION DECORATORS
+# ============================================================================
+
+def admin_required(view_func):
+    """
+    Decorator to check if user is logged in and is a superuser.
+    Redirects unauthenticated users to login page.
+    Redirects non-superusers to access denied page.
+    Also prevents caching to ensure secure content isn't cached.
+    """
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        # Check if user is not authenticated
+        if not request.user.is_authenticated:
+            messages.warning(request, "Please log in first.")
+            return redirect('admin_login')
+        
+        # Check if user is not a superuser
+        if not request.user.is_superuser:
+            response = render(request, 'admin_access_denied.html', status=403)
+            # Add no-cache headers
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+            return response
+        
+        # User is authenticated and is a superuser
+        response = view_func(request, *args, **kwargs)
+        
+        # Add no-cache headers to prevent browser caching of admin pages
+        if hasattr(response, 'has_header'):  # Check if it's a proper HttpResponse
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+        
+        return response
+    
+    return wrapper
 
 
 def index(request):
@@ -40,6 +81,7 @@ def index(request):
 
 
 
+@admin_required
 def admin_dashboard(request):
     # Bundle enrollment statistics
     bundle_stats = Bundle.objects.annotate(
@@ -73,7 +115,12 @@ def admin_dashboard(request):
 
 def admin_logout(request):
     logout(request)
-    return redirect('admin_login')
+    response = redirect('admin_login')
+    # Prevent browser caching to ensure back button doesn't return to admin pages
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
 
 def admin_login(request):
     if request.user.is_authenticated and request.user.is_superuser:
@@ -99,9 +146,15 @@ def admin_login(request):
         else:
             messages.error(request, "Invalid credentials or not an admin user.")
 
-    return render(request, 'admin_login.html')
+    response = render(request, 'admin_login.html')
+    # Add no-cache headers to prevent caching of login page
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
 
 
+@admin_required
 def add_bundle(request):
     if request.method == "POST":
         name = request.POST.get('name')
@@ -142,16 +195,19 @@ def add_bundle(request):
     return render(request, 'add_bundle.html')
 
 
+@admin_required
 def bundles(request):
     bundles = Bundle.objects.all().order_by('id')
     return render(request, 'bundles.html', {'bundles': bundles})
 
+@admin_required
 def delete_bundle(request, bundle_id):
     bundle = get_object_or_404(Bundle, id=bundle_id)
     bundle.delete()
     messages.success(request, f'Course "{bundle.name}" has been deleted successfully.')
     return redirect('bundles')
 
+@admin_required
 def edit_bundle(request, bundle_id):
     bundle = get_object_or_404(Bundle, id=bundle_id)
 
@@ -204,6 +260,7 @@ def edit_bundle(request, bundle_id):
     return render(request, 'edit_bundle.html', context)
 
 
+@admin_required
 def add_course(request):
     categories = Bundle.objects.all()
     if request.method == 'POST':
@@ -212,7 +269,6 @@ def add_course(request):
             category = Bundle.objects.get(id=category_id) if category_id else None
             title = request.POST.get('title')
             thumbnail = request.FILES.get('thumbnail')
-            preview_video = request.FILES.get('preview_video')
             short_description = request.POST.get('short_description')
             full_description = request.POST.get('full_description')
             language = request.POST.get('language', 'English')
@@ -225,7 +281,6 @@ def add_course(request):
                 bundle=category,
                 title=title,
                 thumbnail=thumbnail,
-                preview_video=preview_video,
                 short_description=short_description,
                 full_description=full_description,
                 language=language,
@@ -243,6 +298,7 @@ def add_course(request):
 
     return render(request, 'add_course.html', {'categories': categories})
 
+@admin_required
 def view_courses(request):
     bundles = Bundle.objects.all()
     bundle_id = request.GET.get('bundle_id')
@@ -262,6 +318,7 @@ def view_courses(request):
 
 
 @require_POST
+@admin_required
 def toggle_course_publish(request, course_id):
     try:
         # Parse JSON data
@@ -300,6 +357,7 @@ def toggle_course_publish(request, course_id):
             "error": str(e)
         }, status=400)
     
+@admin_required
 def edit_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     categories = Bundle.objects.all()
@@ -318,8 +376,6 @@ def edit_course(request, course_id):
             # Handle file uploads
             if 'thumbnail' in request.FILES:
                 course.thumbnail = request.FILES['thumbnail']
-            if 'preview_video' in request.FILES:
-                course.preview_video = request.FILES['preview_video']
 
             course.save()
             messages.success(request, "Course updated successfully!")
@@ -329,6 +385,7 @@ def edit_course(request, course_id):
     return render(request, 'edit_course.html', {'course': course, 'categories': categories})
 
 
+@admin_required
 def delete_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     course.delete()
@@ -336,10 +393,12 @@ def delete_course(request, course_id):
     return redirect('view_courses')
 
 
+@admin_required
 def course_detail(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     return render(request, 'course_detail.html', {'course': course})
 
+@admin_required
 def add_section(request, course_id):
     if request.method == "POST":
         course = get_object_or_404(Course, id=course_id)
@@ -375,6 +434,7 @@ def add_section(request, course_id):
 
     return redirect('course_detail', course_id=course_id)
 
+@admin_required
 def edit_section(request, section_id):
     section = get_object_or_404(CourseSection, id=section_id)
     course_id = section.course.id
@@ -407,6 +467,7 @@ def edit_section(request, section_id):
 
     return redirect('course_detail', course_id=course_id)
 
+@admin_required
 def delete_section(request, section_id):
     section = get_object_or_404(CourseSection, id=section_id)
     course_id = section.course.id  # to redirect back
@@ -418,6 +479,8 @@ def delete_section(request, section_id):
     return redirect('course_detail', course_id=course_id)
 
 import os
+
+@admin_required
 def add_lecture(request, section_id):
     section = get_object_or_404(CourseSection, id=section_id)
 
@@ -474,6 +537,7 @@ def add_lecture(request, section_id):
 
     return render(request, "add_lecture.html", {"section": section})
 
+@admin_required
 def edit_lecture(request, lecture_id):
     lecture = get_object_or_404(Lecture, id=lecture_id)
 
@@ -575,6 +639,7 @@ def edit_lecture(request, lecture_id):
     # GET → render edit page
     return render(request, 'edit_lecture.html', {'lecture': lecture})
 
+@admin_required
 def delete_lecture(request, lecture_id):
     lecture = get_object_or_404(Lecture, id=lecture_id)
     course_id = lecture.section.course.id
@@ -587,11 +652,12 @@ def delete_lecture(request, lecture_id):
 
 
 
-
+@admin_required
 def user_list(request):
     users = CustomUser.objects.filter(is_superuser=False).select_related('profile').order_by('-date_joined')
     return render(request, 'user_list.html', {'users': users})
 
+@admin_required
 def bundle_enrollment_details(request, bundle_id):
     bundle = get_object_or_404(Bundle, id=bundle_id)
     
@@ -628,6 +694,7 @@ def bundle_enrollment_details(request, bundle_id):
     
     return render(request, 'bundle_enrollment_details.html', context)
 
+@admin_required
 def total_enrollments(request):
     # Get bundles with enrollment count (grouped by bundle)
     from django.db.models import Count
@@ -641,6 +708,7 @@ def total_enrollments(request):
     }
     return render(request, 'total_enrollments.html', context)
 
+@admin_required
 def view_bundle_candidates(request, bundle_id):
     bundle = get_object_or_404(Bundle, id=bundle_id)
     enrollments = Enrollment.objects.filter(bundle=bundle).select_related('user')
@@ -653,12 +721,14 @@ def view_bundle_candidates(request, bundle_id):
 
 
 
+@admin_required
 def admin_live_sessions(request):
     sessions = LiveSession.objects.all().order_by('-session_date', '-session_time')
     return render(request, 'live_sessions_list.html', {'sessions': sessions})
 
 
 # Admin: Add session
+@admin_required
 def add_live_session(request):
     if request.method == 'POST':
         title = request.POST.get('title')
@@ -688,6 +758,7 @@ def add_live_session(request):
     return render(request, 'add_live_session.html')
 
 
+@admin_required
 def edit_live_session(request, session_id):
     session = get_object_or_404(LiveSession, id=session_id)
 
@@ -711,6 +782,7 @@ def edit_live_session(request, session_id):
 
 
 # Admin: Delete session
+@admin_required
 def delete_live_session(request, session_id):
     session = get_object_or_404(LiveSession, id=session_id)
     session.delete()
@@ -721,6 +793,7 @@ def delete_live_session(request, session_id):
 
 
 
+@admin_required
 def join_live_session(request, session_id):
     from django.conf import settings
     session = get_object_or_404(LiveSession, id=session_id)
@@ -775,10 +848,12 @@ def zoom_sdk_signature(request):
 
 
 
+@admin_required
 def contact_list(request):
     contacts = ContactMessage.objects.all().order_by('-created_at')
     return render(request, 'contact_list.html', {'contacts': contacts})
 
+@admin_required
 def add_post(request):
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
@@ -812,6 +887,7 @@ def add_post(request):
     return render(request, "add_post.html")
 
 
+@admin_required
 def post_list(request):
     posts = Post.objects.order_by('-created_at')
 
@@ -830,6 +906,7 @@ def post_list(request):
     return render(request, 'post_list.html', context)
 
 
+@admin_required
 def delete_post(request, id):
     post = get_object_or_404(Post, id=id)
 
@@ -841,6 +918,7 @@ def delete_post(request, id):
 
     return redirect(request.META.get('HTTP_REFERER', 'post_list'))
 
+@admin_required
 def edit_post(request, id):
     post = get_object_or_404(Post, id=id)
 

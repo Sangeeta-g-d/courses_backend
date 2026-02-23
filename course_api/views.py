@@ -468,12 +468,6 @@ class CourseSectionsAPIView(APIView, APIResponseMixin):
             if course.thumbnail else None
         )
 
-        # 🔹 Preview video
-        preview_video = (
-            request.build_absolute_uri(course.preview_video.url)
-            if course.preview_video else None
-        )
-
         # -------------------------------
         # USER-AWARE PROGRESS
         # -------------------------------
@@ -510,7 +504,6 @@ class CourseSectionsAPIView(APIView, APIResponseMixin):
                 "course_id": course.id,
                 "course_name": course.title,
                 "course_thumbnail": course_thumbnail,
-                "preview_video": preview_video,
                 "is_enrolled": is_enrolled,
                 "course_progress": course_progress,
                 "completed_lectures": completed_lectures,

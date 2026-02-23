@@ -43,16 +43,6 @@
                     <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
                 </div>
                 {% endif %}
-                
-                {% if course.preview_video %}
-                <div class="mt-3">
-                    <p class="fw-bold mb-2">Preview Video:</p>
-                    <video width="100%" controls class="rounded shadow-sm">
-                        <source src="{{ course.preview_video.url }}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
-                {% endif %}
             </div>
         </div>
 

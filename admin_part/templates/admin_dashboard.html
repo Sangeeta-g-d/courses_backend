@@ -203,6 +203,7 @@
                                     <th>Enrollment Date</th>
                                     <th>Payment Status</th>
                                     <th>Amount Paid</th>
+                                    <th>PDF Access</th>
                                     <th>Progress</th>
                                 </tr>
                             </thead>
@@ -255,6 +256,17 @@
                                             ₹{{ enrollment.amount_paid }}
                                         {% else %}
                                             <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if enrollment.has_pdf %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-file-pdf me-1"></i>Yes
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-x-circle me-1"></i>No
+                                            </span>
                                         {% endif %}
                                     </td>
                                     <td>

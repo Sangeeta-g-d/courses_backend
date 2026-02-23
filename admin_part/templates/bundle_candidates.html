@@ -58,7 +58,8 @@
                             <th>Enrollment Date</th>
                             <th>Payment Status</th>
                             <th>Amount Paid</th>
-                           
+                            <th>Purchase Type</th>
+                            <th>PDF Access</th>
                             <th>Last Accessed</th>
                           
                         </tr>
@@ -98,8 +99,35 @@
                                     {{ enrollment.payment_status|title }}
                                 </span>
                             </td>
-                            <td>₹{{ enrollment.amount_paid }}</td>
-                           
+                            <td>{{ enrollment.amount_paid }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if enrollment.purchase_type == 'bundle' %}bg-primary
+                                    {% elif enrollment.purchase_type == 'pdf' %}bg-warning text-dark
+                                    {% elif enrollment.purchase_type == 'both' %}bg-success
+                                    {% else %}bg-secondary{% endif %}">
+                                    {% if enrollment.purchase_type == 'bundle' %}
+                                        <i class="bi bi-book me-1"></i>Bundle Only
+                                    {% elif enrollment.purchase_type == 'pdf' %}
+                                        <i class="bi bi-file-pdf me-1"></i>PDF Only
+                                    {% elif enrollment.purchase_type == 'both' %}
+                                        <i class="bi bi-collection me-1"></i>Bundle + PDF
+                                    {% else %}
+                                        Unknown
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                {% if enrollment.has_pdf %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle me-1"></i>Yes
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-x-circle me-1"></i>No
+                                    </span>
+                                {% endif %}
+                            </td>
                             <td>{{ enrollment.last_accessed|date:"M d, Y"|default:"Never" }}</td>
                            
                         </tr>

@@ -61,7 +61,6 @@ class BundleDetailSerializer(serializers.ModelSerializer):
 
 class CourseSerializer(serializers.ModelSerializer):
     thumbnail_url = serializers.SerializerMethodField()
-    preview_video_url = serializers.SerializerMethodField()
     total_duration = serializers.ReadOnlyField(source='calculated_total_duration_display')
     total_lectures = serializers.ReadOnlyField(source='calculated_total_lectures')
 
@@ -75,7 +74,6 @@ class CourseSerializer(serializers.ModelSerializer):
             'language',
             'level',
             'thumbnail_url',
-            'preview_video_url',
             'total_duration',
             'total_lectures',
             'created_at',
@@ -85,12 +83,6 @@ class CourseSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.thumbnail and request:
             return request.build_absolute_uri(obj.thumbnail.url)
-        return None
-
-    def get_preview_video_url(self, obj):
-        request = self.context.get('request')
-        if obj.preview_video and request:
-            return request.build_absolute_uri(obj.preview_video.url)
         return None
     
 

@@ -62,7 +62,6 @@ class Course(models.Model):
 
     title = models.CharField(max_length=1000)
     thumbnail = models.ImageField(upload_to='course_thumbnails/', blank=True, null=True)
-    preview_video = models.FileField(upload_to='course_videos/', blank=True, null=True)
 
     short_description = models.TextField(max_length=2000)
     full_description = models.TextField()

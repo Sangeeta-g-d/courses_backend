@@ -152,3 +152,22 @@ def format_duration(seconds):
     if hours:
         return f"{hours}h {minutes}m {secs}s"
     return f"{minutes}m {secs}s"
+
+# =========================================================
+# NO-CACHE DECORATOR FOR ADMIN PAGES
+# =========================================================
+
+def no_cache(view_func):
+    """
+    Decorator to add no-cache headers to responses.
+    This prevents browser from caching pages, ensuring back button
+    doesn't return to sensitive admin pages after logout.
+    """
+    def wrapper(request, *args, **kwargs):
+        response = view_func(request, *args, **kwargs)
+        # Add no-cache headers to prevent caching
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return response
+    return wrapper
