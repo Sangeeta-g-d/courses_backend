@@ -139,7 +139,13 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
             if bundle.thumbnail else None
         )
 
-        # 🔐 Auth & Enrollment Check
+        # � Bundle preview video
+        preview_video_url = (
+            request.build_absolute_uri(bundle.preview_video.url)
+            if bundle.preview_video else None
+        )
+
+        # �🔐 Auth & Enrollment Check
         is_logged_in = request.user.is_authenticated
         is_enrolled = False
         enrollment_id = None
@@ -165,6 +171,7 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
                 "bundle_id": bundle.id,
                 "bundle_name": bundle.name,
                 "bundle_thumbnail": thumbnail_url,
+                "bundle_preview_video": preview_video_url,
                 "short_description": bundle.short_description,
                 "full_description": bundle.full_description,
                 "price": bundle.price,
