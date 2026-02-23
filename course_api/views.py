@@ -1033,27 +1033,27 @@ class ContinueLearningAPIView(APIView, APIResponseMixin):
         )
 
 
-class PostListAPIView(APIView, APIResponseMixin):
+# class PostListAPIView(APIView, APIResponseMixin):
 
-    def get(self, request):
-        try:
-            posts = Post.objects.filter(
-                is_active=True
-            ).order_by("-created_at")
+#     def get(self, request):
+#         try:
+#             posts = Post.objects.filter(
+#                 is_active=True
+#             ).order_by("-created_at")
 
-            serializer = PostSerializer(
-                posts,
-                many=True,
-                context={"request": request}
-            )
+#             serializer = PostSerializer(
+#                 posts,
+#                 many=True,
+#                 context={"request": request}
+#             )
 
-            return self.success_response(
-                message="Posts fetched successfully",
-                data=serializer.data
-            )
+#             return self.success_response(
+#                 message="Posts fetched successfully",
+#                 data=serializer.data
+#             )
 
-        except Exception as e:
-            return self.error_response(str(e))
+#         except Exception as e:
+#             return self.error_response(str(e))
         
 
 
@@ -1061,28 +1061,72 @@ class PostListAPIView(APIView, APIResponseMixin):
     permission_classes = [AllowAny]
 
     def get(self, request):
+        # Get query parameters with defaults and validation
         try:
-            posts = Post.objects.filter(is_active=True).order_by("-created_at")
+            page = int(request.query_params.get('page', 1))
+            if page < 1:
+                page = 1
+        except (ValueError, TypeError):
+            page = 1
 
-            paginator = PostPagination()
-            paginated_posts = paginator.paginate_queryset(posts, request)
+        try:
+            page_size = int(request.query_params.get('page_size', 20))
+            if page_size < 1:
+                page_size = 20
+            elif page_size > 100:
+                page_size = 100  # Maximum limit to prevent performance issues
+        except (ValueError, TypeError):
+            page_size = 20
 
-            serializer = PostSerializer(
-                paginated_posts,
-                many=True,
-                context={"request": request}
-            )
+        # Get all active posts
+        posts_queryset = Post.objects.filter(
+            is_active=True
+        ).order_by('-created_at')
 
-            return paginator.get_paginated_response(
-                {
-                    "status": drf_status.HTTP_200_OK,
-                    "message": "Post list fetched successfully",
-                    "response": serializer.data,
-                }
-            )
+        # Calculate total items
+        total_items = posts_queryset.count()
 
-        except Exception as e:
-            return self.error_response(str(e))
+        # Calculate pagination values
+        total_pages = math.ceil(total_items / page_size) if total_items > 0 else 0
+
+        # Handle edge cases: page > totalPages or page < 1
+        if page > total_pages and total_pages > 0:
+            page = total_pages
+        if page < 1:
+            page = 1
+
+        # Calculate slice indices
+        start_index = (page - 1) * page_size
+        end_index = start_index + page_size
+
+        # Slice the queryset
+        paginated_posts = posts_queryset[start_index:end_index]
+
+        # Serialize the paginated posts
+        serializer = PostSerializer(
+            paginated_posts,
+            many=True,
+            context={'request': request}
+        )
+
+        # Build pagination metadata
+        pagination = {
+            "current_page": page,
+            "page_size": page_size,
+            "total_items": total_items,
+            "total_pages": total_pages,
+            "has_next_page": page < total_pages,
+            "has_previous_page": page > 1
+        }
+
+        return self.success_response(
+            message="Posts fetched successfully",
+            data={
+                "posts": serializer.data,
+                "pagination": pagination
+            },
+            status_code=drf_status.HTTP_200_OK
+        )
         
 
 class TogglePostLikeAPIView(APIView, APIResponseMixin):
