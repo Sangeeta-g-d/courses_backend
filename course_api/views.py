@@ -210,51 +210,123 @@ class BundleEnrollAPIView(APIView, APIResponseMixin):
                 status_code=drf_status.HTTP_404_NOT_FOUND
             )
 
-        # 2️⃣ Check existing enrollment
-        enrollment = Enrollment.objects.filter(
-            user=user,
-            bundle=bundle
-        ).first()
-
-        if enrollment and enrollment.payment_status in ['completed', 'free']:
-            return self.success_response(
-                message="Already enrolled in this bundle",
-                data=EnrollmentSerializer(enrollment).data
+        # 2️⃣ Get purchase type from request (default: 'bundle')
+        purchase_type = request.data.get('purchase_type', 'bundle')
+        
+        # Validate purchase_type
+        valid_purchase_types = ['bundle', 'pdf', 'both']
+        if purchase_type not in valid_purchase_types:
+            return self.error_response(
+                f"Invalid purchase_type. Must be one of: {', '.join(valid_purchase_types)}",
+                status_code=drf_status.HTTP_400_BAD_REQUEST
             )
 
-        # 3️⃣ Create enrollment if not exists
-        if not enrollment:
-            if bundle.is_free:
-                payment_status = 'free'
-                amount_paid = 0
-            else:
-                payment_status = 'pending'
-                amount_paid = bundle.get_discounted_price()
+        # 3️⃣ Calculate prices based on purchase_type
+        bundle_price = bundle.get_discounted_price() if not bundle.is_free else 0
+        pdf_price = bundle.bundle_pdf_price if bundle.bundle_pdf_price else 0
+        
+        # Determine amount and has_pdf flag
+        if purchase_type == 'bundle':
+            amount_paid = bundle_price
+            has_pdf = False
+        elif purchase_type == 'pdf':
+            amount_paid = pdf_price
+            has_pdf = True
+        else:  # 'both'
+            amount_paid = bundle_price + pdf_price
+            has_pdf = True
+
+        # 4️⃣ Check existing enrollment
+        enrollment = Enrollment.objects.filter(
+            user=user,
+            bundle=bundle,
+            payment_status__in=['completed', 'free']
+        ).first()
+
+        # 5️⃣ Handle upgrade scenario
+        if enrollment:
+            old_purchase_type = enrollment.purchase_type
+            
+            # Check if this is an upgrade (not the same purchase type)
+            if old_purchase_type == purchase_type:
+                return self.success_response(
+                    message="Already enrolled with this purchase type",
+                    data=EnrollmentSerializer(enrollment).data
+                )
+
+            # Calculate upgrade cost (difference between new and old)
+            old_amount = 0
+            if old_purchase_type == 'bundle':
+                old_amount = bundle_price
+            elif old_purchase_type == 'pdf':
+                old_amount = pdf_price
+            else:  # 'both'
+                old_amount = bundle_price + pdf_price
+
+            # Upgrade amount is the difference
+            upgrade_amount = max(0, amount_paid - old_amount)
+
+            # Update existing enrollment with new purchase type
+            enrollment.purchase_type = purchase_type
+            enrollment.has_pdf = has_pdf
+            enrollment.amount_paid = upgrade_amount  # Store only the upgrade cost
+            enrollment.payment_status = 'pending'
+            enrollment.razorpay_order_id = None
+            enrollment.save(update_fields=['purchase_type', 'has_pdf', 'amount_paid', 'payment_status', 'razorpay_order_id'])
+
+            is_upgrade = True
+            amount_for_order = upgrade_amount
+        else:
+            # 6️⃣ Create new enrollment
+            is_free_purchase = bundle.is_free and purchase_type == 'bundle'
+            
+            payment_status = 'free' if is_free_purchase else 'pending'
 
             enrollment = Enrollment.objects.create(
                 user=user,
                 bundle=bundle,
+                purchase_type=purchase_type,
+                has_pdf=has_pdf,
                 payment_status=payment_status,
                 amount_paid=amount_paid
             )
 
-        # 4️⃣ If FREE bundle → done
-        if bundle.is_free:
+            is_upgrade = False
+            amount_for_order = amount_paid
+
+        # 7️⃣ If FREE purchase → done
+        if enrollment.payment_status == 'free':
             return self.success_response(
-                message="Enrollment successful (Free bundle)",
+                message="Enrollment successful (Free)",
                 data={
                     "enrollment": EnrollmentSerializer(enrollment).data,
-                    "is_free": True
+                    "is_free": True,
+                    "is_upgrade": is_upgrade
                 },
                 status_code=drf_status.HTTP_201_CREATED
             )
 
-        # 5️⃣ PAID bundle → Create Razorpay Order
+        # 8️⃣ If amount is 0 (nothing to pay) → complete enrollment
+        if amount_for_order <= 0:
+            enrollment.payment_status = 'completed'
+            enrollment.save(update_fields=['payment_status'])
+
+            return self.success_response(
+                message="Enrollment completed successfully",
+                data={
+                    "enrollment": EnrollmentSerializer(enrollment).data,
+                    "is_free": True,
+                    "is_upgrade": is_upgrade
+                },
+                status_code=drf_status.HTTP_201_CREATED
+            )
+
+        # 9️⃣ PAID purchase → Create Razorpay Order
         client = razorpay.Client(
             auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
         )
 
-        amount_in_paise = int(enrollment.amount_paid * 100)
+        amount_in_paise = int(amount_for_order * 100)
 
         razorpay_order = client.order.create({
             "amount": amount_in_paise,
@@ -262,7 +334,7 @@ class BundleEnrollAPIView(APIView, APIResponseMixin):
             "payment_capture": 1
         })
 
-        # 6️⃣ Store Razorpay Order ID
+        # 🔟 Store Razorpay Order ID
         enrollment.razorpay_order_id = razorpay_order["id"]
         enrollment.save(update_fields=["razorpay_order_id"])
 
@@ -271,6 +343,7 @@ class BundleEnrollAPIView(APIView, APIResponseMixin):
             data={
                 "enrollment": EnrollmentSerializer(enrollment).data,
                 "is_free": False,
+                "is_upgrade": is_upgrade,
                 "razorpay": {
                     "razorpay_order_id": razorpay_order["id"],
                     "razorpay_key": settings.RAZORPAY_KEY_ID,
