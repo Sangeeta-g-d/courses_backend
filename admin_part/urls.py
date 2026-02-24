@@ -23,6 +23,10 @@ urlpatterns = [
     path('delete_lecture/<int:lecture_id>/', views.delete_lecture, name='delete_lecture'),
     path('user_list/',views.user_list,name="user_list"),
 
+    path('user/<int:user_id>/detail/', views.user_detail, name='user_detail'),
+    path('user/<int:user_id>/edit/', views.edit_user, name='edit_user'),
+    path('user/<int:user_id>/toggle-status/', views.toggle_user_status, name='toggle_user_status'),
+
 
 
 

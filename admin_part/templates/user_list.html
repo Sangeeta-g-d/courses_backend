@@ -44,8 +44,27 @@
                                 {% endif %}
                             </td>
                             <td><strong>{{ user.full_name|default:"Not Provided" }}</strong></td>
-                            <td>{{ user.email }}</td>
-                            <td>{{ user.phone_number|default:"-" }}</td>
+                            <td>
+    <a href="mailto:{{ user.email }}"
+       class="text-decoration-none">
+        <i class="bi bi-envelope-fill text-primary me-1"></i>
+        {{ user.email }}
+    </a>
+</td>
+
+                            <td>
+    {% if user.phone_number %}
+        <a href="https://wa.me/{{ user.phone_number }}"
+           target="_blank"
+           class="text-decoration-none">
+            <i class="bi bi-whatsapp text-success me-1"></i>
+            {{ user.phone_number }}
+        </a>
+    {% else %}
+        -
+    {% endif %}
+</td>
+
                             <td>
                                 {% if user.profile.highest_qualification %}
                                     {{ user.profile.get_highest_qualification_display }}
@@ -63,17 +82,17 @@
                             <td>
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-sm btn-outline-primary" 
-                                            onclick="viewUser({{ user.id }})" 
+                                            onclick="viewUser('{{ user.id }}')" 
                                             title="View Details">
                                         <i class="bi bi-eye"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-warning" 
-                                            onclick="editUser({{ user.id }})"
+                                            onclick="editUser('{{ user.id }}')"
                                             title="Edit User">
                                         <i class="bi bi-pencil-square"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-{% if user.is_active %}danger{% else %}success{% endif %}" 
-                                            onclick="toggleUserStatus({{ user.id }}, {{ user.is_active|yesno:'true,false' }})"
+                                            onclick="toggleUserStatus('{{ user.id }}', {{ user.is_active|yesno:'true,false' }})"
                                             title="{% if user.is_active %}Deactivate{% else %}Activate{% endif %} User">
                                         <i class="bi {% if user.is_active %}bi-person-x{% else %}bi-person-check{% endif %}"></i>
                                     </button>
@@ -132,4 +151,84 @@
     font-size: 0.75em;
 }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+{% comment %} JavaScript helpers for user actions {% endcomment %}
+<script>
+// CSRF helper copied from Django docs
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function viewUser(userId) {
+    fetch(`{% url 'user_detail' 0 %}`.replace('0', userId))
+        .then(resp => resp.text())
+        .then(html => {
+            document.getElementById('userDetails').innerHTML = html;
+            const modal = new bootstrap.Modal(document.getElementById('userModal'));
+            modal.show();
+        });
+}
+
+function editUser(userId) {
+    window.location.href = `{% url 'edit_user' 0 %}`.replace('0', userId);
+}
+
+function toggleUserStatus(userId, isActive) {
+    const action = isActive ? 'deactivate' : 'activate';
+    if (!confirm(`Are you sure you want to ${action} this user?`)) {
+        return;
+    }
+    fetch(`{% url 'toggle_user_status' 0 %}`.replace('0', userId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(resp => resp.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed to update user status');
+            }
+        });
+}
+
+function exportToExcel() {
+    // Simple CSV export of the table
+    const table = document.getElementById('usersTable');
+    let csv = [];
+    for (let row of table.rows) {
+        let cols = [];
+        for (let cell of row.cells) {
+            // skip action column
+            if (cell.querySelector('button')) continue;
+            cols.push('"' + cell.innerText.replace(/"/g, '""') + '"');
+        }
+        if (cols.length) csv.push(cols.join(','));
+    }
+    const blob = new Blob([csv.join("\n")], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'users.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+</script>
 {% endblock %}

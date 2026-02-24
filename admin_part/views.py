@@ -657,6 +657,41 @@ def user_list(request):
     users = CustomUser.objects.filter(is_superuser=False).select_related('profile').order_by('-date_joined')
     return render(request, 'user_list.html', {'users': users})
 
+
+def user_detail(request, user_id):
+    """Return HTML snippet with the user's information for the modal."""
+    user = get_object_or_404(CustomUser, id=user_id)
+    return render(request, 'user_detail_partial.html', {'user': user})
+
+def edit_user(request, user_id):
+    """Render a simple edit form and process updates."""
+    user = get_object_or_404(CustomUser, id=user_id)
+    if request.method == 'POST':
+        # only allow a few editable fields for now
+        user.full_name = request.POST.get('full_name', user.full_name)
+        user.email = request.POST.get('email', user.email)
+        user.phone_number = request.POST.get('phone_number', user.phone_number)
+        user.is_active = bool(request.POST.get('is_active'))
+        # update profile fields if present
+        profile = getattr(user, 'profile', None)
+        if profile:
+            profile.city = request.POST.get('city', profile.city)
+            profile.highest_qualification = request.POST.get('highest_qualification', profile.highest_qualification)
+            profile.save()
+        user.save()
+        messages.success(request, 'User details updated successfully.')
+        return redirect('user_list')
+    return render(request, 'edit_user.html', {'user': user})
+
+
+@require_POST
+def toggle_user_status(request, user_id):
+    """Enable/disable a user account via AJAX."""
+    user = get_object_or_404(CustomUser, id=user_id)
+    user.is_active = not user.is_active
+    user.save()
+    return JsonResponse({'success': True, 'is_active': user.is_active})
+
 @admin_required
 def bundle_enrollment_details(request, bundle_id):
     bundle = get_object_or_404(Bundle, id=bundle_id)
