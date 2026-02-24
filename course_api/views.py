@@ -123,16 +123,6 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
                 status_code=drf_status.HTTP_404_NOT_FOUND
             )
 
-        courses = Course.objects.filter(
-            bundle=bundle
-        ).order_by('-created_at')
-
-        course_serializer = CourseSerializer(
-            courses,
-            many=True,
-            context={'request': request}
-        )
-
         # 🔹 Bundle thumbnail
         thumbnail_url = (
             request.build_absolute_uri(bundle.thumbnail.url)
@@ -151,12 +141,15 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
         enrollment_id = None
         payment_status = None
         progress_percentage = 0
+        purchase_type = None
+        has_pdf_access = False
 
         if is_logged_in:
             enrollment = Enrollment.objects.filter(
                 user=request.user,
                 bundle=bundle,
-                is_active=True
+                is_active=True,
+                payment_status__in=['completed', 'free']
             ).first()
 
             if enrollment:
@@ -164,34 +157,104 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
                 enrollment_id = enrollment.id
                 payment_status = enrollment.payment_status
                 progress_percentage = enrollment.progress_percentage
+                purchase_type = enrollment.purchase_type
+                has_pdf_access = enrollment.has_pdf
 
-        return self.success_response(
-            message="Courses fetched successfully",
-            data={
-                "bundle_id": bundle.id,
-                "bundle_name": bundle.name,
-                "bundle_thumbnail": thumbnail_url,
-                "bundle_preview_video": preview_video_url,
-                "short_description": bundle.short_description,
-                "full_description": bundle.full_description,
-                "price": bundle.price,
-                "discount": bundle.discount,
-                "discounted_price": bundle.get_discounted_price(),
-                "is_free": bundle.is_free,
-
-                # 🔐 Auth info
-                "is_logged_in": is_logged_in,
-                "is_enrolled": is_enrolled,
-
-                # 🎓 Enrollment details (only if enrolled)
-                "enrollment_id": enrollment_id,
-                "payment_status": payment_status,
-                "progress_percentage": progress_percentage,
-
-                "total_courses": courses.count(),
-                "courses": course_serializer.data,
-            }
+        bundle_pdf_url = (
+            request.build_absolute_uri(bundle.bundle_pdf.url)
+            if bundle.bundle_pdf else None
         )
+
+        response_data = {
+            "bundle_id": bundle.id,
+            "bundle_name": bundle.name,
+            "bundle_thumbnail": thumbnail_url,
+            "bundle_preview_video": preview_video_url,
+            "short_description": bundle.short_description,
+            "full_description": bundle.full_description,
+            "price": str(bundle.price),
+            "discount": bundle.discount,
+            "discounted_price": str(bundle.get_discounted_price()),
+            "is_free": bundle.is_free,
+            "is_logged_in": is_logged_in,
+            "is_enrolled": is_enrolled,
+            "enrollment_id": enrollment_id,
+            "payment_status": payment_status,
+            "progress_percentage": progress_percentage,
+            "purchase_type": purchase_type,
+        }
+
+        if not is_enrolled or payment_status == 'pending':
+            return self.success_response(
+                message="Bundle information fetched successfully",
+                data={
+                    **response_data,
+                    "total_courses": 0,
+                    "courses": [],
+                    "has_pdf_access": False,
+                    "bundle_pdf_url": None,
+                    "bundle_pdf_price": None,
+                }
+            )
+
+        if purchase_type == 'pdf':
+            return self.success_response(
+                message="PDF data fetched successfully",
+                data={
+                    **response_data,
+                    "total_courses": 0,
+                    "courses": [],
+                    "has_pdf_access": has_pdf_access,
+                    "bundle_pdf_url": bundle_pdf_url if has_pdf_access else None,
+                    "bundle_pdf_price": str(bundle.bundle_pdf_price) if bundle.bundle_pdf_price else None,
+                }
+            )
+
+        elif purchase_type == 'both':
+            courses = Course.objects.filter(
+                bundle=bundle
+            ).order_by('-created_at')
+
+            course_serializer = CourseSerializer(
+                courses,
+                many=True,
+                context={'request': request}
+            )
+
+            return self.success_response(
+                message="Courses and PDF fetched successfully",
+                data={
+                    **response_data,
+                    "total_courses": courses.count(),
+                    "courses": course_serializer.data,
+                    "has_pdf_access": has_pdf_access,
+                    "bundle_pdf_url": bundle_pdf_url if has_pdf_access else None,
+                    "bundle_pdf_price": str(bundle.bundle_pdf_price) if bundle.bundle_pdf_price else None,
+                }
+            )
+
+        else:
+            courses = Course.objects.filter(
+                bundle=bundle
+            ).order_by('-created_at')
+
+            course_serializer = CourseSerializer(
+                courses,
+                many=True,
+                context={'request': request}
+            )
+
+            return self.success_response(
+                message="Courses fetched successfully",
+                data={
+                    **response_data,
+                    "total_courses": courses.count(),
+                    "courses": course_serializer.data,
+                    "has_pdf_access": False,
+                    "bundle_pdf_url": None,
+                    "bundle_pdf_price": None,
+                }
+            )
 
     
 class BundleEnrollAPIView(APIView, APIResponseMixin):
