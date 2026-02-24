@@ -15,9 +15,10 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from user_part.views import page_not_found
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -28,7 +29,15 @@ urlpatterns = [
     # API URLs
     path('api/auth/', include('auth_app.urls')),
     path('api/courses/', include('course_api.urls')),
+    
+    # Catch-all pattern for 404 (must be last)
+    re_path(r'^.*/$', page_not_found),
+    re_path(r'^.*$', page_not_found),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Custom 404 handler (for when DEBUG = False)
+handler404 = page_not_found
+

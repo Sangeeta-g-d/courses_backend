@@ -1695,3 +1695,9 @@ def like_post(request, post_id):
         "liked": liked,
         "likes_count": post.likes
     })
+
+
+# Custom 404 Error Handler
+def page_not_found(request, exception=None):
+    """Custom 404 error handler"""
+    return render(request, '404.html', status=404)

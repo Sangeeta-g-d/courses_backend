@@ -1,0 +1,151 @@
+
+
+<style>
+    .error-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 70vh;
+        padding: 40px 20px;
+        text-align: center;
+    }
+
+    .error-code {
+        font-size: 120px;
+        font-weight: 700;
+        color: #ff6b6b;
+        margin: 0;
+        line-height: 1;
+        animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-20px);
+        }
+    }
+
+    .error-title {
+        font-size: 2.5rem;
+        font-weight: 600;
+        color: #333;
+        margin: 20px 0 10px;
+    }
+
+    .error-message {
+        font-size: 1.1rem;
+        color: #666;
+        margin-bottom: 30px;
+        max-width: 500px;
+    }
+
+    .error-icon {
+        font-size: 80px;
+        margin: 20px 0;
+        animation: rotate 3s linear infinite;
+    }
+
+    @keyframes rotate {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    .btn-back {
+        display: inline-block;
+        padding: 12px 40px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        margin: 10px;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+
+    .btn-back:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-home {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .btn-home:hover {
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .suggestions {
+        margin-top: 40px;
+        padding: 30px;
+        background: #f8f9fa;
+        border-radius: 15px;
+        max-width: 600px;
+    }
+
+    .suggestions h3 {
+        color: #333;
+        font-size: 1.3rem;
+        margin-bottom: 20px;
+    }
+
+    .suggestions ul {
+        list-style: none;
+        padding: 0;
+        text-align: left;
+    }
+
+    .suggestions li {
+        padding: 10px 0;
+        color: #555;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .suggestions li:last-child {
+        border-bottom: none;
+    }
+
+    .suggestions a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .suggestions a:hover {
+        text-decoration: underline;
+    }
+</style>
+
+<div class="error-container">
+    <div class="error-icon">🔍</div>
+    <h1 class="error-code">404</h1>
+    <h2 class="error-title">Page Not Found</h2>
+    <p class="error-message">
+        Sorry! We couldn't find the page you're looking for. It might have been moved or deleted.
+    </p>
+
+    <div>
+        <a href="/" class="btn-back btn-home">← Back to Home</a>
+        <button class="btn-back" onclick="javascript:history.back()">← Go Back</button>
+    </div>
+
+    <div class="suggestions">
+        <h3>What you can do:</h3>
+        <ul>
+            <li>📚 <a href="/">Visit the home page</a></li>
+            <li>🔍 Check the URL and try again</li>
+        </ul>
+    </div>
+</div>
+
