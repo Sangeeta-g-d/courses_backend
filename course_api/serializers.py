@@ -27,6 +27,8 @@ class BundleDetailSerializer(serializers.ModelSerializer):
             "is_published",
             "total_courses",
             "created_at",
+            "bundle_pdf",
+            "bundle_pdf_price"
         ]
 
     def get_thumbnail_url(self, obj):
