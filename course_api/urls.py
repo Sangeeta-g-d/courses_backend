@@ -20,5 +20,4 @@ urlpatterns = [
     path('continue-learning/', ContinueLearningAPIView.as_view(), name='continue-learning'),
 
     path("posts/", PostListAPIView.as_view(), name="post-list"),
-    path("posts/<int:post_id>/toggle-like/", TogglePostLikeAPIView.as_view(), name="toggle-post-like"),
 ]

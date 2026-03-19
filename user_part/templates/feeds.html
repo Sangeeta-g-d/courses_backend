@@ -285,7 +285,7 @@
             {% if item.type == "live" %}
                 🔴 Live Zoom Session
             {% else %}
-                {{ item.title|default:"Untitled Post" }}
+                Post #{{ item.id }}
             {% endif %}
         </h3>
         <div class="post-date">
@@ -361,13 +361,6 @@
 
         {% if item.type == "post" %}
         <div class="post-stats">
-            <!-- <div class="likes-count">
-                <button class="like-button" onclick="likePost({{ item.id }})">
-                    <i class="far fa-heart" id="like-icon-{{ item.id }}"></i>
-                </button>
-                <span id="likes-count-{{ item.id }}">{{ item.likes }}</span> likes
-            </div> -->
-
             <button class="like-button"
                     onclick="sharePost({{ item.id }})"
                     style="margin-left:auto;">
