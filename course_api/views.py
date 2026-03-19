@@ -173,7 +173,7 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
 
         # 🔹 Public PDF fields for client
         pdf_url = bundle_pdf_url if has_purchased_pdf and bundle_pdf_url else None
-        pdf_price = str(bundle.bundle_pdf_price) if bundle.bundle_pdf_price else None
+        pdf_price = bundle.bundle_pdf_price if bundle.bundle_pdf_price else None
 
         response_data = {
             "bundle_id": bundle.id,
