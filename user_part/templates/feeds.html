@@ -320,14 +320,14 @@
             {{ item.session_time|time:"g:i A" }}<br><br>
 
             <strong>Meeting URL:</strong>
-            <a href="{{ item.meeting_url }}" target="_blank"
+            <a href="{% url 'join_live_session_user' item.id %}" target="_blank"
                style="color:#58a4f5; text-decoration:underline;">
-                {{ item.meeting_url }}
+                Open Live Session
             </a>
             <br><br>
 
             {% if item.is_active %}
-                <a href="{{ item.meeting_url }}"
+                <a href="{% url 'join_live_session_user' item.id %}"
                    target="_blank"
                    class="btn btn-success btn-sm">
                     🔗 Join Now
