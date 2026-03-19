@@ -165,6 +165,19 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
             if bundle.bundle_pdf else None
         )
 
+        # 🔹 PDF availability on this bundle
+        has_pdf = bool(bundle.bundle_pdf or bundle.bundle_pdf_price)
+
+        # 🔹 Has user purchased PDF access?
+        has_purchases = bool(is_logged_in and has_pdf and has_pdf_access)
+
+        pdf_info = None
+        if has_purchases and bundle_pdf_url:
+            pdf_info = {
+                "pdf_url": bundle_pdf_url,
+                "pdf_price": bundle.bundle_pdf_price if bundle.bundle_pdf_price else None,
+            }
+
         response_data = {
             "bundle_id": bundle.id,
             "bundle_name": bundle.name,
@@ -182,6 +195,9 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
             "payment_status": payment_status,
             "progress_percentage": progress_percentage,
             "purchase_type": purchase_type,
+            "has_pdf": has_pdf,
+            "has_purchases": has_purchases,
+            "pdf_info": pdf_info,
         }
 
         if not is_enrolled or payment_status == 'pending':

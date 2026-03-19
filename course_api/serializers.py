@@ -7,7 +7,6 @@ import pytz
 
 class BundleDetailSerializer(serializers.ModelSerializer):
     thumbnail_url = serializers.SerializerMethodField()
-    bundle_pdf_url = serializers.SerializerMethodField()
     discounted_price = serializers.SerializerMethodField()
     already_enrolled = serializers.SerializerMethodField()
     total_courses = serializers.SerializerMethodField()
@@ -24,8 +23,6 @@ class BundleDetailSerializer(serializers.ModelSerializer):
             "short_description",
             "full_description",
             "thumbnail_url",
-            "bundle_pdf_url",
-            "bundle_pdf_price",
             "already_enrolled",
             "is_published",
             "total_courses",
@@ -36,12 +33,6 @@ class BundleDetailSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if obj.thumbnail and request:
             return request.build_absolute_uri(obj.thumbnail.url)
-        return None
-
-    def get_bundle_pdf_url(self, obj):
-        request = self.context.get("request")
-        if obj.bundle_pdf and request:
-            return request.build_absolute_uri(obj.bundle_pdf.url)
         return None
 
     def get_discounted_price(self, obj):
