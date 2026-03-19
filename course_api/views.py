@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from .pagination import PostPagination
 from rest_framework import status as drf_status
 from admin_part.models import Bundle, Enrollment, Course, PostLike, Post
+from admin_part.models import Banner
 from user_part.utils import get_user_rank, get_user_watch_time_rankings
 from .serializers import *
 from courses_backend.api_response import APIResponseMixin
@@ -1271,4 +1272,17 @@ class PostListAPIView(APIView, APIResponseMixin):
                 "pagination": pagination
             },
             status_code=drf_status.HTTP_200_OK
+        )
+
+
+class BannerListAPIView(APIView, APIResponseMixin):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        banners = Banner.objects.all().order_by("-created_at")
+        serializer = BannerSerializer(banners, many=True, context={"request": request})
+        return self.success_response(
+            message="Banner images fetched successfully",
+            data=serializer.data,
+            status_code=drf_status.HTTP_200_OK,
         )

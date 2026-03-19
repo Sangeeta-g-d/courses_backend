@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProgress, Lecture, Post
+from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProgress, Lecture, Post, Banner
 from django.db.models import Avg
 from django.utils import timezone
 import pytz
@@ -433,3 +433,17 @@ class PostSerializer(serializers.ModelSerializer):
         ist = pytz.timezone("Asia/Kolkata")
         ist_time = timezone.localtime(obj.created_at, ist)
         return ist_time.strftime("%d %b %Y, %I:%M %p")
+
+
+class BannerSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Banner
+        fields = ["id", "image", "created_at"]
+
+    def get_image(self, obj):
+        request = self.context.get("request")
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        return None

@@ -102,6 +102,12 @@
                 <span>Contact list</span>
             </a>
         </li>
+         <li class="sidebar-item {% if request.path == '/backend/banners/' %}active{% endif %}">
+            <a href="/backend/banners/" class="sidebar-link">
+                <i class="bi bi-image"></i>
+                <span>Banner Images</span>
+            </a>
+        </li>
                     </ul>
                 </div>
                 <button class="sidebar-toggler btn x"><i data-feather="x"></i></button>

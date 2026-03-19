@@ -44,6 +44,9 @@ urlpatterns = [
     path('total_enrollments/', views.total_enrollments, name='total_enrollments'),
     path('bundle_candidates/<int:bundle_id>/', views.view_bundle_candidates, name='view_bundle_candidates'),
     path('contact_list/', views.contact_list, name='contact_list'),
+    path('banners/', views.banner_list, name='banner_list'),
+    path('banners/add/', views.add_banner, name='add_banner'),
+    path('banners/<int:banner_id>/delete/', views.delete_banner, name='delete_banner'),
 
 
     # is_published toggle API urls

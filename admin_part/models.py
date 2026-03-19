@@ -369,6 +369,17 @@ class LiveSession(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Banner(models.Model):
+    image = models.ImageField(upload_to="banners/")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return f"Banner #{self.id}"
 # ---------------------------------------------------------
 # PAYMENT MODELS
 # ---------------------------------------------------------

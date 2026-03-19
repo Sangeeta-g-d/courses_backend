@@ -895,6 +895,38 @@ def contact_list(request):
     contacts = ContactMessage.objects.all().order_by('-created_at')
     return render(request, 'contact_list.html', {'contacts': contacts})
 
+
+@admin_required
+def banner_list(request):
+    banners = Banner.objects.all().order_by('-created_at')
+    return render(request, 'banner_list.html', {'banners': banners})
+
+
+@admin_required
+def add_banner(request):
+    if request.method == "POST":
+        image = request.FILES.get("image")
+        if not image:
+            messages.error(request, "Please upload an image.")
+            return redirect("add_banner")
+
+        Banner.objects.create(image=image)
+        messages.success(request, "Banner added successfully.")
+        return redirect("banner_list")
+
+    return render(request, "add_banner.html")
+
+
+@admin_required
+def delete_banner(request, banner_id):
+    banner = get_object_or_404(Banner, id=banner_id)
+    if request.method == "POST":
+        banner.delete()
+        messages.success(request, "Banner deleted successfully.")
+    else:
+        messages.error(request, "Invalid request.")
+    return redirect("banner_list")
+
 @admin_required
 def add_post(request):
     if request.method == "POST":

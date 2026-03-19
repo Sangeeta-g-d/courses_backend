@@ -20,4 +20,5 @@ urlpatterns = [
     path('continue-learning/', ContinueLearningAPIView.as_view(), name='continue-learning'),
 
     path("posts/", PostListAPIView.as_view(), name="post-list"),
+    path("banners/", BannerListAPIView.as_view(), name="banner-list"),
 ]

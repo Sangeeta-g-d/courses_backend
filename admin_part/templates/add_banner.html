@@ -1,0 +1,28 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+
+<div class="page-heading">
+    <h3>Add Banner Image</h3>
+</div>
+
+<div class="page-content mt-4">
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label">Banner Image</label>
+                    <input type="file" class="form-control" name="image" accept="image/*" required>
+                </div>
+
+                <button class="btn btn-primary">Save Banner</button>
+                <a href="{% url 'banner_list' %}" class="btn btn-secondary ms-2">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% include 'notify.html' %}
+{% endblock %}
+
