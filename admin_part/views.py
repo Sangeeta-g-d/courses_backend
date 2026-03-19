@@ -770,22 +770,29 @@ def add_live_session(request):
         agenda = request.POST.get('agenda')
         meeting_number = request.POST.get('meeting_number')
         passcode = request.POST.get('Passcode')
-        meeting_url = request.POST.get('meeting_url')  # Optional field
         session_date = request.POST.get('session_date')
         session_time = request.POST.get('session_time')
         session_type = request.POST.get('session_type', 'webinar')
         thumbnail = request.FILES.get('thumbnail')
 
-        LiveSession.objects.create(
+        session = LiveSession.objects.create(
             title=title,
             agenda=agenda,
             meeting_number=meeting_number,
             Passcode=passcode,
-            meeting_url=meeting_url,
             session_date=session_date,
             session_time=session_time,
             session_type=session_type,
             thumbnail=thumbnail
+        )
+
+        # Create a corresponding zoom post for this session
+        Post.objects.create(
+            caption=agenda or "",
+            image1=thumbnail,
+            post_type="zoom_post",
+            session=session,
+            is_active=True,
         )
         messages.success(request, "Live session added successfully.")
         return redirect('admin_live_sessions')
@@ -891,7 +898,6 @@ def contact_list(request):
 @admin_required
 def add_post(request):
     if request.method == "POST":
-        title = request.POST.get("title", "").strip()
         caption = request.POST.get("caption", "").strip()
         is_active = request.POST.get("is_active") == "on"
 
@@ -908,12 +914,12 @@ def add_post(request):
             return redirect("add_post")
 
         Post.objects.create(
-            title=title,
             caption=caption,
             image1=image1,
             image2=image2,
             image3=image3,
-            is_active=is_active
+            is_active=is_active,
+            post_type="post"
         )
 
         messages.success(request, "Post added successfully!")
@@ -934,7 +940,6 @@ def post_list(request):
         'stats': {
             'count': posts.count(),
             'active_count': posts.filter(is_active=True).count(),
-            'total_likes': posts.aggregate(Sum('likes'))['likes__sum'] or 0,
             'this_month_count': posts.filter(created_at__gte=first_day).count(),
         }
     }
@@ -958,7 +963,6 @@ def edit_post(request, id):
     post = get_object_or_404(Post, id=id)
 
     if request.method == "POST":
-        post.title = request.POST.get("title", "").strip()
         post.caption = request.POST.get("caption", "").strip()
         post.is_active = request.POST.get("is_active") == "on"
 

@@ -64,14 +64,6 @@
                         <div class="invalid-feedback"></div>
                     </div>
 
-                    <!-- Meeting URL (optional) -->
-                    <div class="col-md-6">
-                        <label for="meeting_url" class="form-label">Zoom Meeting URL (Optional)</label>
-                        <input type="url" class="form-control" id="meeting_url" name="meeting_url" 
-                               placeholder="Auto-filled or enter manually">
-                        <div class="invalid-feedback"></div>
-                    </div>
-
                     <!-- Session Type -->
                     <div class="col-md-6">
                         <label for="session_type" class="form-label">Session Type</label>
@@ -152,7 +144,6 @@ function createZoomMeeting() {
             // Auto-fill the form fields
             document.getElementById('meeting_number').value = data.data.meeting_id;
             document.getElementById('Passcode').value = data.data.passcode;
-            document.getElementById('meeting_url').value = data.data.join_url;
             
             // Show success message
             alert(`✓ Zoom Meeting Created!\n\nMeeting ID: ${data.data.meeting_id}\nPasscode: ${data.data.passcode}`);
@@ -179,7 +170,7 @@ function createZoomMeeting() {
 document.getElementById('addLiveSessionForm').addEventListener('submit', function(e) {
     let valid = true;
     const requiredFields = ['title', 'agenda', 'meeting_number', 'Passcode', 'session_date', 'session_time', 'thumbnail'];
-    const optionalFields = ['meeting_url'];
+    const optionalFields = [];
 
     requiredFields.forEach(function(id) {
         const input = document.getElementById(id);
