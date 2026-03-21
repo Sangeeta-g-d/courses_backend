@@ -111,7 +111,6 @@ class BundleListAPIView(APIView, APIResponseMixin):
             }
         )
     
-
 class BundleCoursesAPIView(APIView, APIResponseMixin):
     permission_classes = [AllowAny]
 
@@ -124,26 +123,26 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
                 status_code=drf_status.HTTP_404_NOT_FOUND
             )
 
-        # 🔹 Bundle thumbnail
+        # 🔹 Basic bundle data
         thumbnail_url = (
             request.build_absolute_uri(bundle.thumbnail.url)
             if bundle.thumbnail else None
         )
 
-        # � Bundle preview video
         preview_video_url = (
             request.build_absolute_uri(bundle.preview_video.url)
             if bundle.preview_video else None
         )
 
-        # �🔐 Auth & Enrollment Check
+        # 🔹 Auth check
         is_logged_in = request.user.is_authenticated
+
+        enrollment = None
         is_enrolled = False
-        enrollment_id = None
-        payment_status = None
-        progress_percentage = 0
         purchase_type = None
         has_pdf_access = False
+        payment_status = None
+        progress_percentage = 0
 
         if is_logged_in:
             enrollment = Enrollment.objects.filter(
@@ -155,26 +154,41 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
 
             if enrollment:
                 is_enrolled = True
-                enrollment_id = enrollment.id
-                payment_status = enrollment.payment_status
-                progress_percentage = enrollment.progress_percentage
                 purchase_type = enrollment.purchase_type
                 has_pdf_access = enrollment.has_pdf
+                payment_status = enrollment.payment_status
+                progress_percentage = enrollment.progress_percentage
 
+        # 🔹 Bundle PDF
         bundle_pdf_url = (
             request.build_absolute_uri(bundle.bundle_pdf.url)
             if bundle.bundle_pdf else None
         )
 
-        # 🔹 PDF availability on this bundle
         has_pdf = bool(bundle.bundle_pdf or bundle.bundle_pdf_price)
+        has_purchased_pdf = bool(is_enrolled and has_pdf_access)
 
-        # 🔹 Has user purchased PDF access?
-        has_purchased_pdf = bool(is_logged_in and has_pdf and has_pdf_access)
+        pdf_url = bundle_pdf_url if has_purchased_pdf else None
+        pdf_price = bundle.bundle_pdf_price or None
 
-        # 🔹 Public PDF fields for client
-        pdf_url = bundle_pdf_url if has_purchased_pdf and bundle_pdf_url else None
-        pdf_price = bundle.bundle_pdf_price if bundle.bundle_pdf_price else None
+        # 🔹 ALWAYS fetch courses (for preview / public view)
+        courses = Course.objects.filter(
+            bundle=bundle,
+            is_published=True
+        ).order_by('-created_at')
+
+        course_serializer = CourseSerializer(
+            courses,
+            many=True,
+            context={'request': request}
+        )
+
+        # 🔐 ACCESS CONTROL LOGIC
+        show_courses = True
+
+        # ❌ If user purchased ONLY PDF → hide courses
+        if is_enrolled and purchase_type == "pdf":
+            show_courses = False
 
         response_data = {
             "bundle_id": bundle.id,
@@ -187,77 +201,38 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
             "discount": bundle.discount,
             "discounted_price": bundle.get_discounted_price(),
             "is_free": bundle.is_free,
+
             "is_logged_in": is_logged_in,
             "is_enrolled": is_enrolled,
-            "enrollment_id": enrollment_id,
             "payment_status": payment_status,
             "progress_percentage": progress_percentage,
             "purchase_type": purchase_type,
+
             "has_pdf": has_pdf,
             "has_purchased_pdf": has_purchased_pdf,
             "pdf_url": pdf_url,
             "pdf_price": pdf_price,
+
+            # 🔥 KEY FIXES
+            "total_courses": courses.count() if show_courses else 0,
+            "courses": course_serializer.data if show_courses else [],
         }
 
-        if not is_enrolled or payment_status == 'pending':
-            return self.success_response(
-                message="Bundle information fetched successfully",
-                data={
-                    **response_data,
-                    "total_courses": 0,
-                    "courses": [],
-                }
-            )
-
-        if purchase_type == 'pdf':
-            return self.success_response(
-                message="PDF data fetched successfully",
-                data={
-                    **response_data,
-                    "total_courses": 0,
-                    "courses": [],
-                }
-            )
-
-        elif purchase_type == 'both':
-            courses = Course.objects.filter(
-                bundle=bundle
-            ).order_by('-created_at')
-
-            course_serializer = CourseSerializer(
-                courses,
-                many=True,
-                context={'request': request}
-            )
-
-            return self.success_response(
-                message="Courses and PDF fetched successfully",
-                data={
-                    **response_data,
-                    "total_courses": courses.count(),
-                    "courses": course_serializer.data,
-                }
-            )
-
+        # 🎯 Response message
+        if is_enrolled:
+            if purchase_type == "pdf":
+                message = "PDF access only"
+            elif purchase_type == "both":
+                message = "Courses + PDF access"
+            else:
+                message = "Course access"
         else:
-            courses = Course.objects.filter(
-                bundle=bundle
-            ).order_by('-created_at')
+            message = "Bundle preview data"
 
-            course_serializer = CourseSerializer(
-                courses,
-                many=True,
-                context={'request': request}
-            )
-
-            return self.success_response(
-                message="Courses fetched successfully",
-                data={
-                    **response_data,
-                    "total_courses": courses.count(),
-                    "courses": course_serializer.data,
-                }
-            )
+        return self.success_response(
+            message=message,
+            data=response_data
+        )
 
     
 class BundleEnrollAPIView(APIView, APIResponseMixin):
@@ -276,92 +251,101 @@ class BundleEnrollAPIView(APIView, APIResponseMixin):
                 status_code=drf_status.HTTP_404_NOT_FOUND
             )
 
-        # 2️⃣ Get purchase type from request (default: 'bundle')
-        purchase_type = request.data.get('purchase_type', 'bundle')
-        
-        # Validate purchase_type
-        valid_purchase_types = ['bundle', 'pdf', 'both']
+        # 2️⃣ Get purchase_type
+        purchase_type = request.data.get("purchase_type", "bundle").lower()
+
+        valid_purchase_types = ["bundle", "pdf", "both"]
         if purchase_type not in valid_purchase_types:
             return self.error_response(
-                f"Invalid purchase_type. Must be one of: {', '.join(valid_purchase_types)}",
+                f"Invalid purchase_type. Must be one of: {valid_purchase_types}",
                 status_code=drf_status.HTTP_400_BAD_REQUEST
             )
 
-        # 3️⃣ Calculate prices based on purchase_type
+        # 3️⃣ Prices
         bundle_price = bundle.get_discounted_price() if not bundle.is_free else 0
-        pdf_price = bundle.bundle_pdf_price if bundle.bundle_pdf_price else 0
-        
-        # Determine amount and has_pdf flag
-        if purchase_type == 'bundle':
-            amount_paid = bundle_price
-            has_pdf = False
-        elif purchase_type == 'pdf':
-            amount_paid = pdf_price
-            has_pdf = True
-        else:  # 'both'
-            amount_paid = bundle_price + pdf_price
-            has_pdf = True
+        pdf_price = bundle.bundle_pdf_price or 0
+
+        def calculate_amount(ptype):
+            if ptype == "bundle":
+                return bundle_price
+            elif ptype == "pdf":
+                return pdf_price
+            elif ptype == "both":
+                return bundle_price + pdf_price
+
+        requested_amount = calculate_amount(purchase_type)
 
         # 4️⃣ Check existing enrollment
         enrollment = Enrollment.objects.filter(
             user=user,
             bundle=bundle,
-            payment_status__in=['completed', 'free']
+            payment_status__in=["completed", "free"]
         ).first()
 
-        # 5️⃣ Handle upgrade scenario
+        is_upgrade = False
+
+        # 5️⃣ Handle existing enrollment (UPGRADE LOGIC)
         if enrollment:
-            old_purchase_type = enrollment.purchase_type
-            
-            # Check if this is an upgrade (not the same purchase type)
-            if old_purchase_type == purchase_type:
+            old_type = enrollment.purchase_type
+
+            # Already same purchase
+            if old_type == purchase_type:
                 return self.success_response(
                     message="Already enrolled with this purchase type",
                     data=EnrollmentSerializer(enrollment).data
                 )
 
-            # Calculate upgrade cost (difference between new and old)
-            old_amount = 0
-            if old_purchase_type == 'bundle':
-                old_amount = bundle_price
-            elif old_purchase_type == 'pdf':
-                old_amount = pdf_price
-            else:  # 'both'
-                old_amount = bundle_price + pdf_price
+            # 🔥 Merge purchase types correctly
+            if {old_type, purchase_type} == {"bundle", "pdf"}:
+                new_type = "both"
+            elif purchase_type == "both":
+                new_type = "both"
+            else:
+                new_type = purchase_type
 
-            # Upgrade amount is the difference
-            upgrade_amount = max(0, amount_paid - old_amount)
+            new_amount = calculate_amount(new_type)
+            old_amount = enrollment.amount_paid
 
-            # Update existing enrollment with new purchase type
-            enrollment.purchase_type = purchase_type
-            enrollment.has_pdf = has_pdf
-            enrollment.amount_paid = upgrade_amount  # Store only the upgrade cost
-            enrollment.payment_status = 'pending'
+            upgrade_amount = max(0, new_amount - old_amount)
+
+            # Update enrollment
+            enrollment.purchase_type = new_type
+            enrollment.has_pdf = new_type in ["pdf", "both"]
+            enrollment.amount_paid = upgrade_amount
+            enrollment.payment_status = "pending"
             enrollment.razorpay_order_id = None
-            enrollment.save(update_fields=['purchase_type', 'has_pdf', 'amount_paid', 'payment_status', 'razorpay_order_id'])
+            enrollment.save(
+                update_fields=[
+                    "purchase_type",
+                    "has_pdf",
+                    "amount_paid",
+                    "payment_status",
+                    "razorpay_order_id"
+                ]
+            )
 
             is_upgrade = True
             amount_for_order = upgrade_amount
+
         else:
-            # 6️⃣ Create new enrollment
-            is_free_purchase = bundle.is_free and purchase_type == 'bundle'
-            
-            payment_status = 'free' if is_free_purchase else 'pending'
+            # 6️⃣ New enrollment
+            is_free_purchase = bundle.is_free and purchase_type == "bundle"
+
+            payment_status = "free" if is_free_purchase else "pending"
 
             enrollment = Enrollment.objects.create(
                 user=user,
                 bundle=bundle,
                 purchase_type=purchase_type,
-                has_pdf=has_pdf,
+                has_pdf=purchase_type in ["pdf", "both"],
                 payment_status=payment_status,
-                amount_paid=amount_paid
+                amount_paid=requested_amount
             )
 
-            is_upgrade = False
-            amount_for_order = amount_paid
+            amount_for_order = requested_amount
 
-        # 7️⃣ If FREE purchase → done
-        if enrollment.payment_status == 'free':
+        # 7️⃣ FREE enrollment
+        if enrollment.payment_status == "free":
             return self.success_response(
                 message="Enrollment successful (Free)",
                 data={
@@ -372,10 +356,10 @@ class BundleEnrollAPIView(APIView, APIResponseMixin):
                 status_code=drf_status.HTTP_201_CREATED
             )
 
-        # 8️⃣ If amount is 0 (nothing to pay) → complete enrollment
+        # 8️⃣ No payment required (upgrade = 0)
         if amount_for_order <= 0:
-            enrollment.payment_status = 'completed'
-            enrollment.save(update_fields=['payment_status'])
+            enrollment.payment_status = "completed"
+            enrollment.save(update_fields=["payment_status"])
 
             return self.success_response(
                 message="Enrollment completed successfully",
@@ -387,7 +371,7 @@ class BundleEnrollAPIView(APIView, APIResponseMixin):
                 status_code=drf_status.HTTP_201_CREATED
             )
 
-        # 9️⃣ PAID purchase → Create Razorpay Order
+        # 9️⃣ Razorpay Order Creation
         client = razorpay.Client(
             auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
         )
@@ -400,7 +384,7 @@ class BundleEnrollAPIView(APIView, APIResponseMixin):
             "payment_capture": 1
         })
 
-        # 🔟 Store Razorpay Order ID
+        # 🔟 Save order id
         enrollment.razorpay_order_id = razorpay_order["id"]
         enrollment.save(update_fields=["razorpay_order_id"])
 
@@ -419,7 +403,6 @@ class BundleEnrollAPIView(APIView, APIResponseMixin):
             },
             status_code=drf_status.HTTP_201_CREATED
         )
-    
 
 class VerifyRazorpayPaymentAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
