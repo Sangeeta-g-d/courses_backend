@@ -5,7 +5,7 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from django.shortcuts import get_object_or_404
 from .pagination import PostPagination
 from rest_framework import status as drf_status
-from admin_part.models import Bundle, Enrollment, Course, PostLike, Post
+from admin_part.models import Bundle, Enrollment, Course, Post
 from admin_part.models import Banner
 from user_part.utils import get_user_rank, get_user_watch_time_rankings
 from .serializers import *
@@ -123,7 +123,7 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
                 status_code=drf_status.HTTP_404_NOT_FOUND
             )
 
-        # 🔹 Basic bundle data
+        # 🔹 Bundle media
         thumbnail_url = (
             request.build_absolute_uri(bundle.thumbnail.url)
             if bundle.thumbnail else None
@@ -134,15 +134,19 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
             if bundle.preview_video else None
         )
 
+        bundle_pdf_url = (
+            request.build_absolute_uri(bundle.bundle_pdf.url)
+            if bundle.bundle_pdf else None
+        )
+
         # 🔹 Auth check
         is_logged_in = request.user.is_authenticated
 
-        enrollment = None
         is_enrolled = False
         purchase_type = None
-        has_pdf_access = False
         payment_status = None
         progress_percentage = 0
+        has_pdf_access = False
 
         if is_logged_in:
             enrollment = Enrollment.objects.filter(
@@ -155,23 +159,15 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
             if enrollment:
                 is_enrolled = True
                 purchase_type = enrollment.purchase_type
-                has_pdf_access = enrollment.has_pdf
                 payment_status = enrollment.payment_status
                 progress_percentage = enrollment.progress_percentage
+                has_pdf_access = enrollment.has_pdf
 
-        # 🔹 Bundle PDF
-        bundle_pdf_url = (
-            request.build_absolute_uri(bundle.bundle_pdf.url)
-            if bundle.bundle_pdf else None
-        )
-
+        # 🔹 PDF info
         has_pdf = bool(bundle.bundle_pdf or bundle.bundle_pdf_price)
-        has_purchased_pdf = bool(is_enrolled and has_pdf_access)
-
-        pdf_url = bundle_pdf_url if has_purchased_pdf else None
         pdf_price = bundle.bundle_pdf_price or None
 
-        # 🔹 ALWAYS fetch courses (for preview / public view)
+        # 🔹 Fetch courses (ALWAYS fetch)
         courses = Course.objects.filter(
             bundle=bundle,
             is_published=True
@@ -183,20 +179,50 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
             context={'request': request}
         )
 
-        # 🔐 ACCESS CONTROL LOGIC
+        # =====================================================
+        # 🔐 ACCESS CONTROL LOGIC (FINAL)
+        # =====================================================
         show_courses = True
+        show_pdf = False
 
-        # ❌ If user purchased ONLY PDF → hide courses
-        if is_enrolled and purchase_type == "pdf":
-            show_courses = False
+        if not is_logged_in:
+            # Public preview
+            show_courses = True
+            show_pdf = False
 
+        elif is_logged_in and not is_enrolled:
+            # Logged in but not purchased
+            show_courses = True
+            show_pdf = False
+
+        elif is_enrolled:
+            if purchase_type == "bundle":
+                show_courses = True
+                show_pdf = False
+
+            elif purchase_type == "pdf":
+                show_courses = False
+                show_pdf = True
+
+            elif purchase_type == "both":
+                show_courses = True
+                show_pdf = True
+
+        # 🔹 Final PDF URL based on access
+        pdf_url = bundle_pdf_url if show_pdf else None
+
+        # =====================================================
+        # 📦 RESPONSE DATA
+        # =====================================================
         response_data = {
             "bundle_id": bundle.id,
             "bundle_name": bundle.name,
             "bundle_thumbnail": thumbnail_url,
             "bundle_preview_video": preview_video_url,
+
             "short_description": bundle.short_description,
             "full_description": bundle.full_description,
+
             "price": bundle.price,
             "discount": bundle.discount,
             "discounted_price": bundle.get_discounted_price(),
@@ -204,21 +230,20 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
 
             "is_logged_in": is_logged_in,
             "is_enrolled": is_enrolled,
+            "purchase_type": purchase_type,
             "payment_status": payment_status,
             "progress_percentage": progress_percentage,
-            "purchase_type": purchase_type,
 
             "has_pdf": has_pdf,
-            "has_purchased_pdf": has_purchased_pdf,
+            "has_purchased_pdf": has_pdf_access,
             "pdf_url": pdf_url,
             "pdf_price": pdf_price,
 
-            # 🔥 KEY FIXES
             "total_courses": courses.count() if show_courses else 0,
             "courses": course_serializer.data if show_courses else [],
         }
 
-        # 🎯 Response message
+        # 🔹 Message
         if is_enrolled:
             if purchase_type == "pdf":
                 message = "PDF access only"

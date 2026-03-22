@@ -20,7 +20,7 @@ def find_ffmpeg_binary_windows(name):
 
     common_paths = [
         r"C:\ffmpeg\bin",
-        r"C:\ffmpeg-8.0-essentials_build\bin",
+        r"C:\ffmpeg-8.1-essentials_build\bin",
         r"C:\Program Files\ffmpeg\bin",
         r"C:\Program Files (x86)\ffmpeg\bin",
     ]
