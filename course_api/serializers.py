@@ -357,7 +357,6 @@ class CourseListSerializer(serializers.ModelSerializer):
     
 
 # enrolled bundles
-
 class EnrolledBundleSerializer(serializers.ModelSerializer):
     bundle_id = serializers.IntegerField(source='bundle.id', read_only=True)
     bundle_name = serializers.CharField(source='bundle.name', read_only=True)
@@ -367,6 +366,7 @@ class EnrolledBundleSerializer(serializers.ModelSerializer):
         read_only=True
     )
     discounted_price = serializers.SerializerMethodField()
+    purchase_type = serializers.CharField(read_only=True)  # ✅ Added
 
     class Meta:
         model = Enrollment
@@ -379,6 +379,7 @@ class EnrolledBundleSerializer(serializers.ModelSerializer):
             'amount_paid',
             'discounted_price',
             'progress_percentage',
+            'purchase_type',  # ✅ Added
             'enrolled_at',
         ]
 
@@ -390,7 +391,6 @@ class EnrolledBundleSerializer(serializers.ModelSerializer):
 
     def get_discounted_price(self, obj):
         return obj.bundle.get_discounted_price()
-    
 
 class PostSerializer(serializers.ModelSerializer):
     image1 = serializers.SerializerMethodField()

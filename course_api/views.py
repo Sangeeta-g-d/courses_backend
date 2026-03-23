@@ -110,7 +110,6 @@ class BundleListAPIView(APIView, APIResponseMixin):
                 "pagination": pagination
             }
         )
-    
 class BundleCoursesAPIView(APIView, APIResponseMixin):
     permission_classes = [AllowAny]
 
@@ -123,7 +122,9 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
                 status_code=drf_status.HTTP_404_NOT_FOUND
             )
 
+        # =====================================================
         # 🔹 Bundle media
+        # =====================================================
         thumbnail_url = (
             request.build_absolute_uri(bundle.thumbnail.url)
             if bundle.thumbnail else None
@@ -139,35 +140,71 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
             if bundle.bundle_pdf else None
         )
 
+        # =====================================================
         # 🔹 Auth check
+        # =====================================================
         is_logged_in = request.user.is_authenticated
 
+        enrollments = []
         is_enrolled = False
         purchase_type = None
         payment_status = None
         progress_percentage = 0
         has_pdf_access = False
+        has_bundle_access = False
 
         if is_logged_in:
-            enrollment = Enrollment.objects.filter(
+            enrollments = Enrollment.objects.filter(
                 user=request.user,
                 bundle=bundle,
                 is_active=True,
                 payment_status__in=['completed', 'free']
-            ).first()
+            )
 
-            if enrollment:
-                is_enrolled = True
-                purchase_type = enrollment.purchase_type
+        # =====================================================
+        # 🔹 HANDLE MULTIPLE ENROLLMENTS
+        # =====================================================
+        if enrollments.exists():
+            is_enrolled = True
+
+            for enrollment in enrollments:
+                # Bundle access
+                if enrollment.purchase_type in ["bundle", "both"]:
+                    has_bundle_access = True
+
+                # PDF access
+                if enrollment.purchase_type in ["pdf", "both"]:
+                    has_pdf_access = True
+
+                # Track latest progress (max)
+                progress_percentage = max(
+                    progress_percentage,
+                    enrollment.progress_percentage
+                )
+
                 payment_status = enrollment.payment_status
-                progress_percentage = enrollment.progress_percentage
-                has_pdf_access = enrollment.has_pdf
 
-        # 🔹 PDF info
+        # =====================================================
+        # 🔹 FINAL PURCHASE TYPE DERIVATION
+        # =====================================================
+        if has_bundle_access and has_pdf_access:
+            purchase_type = "both"
+        elif has_bundle_access:
+            purchase_type = "bundle"
+        elif has_pdf_access:
+            purchase_type = "pdf"
+        else:
+            purchase_type = None
+
+        # =====================================================
+        # 🔹 PDF INFO
+        # =====================================================
         has_pdf = bool(bundle.bundle_pdf or bundle.bundle_pdf_price)
         pdf_price = bundle.bundle_pdf_price or None
 
-        # 🔹 Fetch courses (ALWAYS fetch)
+        # =====================================================
+        # 🔹 FETCH COURSES (ALWAYS FETCH)
+        # =====================================================
         courses = Course.objects.filter(
             bundle=bundle,
             is_published=True
@@ -180,35 +217,33 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
         )
 
         # =====================================================
-        # 🔐 ACCESS CONTROL LOGIC (FINAL)
+        # 🔐 ACCESS CONTROL LOGIC
         # =====================================================
-        show_courses = True
+        show_courses = False
         show_pdf = False
 
         if not is_logged_in:
             # Public preview
             show_courses = True
-            show_pdf = False
 
-        elif is_logged_in and not is_enrolled:
+        elif not is_enrolled:
             # Logged in but not purchased
             show_courses = True
-            show_pdf = False
 
-        elif is_enrolled:
+        else:
             if purchase_type == "bundle":
                 show_courses = True
-                show_pdf = False
 
             elif purchase_type == "pdf":
-                show_courses = False
                 show_pdf = True
 
             elif purchase_type == "both":
                 show_courses = True
                 show_pdf = True
 
-        # 🔹 Final PDF URL based on access
+        # =====================================================
+        # 🔹 FINAL PDF URL
+        # =====================================================
         pdf_url = bundle_pdf_url if show_pdf else None
 
         # =====================================================
@@ -243,7 +278,9 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
             "courses": course_serializer.data if show_courses else [],
         }
 
-        # 🔹 Message
+        # =====================================================
+        # 🔹 MESSAGE
+        # =====================================================
         if is_enrolled:
             if purchase_type == "pdf":
                 message = "PDF access only"
@@ -258,7 +295,6 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
             message=message,
             data=response_data
         )
-
     
 class BundleEnrollAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
@@ -945,17 +981,19 @@ class CourseListAPIView(APIView, APIResponseMixin):
             status_code=drf_status.HTTP_200_OK
         )
 
+from collections import OrderedDict
+import math
 
 class EnrolledBundleListAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # Get query parameters with defaults and validation
+        # 🔹 Pagination params
         try:
             page = int(request.query_params.get('page', 1))
             if page < 1:
                 page = 1
-        except (ValueError, TypeError):
+        except:
             page = 1
 
         try:
@@ -963,46 +1001,79 @@ class EnrolledBundleListAPIView(APIView, APIResponseMixin):
             if page_size < 1:
                 page_size = 20
             elif page_size > 100:
-                page_size = 100  # Maximum limit to prevent performance issues
-        except (ValueError, TypeError):
+                page_size = 100
+        except:
             page_size = 20
 
-        # Get all enrolled bundles for the user
+        # 🔹 Fetch enrollments
         enrollments_queryset = Enrollment.objects.filter(
             user=request.user,
-            is_active=True
-        ).select_related(
-            'bundle'
-        ).prefetch_related(
-            'bundle__courses'
-        ).order_by('-enrolled_at')
+            is_active=True,
+            payment_status__in=['completed', 'free']
+        ).select_related('bundle').prefetch_related('bundle__courses').order_by('-enrolled_at')
 
-        # Calculate total items
-        total_items = enrollments_queryset.count()
+        # =====================================================
+        # 🔥 MERGE ENROLLMENTS BY BUNDLE
+        # =====================================================
+        bundle_map = OrderedDict()
 
-        # Calculate pagination values
+        for enrollment in enrollments_queryset:
+            bundle_id = enrollment.bundle.id
+
+            if bundle_id not in bundle_map:
+                bundle_map[bundle_id] = enrollment
+            else:
+                existing = bundle_map[bundle_id]
+
+                # 🔹 Merge purchase_type
+                types = {existing.purchase_type, enrollment.purchase_type}
+
+                if "both" in types or ("bundle" in types and "pdf" in types):
+                    existing.purchase_type = "both"
+                elif "bundle" in types:
+                    existing.purchase_type = "bundle"
+                elif "pdf" in types:
+                    existing.purchase_type = "pdf"
+
+                # 🔹 Max progress
+                existing.progress_percentage = max(
+                    existing.progress_percentage,
+                    enrollment.progress_percentage
+                )
+
+                # 🔹 Sum amount
+                existing.amount_paid += enrollment.amount_paid
+
+                # 🔹 Latest payment status (optional override)
+                existing.payment_status = enrollment.payment_status
+
+        # Convert to list
+        merged_enrollments = list(bundle_map.values())
+
+        # =====================================================
+        # 🔹 Pagination
+        # =====================================================
+        total_items = len(merged_enrollments)
         total_pages = math.ceil(total_items / page_size) if total_items > 0 else 0
 
-        # Handle edge cases: page > totalPages or page < 1
         if page > total_pages and total_pages > 0:
             page = total_pages
-        if page < 1:
-            page = 1
 
-        # Calculate slice indices
         start_index = (page - 1) * page_size
         end_index = start_index + page_size
 
-        # Slice the queryset
-        paginated_enrollments = enrollments_queryset[start_index:end_index]
+        paginated_enrollments = merged_enrollments[start_index:end_index]
 
+        # =====================================================
+        # 🔹 Serializer
+        # =====================================================
         serializer = EnrolledBundleSerializer(
             paginated_enrollments,
             many=True,
             context={'request': request}
         )
 
-        # Build pagination metadata
+        # 🔹 Pagination metadata
         pagination = {
             "current_page": page,
             "page_size": page_size,
