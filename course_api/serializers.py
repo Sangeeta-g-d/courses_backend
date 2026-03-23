@@ -382,7 +382,7 @@ class EnrolledBundleSerializer(serializers.ModelSerializer):
             'discounted_price',
             'progress_percentage',
             'purchase_type',
-            'courses',   # ✅ NEW
+            # 'courses',   # ✅ NEW
             'enrolled_at',
         ]
 
@@ -395,20 +395,20 @@ class EnrolledBundleSerializer(serializers.ModelSerializer):
     def get_discounted_price(self, obj):
         return obj.bundle.get_discounted_price()
 
-    def get_courses(self, obj):
-        """
-        Show courses only if user has bundle access
-        """
-        if obj.purchase_type in ["bundle", "both"]:
-            courses = obj.bundle.courses.filter(is_published=True)
+    # def get_courses(self, obj):
+    #     """
+    #     Show courses only if user has bundle access
+    #     """
+    #     if obj.purchase_type in ["bundle", "both"]:
+    #         courses = obj.bundle.courses.filter(is_published=True)
 
-            return CourseSerializer(
-                courses,
-                many=True,
-                context=self.context
-            ).data
+    #         return CourseSerializer(
+    #             courses,
+    #             many=True,
+    #             context=self.context
+    #         ).data
 
-        return []  # ❌ No courses for PDF-only users
+    #     return []  # ❌ No courses for PDF-only users
 
 
 
