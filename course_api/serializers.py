@@ -368,7 +368,6 @@ class EnrolledBundleSerializer(serializers.ModelSerializer):
     discounted_price = serializers.SerializerMethodField()
     purchase_type = serializers.CharField(read_only=True)
 
-    courses = serializers.SerializerMethodField()  # ✅ NEW
 
     class Meta:
         model = Enrollment
