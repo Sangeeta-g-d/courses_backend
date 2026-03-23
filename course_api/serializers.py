@@ -366,7 +366,9 @@ class EnrolledBundleSerializer(serializers.ModelSerializer):
         read_only=True
     )
     discounted_price = serializers.SerializerMethodField()
-    purchase_type = serializers.CharField(read_only=True)  # ✅ Added
+    purchase_type = serializers.CharField(read_only=True)
+
+    courses = serializers.SerializerMethodField()  # ✅ NEW
 
     class Meta:
         model = Enrollment
@@ -379,7 +381,8 @@ class EnrolledBundleSerializer(serializers.ModelSerializer):
             'amount_paid',
             'discounted_price',
             'progress_percentage',
-            'purchase_type',  # ✅ Added
+            'purchase_type',
+            'courses',   # ✅ NEW
             'enrolled_at',
         ]
 
@@ -391,6 +394,26 @@ class EnrolledBundleSerializer(serializers.ModelSerializer):
 
     def get_discounted_price(self, obj):
         return obj.bundle.get_discounted_price()
+
+    def get_courses(self, obj):
+        """
+        Show courses only if user has bundle access
+        """
+        if obj.purchase_type in ["bundle", "both"]:
+            courses = obj.bundle.courses.filter(is_published=True)
+
+            return CourseSerializer(
+                courses,
+                many=True,
+                context=self.context
+            ).data
+
+        return []  # ❌ No courses for PDF-only users
+
+
+
+
+        
 
 class PostSerializer(serializers.ModelSerializer):
     image1 = serializers.SerializerMethodField()

@@ -145,7 +145,7 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
         # =====================================================
         is_logged_in = request.user.is_authenticated
 
-        enrollments = []
+        enrollments = None
         is_enrolled = False
         purchase_type = None
         payment_status = None
@@ -164,7 +164,7 @@ class BundleCoursesAPIView(APIView, APIResponseMixin):
         # =====================================================
         # 🔹 HANDLE MULTIPLE ENROLLMENTS
         # =====================================================
-        if enrollments.exists():
+        if enrollments and enrollments.exists():
             is_enrolled = True
 
             for enrollment in enrollments:
@@ -983,6 +983,9 @@ class CourseListAPIView(APIView, APIResponseMixin):
 
 from collections import OrderedDict
 import math
+from collections import OrderedDict
+import math
+from django.db.models import Prefetch
 
 class EnrolledBundleListAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
@@ -1005,12 +1008,17 @@ class EnrolledBundleListAPIView(APIView, APIResponseMixin):
         except:
             page_size = 20
 
-        # 🔹 Fetch enrollments
+        # 🔹 Fetch enrollments with optimized course prefetch
         enrollments_queryset = Enrollment.objects.filter(
             user=request.user,
             is_active=True,
             payment_status__in=['completed', 'free']
-        ).select_related('bundle').prefetch_related('bundle__courses').order_by('-enrolled_at')
+        ).select_related('bundle').prefetch_related(
+            Prefetch(
+                'bundle__courses',
+                queryset=Course.objects.filter(is_published=True)
+            )
+        ).order_by('-enrolled_at')
 
         # =====================================================
         # 🔥 MERGE ENROLLMENTS BY BUNDLE
@@ -1044,7 +1052,7 @@ class EnrolledBundleListAPIView(APIView, APIResponseMixin):
                 # 🔹 Sum amount
                 existing.amount_paid += enrollment.amount_paid
 
-                # 🔹 Latest payment status (optional override)
+                # 🔹 Latest payment status
                 existing.payment_status = enrollment.payment_status
 
         # Convert to list
@@ -1091,8 +1099,6 @@ class EnrolledBundleListAPIView(APIView, APIResponseMixin):
             },
             status_code=drf_status.HTTP_200_OK
         )
-
-
 # user profile stats
 class UserProfileStatsAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
