@@ -1722,3 +1722,7 @@ class DeleteAccountView(View):
         else:
             messages.error(request, "Invalid email or password.")
             return redirect('delete_account')
+
+
+def privacy(request):
+    return render(request,'privacy.html')

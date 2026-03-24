@@ -56,4 +56,5 @@ urlpatterns = [
     path('like-post/<int:post_id>/', views.like_post, name='like_post'),
 
     path('delete-account/', views.DeleteAccountView.as_view(), name='delete_account'),
+    path('privacy-policy/',views.privacy,name="privacy")
 ]
