@@ -54,4 +54,6 @@ urlpatterns = [
 
     path('', views.feeds, name='feeds'),
     path('like-post/<int:post_id>/', views.like_post, name='like_post'),
+
+    path('delete-account/', views.DeleteAccountView.as_view(), name='delete_account'),
 ]

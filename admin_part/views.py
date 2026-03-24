@@ -1015,21 +1015,3 @@ def edit_post(request, id):
     return render(request, "edit_post.html", {"post": post})
 
 
-
-class DeleteAccountView(View):
-    def get(self, request):
-        return render(request, 'delete_account.html')
-
-    def post(self, request):
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-
-        user = authenticate(request, email=email, password=password)
-
-        if user is not None:
-            user.delete()
-            messages.success(request, "Your account has been deleted successfully.")
-            return redirect('delete_account')  # or login/home page
-        else:
-            messages.error(request, "Invalid email or password.")
-            return redirect('delete_account')
