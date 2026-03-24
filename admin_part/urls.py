@@ -57,6 +57,9 @@ urlpatterns = [
     path('post_list/', views.post_list, name='post_list'),
     path('delete_post/<int:id>/', views.delete_post, name='delete_post'),
     path('edit_post/<int:id>/', views.edit_post, name='edit_post'),
+
+
+    path('delete-account/', views.DeleteAccountView.as_view(), name='delete_account'),
     
     
    
