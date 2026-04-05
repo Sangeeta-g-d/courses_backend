@@ -8,7 +8,7 @@ from course_api.utils import get_user_watch_time_rankings, get_user_rank
 from admin_part.models import Enrollment, Course, UserProgress
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
-
+from rest_framework.response import Response
 from rest_framework import status as drf_status
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -578,3 +578,19 @@ class ResetPasswordAPIView(APIResponseMixin, APIView):
             except CustomUser.DoesNotExist:
                 return self.error_response(message="User not found", status_code=status.HTTP_400_BAD_REQUEST)
         return self.error_response(errors=serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class AppVersionAPIView(APIView):
+
+    def get(self, request):
+        data = {
+            "status": "200",
+            "message": "App version metadata",
+            "Response": {
+                "latest_app_version": 2,
+                "minimum_app_version": 1
+            }
+        }
+        return Response(data, status=status.HTTP_200_OK)
