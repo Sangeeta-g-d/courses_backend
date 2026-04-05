@@ -222,3 +222,23 @@ class ZoomTokenRequestSerializer(serializers.Serializer):
         if len(value) > 100:
             raise serializers.ValidationError("User display name is too long (max 100 characters)")
         return value.strip()
+
+
+# Forgot Password Serializers
+class RequestOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+class VerifyOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+
+class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(min_length=8)
+    confirm_password = serializers.CharField(min_length=8)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError("Passwords do not match")
+        return attrs

@@ -14,4 +14,9 @@ urlpatterns = [
 
     path("forgot-password/", views.ForgotPasswordAPI.as_view(), name="forgot_password_api"),
     path("reset-password/<uidb64>/<token>/",views.ResetPasswordAPI.as_view(),name="reset_password_api"),
+
+    # OTP forgot password
+    path('request-otp/', views.RequestOTPAPIView.as_view(), name='request_otp'),
+    path('verify-otp/', views.VerifyOTPAPIView.as_view(), name='verify_otp'),
+    path('reset-password-otp/', views.ResetPasswordAPIView.as_view(), name='reset_password_otp'),
 ]
