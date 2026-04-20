@@ -234,6 +234,14 @@
         console.log("[DEBUG] SDK_KEY:", SDK_KEY ? "✓ Present" : "✗ Missing");
         console.log("[DEBUG] Meeting Number:", MEETING_NUMBER);
         console.log("[DEBUG] Role:", ROLE);
+        console.log("[DEBUG] User Email:", USER_EMAIL);
+
+        // Check if user email is required and present
+        if (ROLE === 0 && (!USER_EMAIL || USER_EMAIL.trim() === '')) {
+          alert('User email is required to join as attendee. Please update your profile with a valid email.');
+          status.textContent = "Email required for attendees";
+          return;
+        }
 
         // Wait for ZoomMtg to be available
         let attempts = 0;
@@ -286,7 +294,6 @@
             
             ZoomMtg.join({
               signature: signature,
-              sdkKey: SDK_KEY,
               meetingNumber: MEETING_NUMBER,
               passWord: PASSCODE,
               userName: DISPLAY_NAME,

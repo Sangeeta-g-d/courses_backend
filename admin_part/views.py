@@ -871,21 +871,25 @@ def zoom_sdk_signature(request):
     exp = iat + 60 * 60 * 2  # 2 hours
 
     payload = {
-        "appKey": sdk_key,
-        "sdkKey": sdk_key,
-        "mn": meeting_number,
-        "role": role,
-        "iat": iat,
+        "iss": sdk_key,
         "exp": exp,
-        "tokenExp": exp
+        "iat": iat,
+        "aud": "zoom",
+        "appKey": sdk_key,
+        "tokenExp": exp,
+        "mn": str(meeting_number).strip(),
+        "role": role,
+        "video_webrtc_mode": 1
     }
 
     try:
         signature = jwt.encode(payload, sdk_secret, algorithm="HS256")
         if isinstance(signature, bytes):
             signature = signature.decode("utf-8")
+        print(f"[ZOOM_SIG] Generated signature for meeting {meeting_number}, role {role}, length {len(signature)}")
         return JsonResponse({"signature": signature, "meetingNumber": meeting_number})
     except Exception as e:
+        print(f"[ZOOM_SIG] Error generating signature: {e}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
