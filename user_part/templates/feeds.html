@@ -283,7 +283,11 @@
     <div class="card-header">
         <h3 class="post-title">
             {% if item.type == "live" %}
-                🔴 Live Zoom Session
+                {% if item.session_type == "webinar" %}
+                    🔴 Live Webinar: {{ item.title }}
+                {% else %}
+                    🔴 Live Meeting: {{ item.title }}
+                {% endif %}
             {% else %}
                 Post #{{ item.id }}
             {% endif %}
@@ -313,6 +317,7 @@
 
         {% if item.type == "live" %}
         <div class="caption expanded">
+            <strong>Type:</strong> {{ item.get_session_type_display }}<br>
             <strong>Agenda:</strong> {{ item.agenda }}<br><br>
 
             <strong>Date & Time:</strong>
@@ -334,7 +339,7 @@
                 </a>
           {% else %}
 <div style="display:flex; align-items:center; justify-content:space-between;">
-    <span class="text-muted">⏰ Meeting not active</span>
+    <span class="text-muted">⏰ Session not active</span>
 
     <button class="like-button"
             onclick="sharePost({{ item.id }})">
