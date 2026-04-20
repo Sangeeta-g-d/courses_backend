@@ -93,7 +93,7 @@
     const SDK_KEY = "{{ zoom_sdk_key }}";
     const MEETING_NUMBER = "{{ session.meeting_number }}";
     const PASSCODE = "{{ session.Passcode }}";
-    const USER_EMAIL = "{{ request.user.email|default:'' }}";
+    const USER_EMAIL = "{{ request.user.email|default:'host@example.com' }}";
     const ROLE = 1;  // 1 = Host (admin)
     const LEAVE_URL = "/admin_part/admin_live_sessions/";
 

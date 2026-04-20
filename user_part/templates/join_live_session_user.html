@@ -171,7 +171,7 @@
     const SDK_KEY = "{{ zoom_sdk_key }}";
     const MEETING_NUMBER = "{{ session.meeting_number }}";
     const PASSCODE = "{{ session.Passcode }}";
-    const USER_EMAIL = "{{ request.user.email|default:'' }}";
+    const USER_EMAIL = "{{ request.user.email|default:'attendee@example.com' }}";
     const ROLE = 0;  // 0 = Attendee (user)
     const LEAVE_URL = "/meetings/";
 
@@ -234,6 +234,8 @@
         console.log("[DEBUG] SDK_KEY:", SDK_KEY ? "✓ Present" : "✗ Missing");
         console.log("[DEBUG] Meeting Number:", MEETING_NUMBER);
         console.log("[DEBUG] Role:", ROLE);
+        console.log("[DEBUG] User Email:", USER_EMAIL);
+        console.log("[DEBUG] Passcode:", PASSCODE ? "✓ Present" : "✗ Missing");
         console.log("[DEBUG] User Email:", USER_EMAIL);
 
         // Check if user email is required and present
