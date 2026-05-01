@@ -7,6 +7,9 @@ from django.core.files.base import ContentFile
 from .models import Lecture
 from .utils import convert_to_hls, get_video_duration
 import shutil
+from datetime import timedelta
+from django.utils import timezone
+from zoneinfo import ZoneInfo
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=30, retry_kwargs={"max_retries": 3})
 def process_lecture_video(self, lecture_id):
@@ -81,3 +84,47 @@ def upload_hls_to_storage(lecture_id, local_dir):
 
         with open(local_file_path, "rb") as f:
             default_storage.save(storage_path, ContentFile(f.read()))
+
+
+@shared_task
+def cleanup_inactive_meetings():
+    """
+    Delete LiveSession and related Post records where the session
+    ended more than 60 minutes ago (i.e., is_active = False).
+    Runs once daily via Celery beat schedule.
+    """
+    from admin_part.models import LiveSession, Post
+    
+    ist = ZoneInfo("Asia/Kolkata")
+    now_ist = timezone.now().astimezone(ist)
+    
+    # Calculate the cutoff time (60 minutes ago)
+    cutoff_time = now_ist - timedelta(minutes=60)
+    
+    # Find sessions where session datetime is older than cutoff
+    inactive_sessions = []
+    
+    for session in LiveSession.objects.all():
+        session_datetime = datetime.combine(session.session_date, session.session_time)
+        session_datetime = ist.localize(session_datetime)
+        
+        if session_datetime < cutoff_time:
+            inactive_sessions.append(session)
+    
+    deleted_sessions = 0
+    deleted_posts = 0
+    
+    for session in inactive_sessions:
+        # Delete related posts first
+        posts_deleted = Post.objects.filter(session=session).delete()[0]
+        deleted_posts += posts_deleted
+        
+        # Delete the session
+        session.delete()
+        deleted_sessions += 1
+    
+    return {
+        "deleted_sessions": deleted_sessions,
+        "deleted_posts": deleted_posts,
+        "cleanup_time": now_ist.isoformat()
+    }

@@ -1312,7 +1312,7 @@ class PostListAPIView(APIView, APIResponseMixin):
         # Get all active posts
         posts_queryset = Post.objects.filter(
             is_active=True
-        ).order_by('-created_at')
+        ).select_related('session').order_by('-created_at')
 
         # Calculate total items
         total_items = posts_queryset.count()

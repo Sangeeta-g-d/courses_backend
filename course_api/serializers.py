@@ -2,6 +2,7 @@ from rest_framework import serializers
 from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProgress, Lecture, Post, Banner
 from django.db.models import Avg
 from django.utils import timezone
+from datetime import datetime
 import pytz
 
 
@@ -419,6 +420,9 @@ class PostSerializer(serializers.ModelSerializer):
     image2 = serializers.SerializerMethodField()
     image3 = serializers.SerializerMethodField()
     created_at = serializers.SerializerMethodField()
+    session_date_time_ist = serializers.SerializerMethodField()
+    meeting_url = serializers.SerializerMethodField()
+    is_active = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
@@ -431,6 +435,9 @@ class PostSerializer(serializers.ModelSerializer):
             "post_type",
             "session_id",
             "created_at",
+            "session_date_time_ist",
+            "meeting_url",
+            "is_active",
         ]
 
     def get_image1(self, obj):
@@ -455,6 +462,26 @@ class PostSerializer(serializers.ModelSerializer):
         ist = pytz.timezone("Asia/Kolkata")
         ist_time = timezone.localtime(obj.created_at, ist)
         return ist_time.strftime("%d %b %Y, %I:%M %p")
+
+    def get_session_date_time_ist(self, obj):
+        if obj.post_type == "zoom_post" and obj.session:
+            session = obj.session
+            if session.session_date and session.session_time:
+                ist = pytz.timezone("Asia/Kolkata")
+                session_datetime = datetime.combine(session.session_date, session.session_time)
+                session_datetime = ist.localize(session_datetime)
+                return session_datetime.strftime("%d %b %Y, %I:%M %p")
+        return None
+
+    def get_meeting_url(self, obj):
+        if obj.post_type == "zoom_post" and obj.session:
+            return f"join_live_session_user/{obj.session.id}/"
+        return None
+
+    def get_is_active(self, obj):
+        if obj.post_type == "zoom_post" and obj.session:
+            return obj.session.is_active
+        return None
 
 
 class BannerSerializer(serializers.ModelSerializer):
