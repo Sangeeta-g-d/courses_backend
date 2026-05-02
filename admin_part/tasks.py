@@ -10,6 +10,7 @@ import shutil
 from datetime import timedelta
 from django.utils import timezone
 from zoneinfo import ZoneInfo
+import datetime
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=30, retry_kwargs={"max_retries": 3})
 def process_lecture_video(self, lecture_id):

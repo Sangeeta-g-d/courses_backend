@@ -4,6 +4,9 @@ import shutil
 import subprocess
 import platform
 from django.conf import settings
+from PIL import Image
+from io import BytesIO
+from django.core.files.base import ContentFile
 
 
 # =========================================================
@@ -171,3 +174,43 @@ def no_cache(view_func):
         response['Expires'] = '0'
         return response
     return wrapper
+
+
+# =========================================================
+# IMAGE COMPRESSION
+# =========================================================
+
+def compress_image(image_file, quality=85, max_size=(1920, 1080)):
+    """
+    Compress an image file to reduce size.
+    - Converts to JPEG format
+    - Resizes if larger than max_size
+    - Applies quality compression
+
+    Args:
+        image_file: Django's InMemoryUploadedFile or file-like object
+        quality: JPEG quality (0-100, default 85)
+        max_size: Max (width, height) tuple, resizes if exceeded
+
+    Returns:
+        Compressed ContentFile with same name
+    """
+    img = Image.open(image_file)
+
+    # Convert to RGB if necessary (for PNG, etc.)
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+
+    # Resize if too large
+    if img.size[0] > max_size[0] or img.size[1] > max_size[1]:
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+    # Compress and save to BytesIO
+    output = BytesIO()
+    img.save(output, format='JPEG', quality=quality, optimize=True)
+    output.seek(0)
+
+    # Create new ContentFile with original name
+    compressed_file = ContentFile(output.getvalue(), name=image_file.name)
+
+    return compressed_file

@@ -57,6 +57,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+    def save(self, *args, **kwargs):
+        if self.profile_image and hasattr(self.profile_image, 'file') and self.profile_image.file:
+            from admin_part.utils import compress_image
+            self.profile_image = compress_image(self.profile_image)
+        super().save(*args, **kwargs)
+
 
 class UserProfile(models.Model):
     QUALIFICATION_CHOICES = [

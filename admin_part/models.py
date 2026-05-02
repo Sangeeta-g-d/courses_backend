@@ -41,6 +41,11 @@ class Bundle(models.Model):  # Keep table name the same
             self.price = 0
             self.discount = 0
 
+        # Compress thumbnail if present
+        if self.thumbnail and hasattr(self.thumbnail, 'file') and self.thumbnail.file:
+            from admin_part.utils import compress_image
+            self.thumbnail = compress_image(self.thumbnail)
+
         super().save(*args, **kwargs)
 
     def get_discounted_price(self):
@@ -118,6 +123,12 @@ class Course(models.Model):
         return self.course_sections.aggregate(
             total_lectures=Count('lectures')
         )['total_lectures'] or 0
+
+    def save(self, *args, **kwargs):
+        if self.thumbnail and hasattr(self.thumbnail, 'file') and self.thumbnail.file:
+            from admin_part.utils import compress_image
+            self.thumbnail = compress_image(self.thumbnail)
+        super().save(*args, **kwargs)
 
     
 
@@ -226,6 +237,10 @@ class Lecture(models.Model):
         return f"{self.section.title} - {self.title}"
 
     def save(self, *args, **kwargs):
+        # Compress thumbnail if present
+        if self.thumbnail and hasattr(self.thumbnail, 'file') and self.thumbnail.file:
+            from admin_part.utils import compress_image
+            self.thumbnail = compress_image(self.thumbnail)
         super().save(*args, **kwargs)
         self.section.update_duration()
 
@@ -370,6 +385,12 @@ class LiveSession(models.Model):
     def __str__(self):
         return self.title
 
+    def save(self, *args, **kwargs):
+        if self.thumbnail and hasattr(self.thumbnail, 'file') and self.thumbnail.file:
+            from admin_part.utils import compress_image
+            self.thumbnail = compress_image(self.thumbnail)
+        super().save(*args, **kwargs)
+
 
 class Banner(models.Model):
     image = models.ImageField(upload_to="banners/")
@@ -380,6 +401,12 @@ class Banner(models.Model):
 
     def __str__(self):
         return f"Banner #{self.id}"
+
+    def save(self, *args, **kwargs):
+        if self.image and hasattr(self.image, 'file') and self.image.file:
+            from admin_part.utils import compress_image
+            self.image = compress_image(self.image)
+        super().save(*args, **kwargs)
 # ---------------------------------------------------------
 # PAYMENT MODELS
 # ---------------------------------------------------------
@@ -646,3 +673,13 @@ class Post(models.Model):
 
     def __str__(self):
         return f"{self.post_type} #{self.id}"
+
+    def save(self, *args, **kwargs):
+        from admin_part.utils import compress_image
+        if self.image1 and hasattr(self.image1, 'file') and self.image1.file:
+            self.image1 = compress_image(self.image1)
+        if self.image2 and hasattr(self.image2, 'file') and self.image2.file:
+            self.image2 = compress_image(self.image2)
+        if self.image3 and hasattr(self.image3, 'file') and self.image3.file:
+            self.image3 = compress_image(self.image3)
+        super().save(*args, **kwargs)
