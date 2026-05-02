@@ -4,6 +4,7 @@ from .models import CustomUser, UserProfile
 from django.utils import timezone
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from django.urls import reverse
 from admin_part.models import LiveSession
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -145,6 +146,7 @@ class LiveSessionSerializer(serializers.ModelSerializer):
     is_active = serializers.ReadOnlyField()
     session_datetime_ist = serializers.SerializerMethodField()
     session_time_ist = serializers.SerializerMethodField()
+    meeting_url = serializers.SerializerMethodField()
 
     class Meta:
         model = LiveSession
@@ -187,6 +189,13 @@ class LiveSessionSerializer(serializers.ModelSerializer):
         ).replace(tzinfo=ist)
 
         return session_dt.strftime("%I:%M %p")
+
+    def get_meeting_url(self, obj):
+        request = self.context.get("request")
+        path = reverse("join_live_session_user", args=[obj.id])
+        if request is not None:
+            return request.build_absolute_uri(path)
+        return f"https://mysmta.com{path}"
 
 
 # Zoom Token Request Serializer

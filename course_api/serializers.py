@@ -2,6 +2,7 @@ from rest_framework import serializers
 from admin_part.models import Bundle, CourseSection, Enrollment,Course, UserProgress, Lecture, Post, Banner
 from django.db.models import Avg
 from django.utils import timezone
+from django.urls import reverse
 from datetime import datetime
 import pytz
 
@@ -475,7 +476,11 @@ class PostSerializer(serializers.ModelSerializer):
 
     def get_meeting_url(self, obj):
         if obj.post_type == "zoom_post" and obj.session:
-            return f"join_live_session_user/{obj.session.id}/"
+            request = self.context.get("request")
+            path = reverse("join_live_session_user", args=[obj.session.id])
+            if request is not None:
+                return request.build_absolute_uri(path)
+            return f"https://mysmta.com{path}"
         return None
 
     def get_is_active(self, obj):
