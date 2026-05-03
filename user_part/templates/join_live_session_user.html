@@ -287,19 +287,17 @@
         console.log("[DEBUG] Calling ZoomMtg.init...");
         
         ZoomMtg.init({
-          leaveUrl: window.location.href,
+          leaveUrl: "about:blank",
           success: function() {
             console.log("[DEBUG] ✓ SDK init success");
             status.textContent = "Joining meeting as ATTENDEE...";
             console.log("[DEBUG] Calling ZoomMtg.join...");
             console.log("[DEBUG] Signature:", signature.substring(0, 50) + "...");
             
-            // Setup leave event listener
+            // Setup leave event listener to close tab
             ZoomMtg.inMeetingServiceListener('onMeetingLeave', function() {
-              console.log("[DEBUG] User left meeting, closing tab...");
-              setTimeout(() => {
-                window.close();
-              }, 500);
+              console.log("[DEBUG] Meeting leave event triggered, closing tab...");
+              window.close();
             });
             
             ZoomMtg.join({
