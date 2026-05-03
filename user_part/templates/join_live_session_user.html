@@ -287,12 +287,20 @@
         console.log("[DEBUG] Calling ZoomMtg.init...");
         
         ZoomMtg.init({
-          leaveUrl: 'javascript:void(0);',
+          leaveUrl: window.location.href,
           success: function() {
             console.log("[DEBUG] ✓ SDK init success");
             status.textContent = "Joining meeting as ATTENDEE...";
             console.log("[DEBUG] Calling ZoomMtg.join...");
             console.log("[DEBUG] Signature:", signature.substring(0, 50) + "...");
+            
+            // Setup leave event listener
+            ZoomMtg.inMeetingServiceListener('onMeetingLeave', function() {
+              console.log("[DEBUG] User left meeting, closing tab...");
+              setTimeout(() => {
+                window.close();
+              }, 500);
+            });
             
             ZoomMtg.join({
               sdkKey: SDK_KEY,
@@ -304,12 +312,6 @@
               success: function() {
                 status.textContent = "✓ Successfully joined as ATTENDEE!";
                 console.log("[DEBUG] ✓ Successfully joined meeting");
-                // Listen for leave event and close tab
-                if (ZoomMtg.inMeetingServiceListener) {
-                  ZoomMtg.inMeetingServiceListener('onUserLeave', function() {
-                    window.close();
-                  });
-                }
               },
               error: function(e) {
                 console.error("[ERROR] Join failed:", e);
