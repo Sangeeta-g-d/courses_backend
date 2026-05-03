@@ -173,7 +173,11 @@
     const PASSCODE = "{{ session.Passcode }}";
     const USER_EMAIL = "{{ request.user.email|default:'attendee@example.com' }}";
     const ROLE = 0;  // 0 = Attendee (user)
-    const LEAVE_URL = "/meetings/";
+    const LEAVE_URL = "about:blank";
+
+    function closeTab() {
+      window.close();
+    }
 
     // Handle display name input
     document.getElementById('displayNameInput').addEventListener('keypress', function(e) {
@@ -287,19 +291,17 @@
         console.log("[DEBUG] Calling ZoomMtg.init...");
         
         ZoomMtg.init({
-          leaveUrl: "about:blank",
+          leaveUrl: LEAVE_URL,
           success: function() {
             console.log("[DEBUG] ✓ SDK init success");
             status.textContent = "Joining meeting as ATTENDEE...";
             console.log("[DEBUG] Calling ZoomMtg.join...");
             console.log("[DEBUG] Signature:", signature.substring(0, 50) + "...");
-            
-            // Setup leave event listener to close tab
-            ZoomMtg.inMeetingServiceListener('onMeetingLeave', function() {
-              console.log("[DEBUG] Meeting leave event triggered, closing tab...");
-              window.close();
-            });
-            
+
+            if (ZoomMtg.inMeetingServiceListener) {
+              ZoomMtg.inMeetingServiceListener('onMeetingLeave', closeTab);
+            }
+
             ZoomMtg.join({
               sdkKey: SDK_KEY,
               signature: signature,
