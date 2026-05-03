@@ -133,6 +133,7 @@ DATABASES = {
 ZOOM_SDK_KEY = config("ZOOM_SDK_KEY")
 ZOOM_SDK_SECRET = config("ZOOM_SDK_SECRET")
 ZOOM_WEBHOOK_TOKEN = config("ZOOM_WEBHOOK_TOKEN", default="")
+ZOOM_HOST_EMAIL = config("ZOOM_HOST_EMAIL", default="")
 
 # Zoom OAuth Server-to-Server Configuration
 ZOOM_ACCOUNT_ID = config("account_id", default="")

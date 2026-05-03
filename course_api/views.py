@@ -61,9 +61,10 @@ class BundleListAPIView(APIView, APIResponseMixin):
         # ---------------------------
         # FETCH BUNDLES
         # ---------------------------
-        bundles_queryset = Bundle.objects.filter(is_published=True).annotate(
-            total_courses=Count('courses').order_by('-created_at')
-        )
+        # Calculate total items
+        bundles_queryset = Bundle.objects.filter(is_published=True) \
+            .annotate(total_courses=Count('courses')) \
+            .order_by('-created_at')
 
         # Calculate total items
         total_items = bundles_queryset.count()

@@ -205,7 +205,7 @@
     async function getSignature() {
       try {
         console.log("[DEBUG] Fetching signature...");
-        const url = `/zoom_signature/?meetingNumber=${MEETING_NUMBER}&role=${ROLE}`;
+        const url = `${window.location.origin}/zoom_signature/?meetingNumber=${MEETING_NUMBER}&role=${ROLE}`;
         console.log("[DEBUG] URL:", url);
         
         const response = await fetch(url);
@@ -295,6 +295,7 @@
             console.log("[DEBUG] Signature:", signature.substring(0, 50) + "...");
             
             ZoomMtg.join({
+              sdkKey: SDK_KEY,
               signature: signature,
               meetingNumber: MEETING_NUMBER,
               passWord: PASSCODE,

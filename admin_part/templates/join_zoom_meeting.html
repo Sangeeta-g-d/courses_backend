@@ -93,7 +93,7 @@
     const SDK_KEY = "{{ zoom_sdk_key }}";
     const MEETING_NUMBER = "{{ session.meeting_number }}";
     const PASSCODE = "{{ session.Passcode }}";
-    const USER_EMAIL = "{{ request.user.email|default:'host@example.com' }}";
+    const USER_EMAIL = "{{ zoom_host_email|default:'' }}";
     const ROLE = 1;  // 1 = Host (admin)
     const LEAVE_URL = "/admin_part/admin_live_sessions/";
 
@@ -125,7 +125,7 @@
     async function getSignature() {
       try {
         console.log("[DEBUG] Fetching signature...");
-        const url = `/zoom_signature/?meetingNumber=${MEETING_NUMBER}&role=${ROLE}`;
+        const url = `${window.location.origin}/zoom_signature/?meetingNumber=${MEETING_NUMBER}&role=${ROLE}`;
         console.log("[DEBUG] URL:", url);
         
         const response = await fetch(url);
@@ -203,6 +203,14 @@
             status.textContent = "Joining meeting as HOST...";
             console.log("[DEBUG] Calling ZoomMtg.join...");
             console.log("[DEBUG] Signature:", signature.substring(0, 50) + "...");
+
+            if (!USER_EMAIL || USER_EMAIL.trim() === '') {
+              const errorMsg = 'Host email is required to start the webinar. Please set ZOOM_HOST_EMAIL in settings to a valid Zoom host/alternative host email.';
+              console.error('[ERROR] Invalid host email:', USER_EMAIL);
+              status.textContent = errorMsg;
+              alert(errorMsg);
+              return;
+            }
             
             ZoomMtg.join({
               signature: signature,

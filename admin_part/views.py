@@ -839,9 +839,11 @@ def delete_live_session(request, session_id):
 def join_live_session(request, session_id):
     from django.conf import settings
     session = get_object_or_404(LiveSession, id=session_id)
+    zoom_host_email = settings.ZOOM_HOST_EMAIL
     context = {
         'session': session,
         'zoom_sdk_key': settings.ZOOM_SDK_KEY,
+        'zoom_host_email': zoom_host_email,
     }
     return render(request, 'join_zoom_meeting.html', context)
 
