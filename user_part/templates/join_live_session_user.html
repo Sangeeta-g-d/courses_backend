@@ -12,55 +12,80 @@
   :root {
     --header-height: 70px;
     --info-height: 40px;
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --success-color: #28a745;
+    --dark-bg: #111;
+    --darker-bg: #0a0a0a;
+    --card-bg: #1a1a1a;
+    --text-light: #fff;
+    --text-muted: #ccc;
+    --border-color: #333;
   }
 
   body, html {
     margin: 0;
     padding: 0;
     height: 100%;
-    background-color: #000;
-    color: white;
-    font-family: Arial, sans-serif;
+    background: var(--primary-gradient);
+    color: var(--text-light);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     overflow: hidden;
+    background-attachment: fixed;
   }
 
   /* HEADER */
   .meeting-header {
-    background-color: #111;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
     text-align: center;
-    padding: 12px 10px;
-    border-bottom: 1px solid #222;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 2px 20px rgba(0,0,0,0.3);
   }
 
   .meeting-header h3 {
-    font-size: clamp(16px, 3vw, 22px);
+    font-size: clamp(18px, 4vw, 24px);
     margin: 0;
     line-height: 1.3;
     word-break: break-word;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
   }
 
   /* MEETING INFO */
   .meeting-info {
     text-align: center;
-    padding: 6px 10px;
-    color: #ccc;
-    font-size: clamp(12px, 2.5vw, 14px);
-    line-height: 1.4;
+    padding: 10px 20px;
+    color: var(--text-muted);
+    font-size: clamp(13px, 2.8vw, 15px);
+    line-height: 1.5;
     word-wrap: break-word;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .meeting-info strong {
+    color: var(--text-light);
   }
 
   /* STATUS TEXT */
   #status {
     text-align: center;
-    color: #aaa;
-    font-size: clamp(12px, 2.5vw, 14px);
-    padding: 5px 10px;
+    color: var(--text-muted);
+    font-size: clamp(14px, 2.8vw, 16px);
+    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(5px);
+    border-bottom: 1px solid var(--border-color);
   }
 
   /* ZOOM SDK CONTAINER */
   #meetingSDKElement {
     width: 100%;
     height: calc(100vh - 140px);
+    background: var(--darker-bg);
   }
 
   /* DISPLAY NAME MODAL */
@@ -71,30 +96,77 @@
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(10px);
     z-index: 9999;
-    padding: 15px;
+    padding: 20px;
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   #nameModal > div {
     width: 100%;
-    max-width: 420px;
-    background: #1a1a1a;
-    padding: 30px 25px;
-    border-radius: 10px;
+    max-width: 450px;
+    background: var(--card-bg);
+    padding: 40px 30px;
+    border-radius: 20px;
     text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    border: 1px solid var(--border-color);
+  }
+
+  #nameModal h3 {
+    color: var(--text-light);
+    margin-bottom: 25px;
+    font-size: 24px;
+    font-weight: 600;
+  }
+
+  #nameModal p {
+    color: var(--text-muted);
+    margin-bottom: 25px;
+    font-size: 16px;
   }
 
   #displayNameInput {
     width: 100%;
-    padding: 12px;
+    padding: 15px;
     font-size: 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--dark-bg);
+    color: var(--text-light);
+    box-sizing: border-box;
+    margin-bottom: 25px;
+    transition: border-color 0.3s ease;
+  }
+
+  #displayNameInput:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
   }
 
   #joinBtn {
     width: 100%;
-    padding: 12px;
+    padding: 15px;
     font-size: 16px;
-    font-weight: bold;
+    font-weight: 600;
+    background: var(--primary-gradient);
+    color: var(--text-light);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  }
+
+  #joinBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
   }
 
   /* MOBILE FIXES */
@@ -102,19 +174,55 @@
     #meetingSDKElement {
       height: calc(100vh - 155px);
     }
+
+    #nameModal > div {
+      padding: 30px 20px;
+    }
+
+    .meeting-header {
+      padding: 12px 15px;
+    }
+
+    .meeting-info {
+      font-size: 13px;
+      padding: 8px 15px;
+    }
+
+    #status {
+      font-size: 13px;
+      padding: 8px 15px;
+    }
   }
 
   @media (max-width: 480px) {
     .meeting-header {
-      padding: 10px 8px;
+      padding: 10px 12px;
+    }
+
+    .meeting-header h3 {
+      font-size: 18px;
     }
 
     .meeting-info {
       font-size: 12px;
+      padding: 6px 12px;
+    }
+
+    #status {
+      font-size: 12px;
+      padding: 6px 12px;
     }
 
     #meetingSDKElement {
       height: calc(100vh - 165px);
+    }
+
+    #nameModal > div {
+      padding: 25px 15px;
+    }
+
+    #nameModal h3 {
+      font-size: 20px;
     }
   }
 </style>
@@ -122,25 +230,25 @@
 </head>
 <body>
   <!-- Display Name Input Modal -->
-  <div id="nameModal" style="display: flex; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999;">
-    <div style="background: #1a1a1a; padding: 40px; border-radius: 10px; text-align: center; max-width: 400px;">
-      <h3 style="color: white; margin-bottom: 20px;">Join Meeting</h3>
-      <p style="color: #ccc; margin-bottom: 20px;">{{ session.title }}</p>
+  <div id="nameModal" style="display: flex; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 9999; padding: 20px; animation: fadeIn 0.3s ease-out;">
+    <div style="background: #1a1a1a; padding: 40px 30px; border-radius: 20px; text-align: center; max-width: 450px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid #333;">
+      <h3 style="color: white; margin-bottom: 25px; font-size: 24px; font-weight: 600;">Join Live Session</h3>
+      <p style="color: #ccc; margin-bottom: 25px; font-size: 16px;">{{ session.title }}</p>
       
       <input 
         type="text" 
         id="displayNameInput" 
-        placeholder="Enter your name" 
-        style="width: 100%; padding: 12px; border: 1px solid #444; border-radius: 5px; font-size: 16px; background: #222; color: white; box-sizing: border-box; margin-bottom: 20px;"
+        placeholder="Enter your display name" 
+        style="width: 100%; padding: 15px; border: 2px solid #333; border-radius: 10px; font-size: 16px; background: #111; color: white; box-sizing: border-box; margin-bottom: 25px; transition: border-color 0.3s ease;"
       />
       
       <button 
         id="joinBtn" 
-        style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.3s;"
-        onmouseover="this.style.background='#218838'"
-        onmouseout="this.style.background='#28a745'"
+        style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);"
+        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.4)'"
+        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.3)'"
       >
-        Join Meeting
+        Join Session
       </button>
     </div>
   </div>
@@ -152,6 +260,8 @@
   <div class="meeting-info container-fluid">
     <strong>Meeting ID:</strong> {{ session.meeting_number }} |
     <strong>Passcode:</strong> {{ session.Passcode }} |
+    <strong>Date:</strong> {{ session.session_date|date:"M j, Y" }} |
+    <strong>Time:</strong> {{ session.session_time|time:"g:i A" }} |
     <strong>Role:</strong> <span style="color: #28a745;">ATTENDEE</span>
   </div>
 

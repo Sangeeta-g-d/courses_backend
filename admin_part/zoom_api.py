@@ -123,7 +123,7 @@ class ZoomOAuthManager:
                 'type': 2,
                 'start_time': start_time,  # ISO 8601: 2024-02-10T10:00:00
                 'duration': int(duration),
-                'timezone': 'UTC',
+                'timezone': 'Asia/Kolkata',
                 'settings': webinar_settings
             }
             
