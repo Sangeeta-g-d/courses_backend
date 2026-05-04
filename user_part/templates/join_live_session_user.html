@@ -300,6 +300,7 @@
 
             if (ZoomMtg.inMeetingServiceListener) {
               ZoomMtg.inMeetingServiceListener('onMeetingLeave', closeTab);
+              ZoomMtg.inMeetingServiceListener('onUserLeave', closeTab);
             }
 
             ZoomMtg.join({
