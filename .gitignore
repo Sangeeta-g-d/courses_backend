@@ -2,7 +2,10 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+__pycache__/
+*.pyc
+venv/
+.env
 # Environment
 .env
 venv/
