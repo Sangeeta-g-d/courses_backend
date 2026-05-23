@@ -407,6 +407,45 @@ class Banner(models.Model):
             from admin_part.utils import compress_image
             self.image = compress_image(self.image)
         super().save(*args, **kwargs)
+
+
+class SiteSetting(models.Model):
+    address = models.CharField(max_length=500, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=50, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Site Setting"
+        verbose_name_plural = "Site Settings"
+
+    def __str__(self):
+        return "Site Settings"
+
+
+class TeamMember(models.Model):
+    name = models.CharField(max_length=150)
+    role = models.CharField(max_length=150)
+    image = models.ImageField(upload_to='team_members/', blank=True, null=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'created_at']
+        verbose_name = "Team Member"
+        verbose_name_plural = "Team Members"
+
+    def __str__(self):
+        return f"{self.name} - {self.role}"
+
+    def save(self, *args, **kwargs):
+        if self.image and hasattr(self.image, 'file') and self.image.file:
+            from admin_part.utils import compress_image
+            self.image = compress_image(self.image)
+        super().save(*args, **kwargs)
+
+
 # ---------------------------------------------------------
 # PAYMENT MODELS
 # ---------------------------------------------------------

@@ -933,6 +933,126 @@ def delete_banner(request, banner_id):
         messages.error(request, "Invalid request.")
     return redirect("banner_list")
 
+
+@admin_required
+def site_settings(request):
+    site_settings_obj = SiteSetting.objects.first()
+    if request.method == "POST":
+        team_action = request.POST.get('team_action')
+
+        if team_action in ['add', 'edit']:
+            name = request.POST.get('name', '').strip()
+            role = request.POST.get('role', '').strip()
+            order = request.POST.get('order', 0)
+            image = request.FILES.get('image')
+            member_id = request.POST.get('member_id')
+
+            if not name or not role:
+                messages.error(request, "Name and role are required.")
+                return redirect('site_settings')
+
+            if team_action == 'add':
+                TeamMember.objects.create(
+                    name=name,
+                    role=role,
+                    order=order,
+                    image=image
+                )
+                messages.success(request, "Team member added successfully.")
+            else:
+                member = get_object_or_404(TeamMember, id=member_id)
+                member.name = name
+                member.role = role
+                member.order = order
+                if image:
+                    member.image = image
+                member.save()
+                messages.success(request, "Team member updated successfully.")
+
+            return redirect('site_settings')
+
+        address = request.POST.get('address', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+
+        if site_settings_obj:
+            site_settings_obj.address = address
+            site_settings_obj.email = email
+            site_settings_obj.phone = phone
+            site_settings_obj.save()
+        else:
+            site_settings_obj = SiteSetting.objects.create(
+                address=address,
+                email=email,
+                phone=phone
+            )
+        messages.success(request, "Site settings updated successfully.")
+        return redirect('site_settings')
+
+    team_members = TeamMember.objects.all()
+    return render(request, 'site_settings.html', {
+        'site_settings_obj': site_settings_obj,
+        'team_members': team_members,
+    })
+
+
+@admin_required
+def add_team_member(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        role = request.POST.get('role', '').strip()
+        order = request.POST.get('order', 0)
+        image = request.FILES.get('image')
+
+        if not name or not role:
+            messages.error(request, "Name and role are required.")
+            return redirect('add_team_member')
+
+        TeamMember.objects.create(
+            name=name,
+            role=role,
+            order=order,
+            image=image
+        )
+        messages.success(request, "Team member added successfully.")
+        return redirect('site_settings')
+
+    return render(request, 'team_member_form.html', {'action': 'add'})
+
+
+@admin_required
+def edit_team_member(request, member_id):
+    member = get_object_or_404(TeamMember, id=member_id)
+    if request.method == 'POST':
+        member.name = request.POST.get('name', '').strip()
+        member.role = request.POST.get('role', '').strip()
+        member.order = request.POST.get('order', 0)
+        image = request.FILES.get('image')
+
+        if image:
+            member.image = image
+
+        member.save()
+        messages.success(request, "Team member updated successfully.")
+        return redirect('site_settings')
+
+    return render(request, 'team_member_form.html', {
+        'action': 'edit',
+        'member': member,
+    })
+
+
+@admin_required
+def delete_team_member(request, member_id):
+    member = get_object_or_404(TeamMember, id=member_id)
+    if request.method == 'POST':
+        member.delete()
+        messages.success(request, "Team member deleted successfully.")
+    else:
+        messages.error(request, "Invalid request.")
+    return redirect('site_settings')
+
+
 @admin_required
 def add_post(request):
     if request.method == "POST":

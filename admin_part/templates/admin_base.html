@@ -102,6 +102,12 @@
                 <span>Contact list</span>
             </a>
         </li>
+         <li class="sidebar-item {% if request.path == '/backend/site_settings/' %}active{% endif %}">
+            <a href="/backend/site_settings/" class="sidebar-link">
+                <i class="bi bi-gear-fill"></i>
+                <span>Site Settings</span>
+            </a>
+        </li>
          <li class="sidebar-item {% if request.path == '/backend/banners/' %}active{% endif %}">
             <a href="/backend/banners/" class="sidebar-link">
                 <i class="bi bi-image"></i>

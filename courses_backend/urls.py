@@ -29,14 +29,16 @@ urlpatterns = [
     # API URLs
     path('api/auth/', include('auth_app.urls')),
     path('api/courses/', include('course_api.urls')),
-    
-    # Catch-all pattern for 404 (must be last)
-    re_path(r'^.*/$', page_not_found),
-    re_path(r'^.*$', page_not_found),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Catch-all pattern for 404 (must be last)
+urlpatterns += [
+    re_path(r'^.*/$', page_not_found),
+    re_path(r'^.*$', page_not_found),
+]
 
 # Custom 404 handler (for when DEBUG = False)
 handler404 = page_not_found

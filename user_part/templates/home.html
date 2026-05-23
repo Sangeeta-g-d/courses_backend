@@ -469,8 +469,29 @@
 
     <!-- About End -->
 
+    <!-- Vision & Mission Start -->
+    <div class="container-fluid py-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container">
+            <div class="row g-5 align-items-center">
+                <div class="col-lg-6">
+                    <div class="bg-light rounded p-5">
+                        <h6 class="text-primary text-uppercase mb-3">Vision</h6>
+                        <h1 class="display-6 mb-4">To be the most trusted learning platform globally</h1>
+                        <p class="mb-0">Helping women gain quick skills, careers, and confidence through practical courses and skill development.</p>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="bg-light rounded p-5">
+                        <h6 class="text-primary text-uppercase mb-3">Mission</h6>
+                        <h1 class="display-6 mb-4">To empower women in Pakistan and beyond</h1>
+                        <p class="mb-0">With flexible, skills-based education that shapes professional identities, supports financial independence, and leads them to success.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-   
+    <!-- Vision & Mission End -->
 
     <!-- Features Start -->
       <!--
@@ -697,7 +718,7 @@
 
    
 
-  <!-- Testimonial Start -->
+  <!-- Team Start -->
 <div class="container-fluid pt-3 pb-6">
     <div class="container">
         <div class="text-center mx-auto wow fadeInUp" data-wow-delay="0.1s" style="max-width: 600px;">
@@ -706,78 +727,62 @@
         <div class="row g-5 align-items-center">
             <div class="col-lg-5 wow fadeInUp" data-wow-delay="0.3s">
                 <div class="testimonial-img">
-                    <div class="animated flip infinite">
-                        <img class="img-fluid" src="/static/home_assets/img/muttu.jpeg" alt="">
-                    </div>
-                    
-                    <div class="animated flip infinite">
-                        <img class="img-fluid" src="/static/home_assets/img/abhilash.jpeg" alt="">
-                    </div>
-                     <div class="animated flip infinite">
-                        <img class="img-fluid" src="/static/home_assets/img/basavraj.jpeg" alt="">
-                    </div>
-                   
-                 
-                    <div class="animated flip infinite">
-                        <img class="img-fluid" src="/static/home_assets/img/pradeep.jpeg" alt="">
-                    </div>
-                    
+                    {% if team_members %}
+                        {% for member in team_members|slice:":4" %}
+                            <div class="animated flip infinite">
+                                <img class="img-fluid" src="{% if member.image %}{{ member.image.url }}{% else %}/static/home_assets/img/simple-user-default-icon-free-png.webp{% endif %}" alt="{{ member.name }}">
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="animated flip infinite">
+                            <img class="img-fluid" src="/static/home_assets/img/muttu.jpeg" alt="Team member">
+                        </div>
+                        <div class="animated flip infinite">
+                            <img class="img-fluid" src="/static/home_assets/img/abhilash.jpeg" alt="Team member">
+                        </div>
+                        <div class="animated flip infinite">
+                            <img class="img-fluid" src="/static/home_assets/img/basavraj.jpeg" alt="Team member">
+                        </div>
+                        <div class="animated flip infinite">
+                            <img class="img-fluid" src="/static/home_assets/img/pradeep.jpeg" alt="Team member">
+                        </div>
+                    {% endif %}
                 </div>
             </div>
             <div class="col-lg-7 wow fadeInUp" data-wow-delay="0.5s">
                 <div class="owl-carousel testimonial-carousel">
-                    <div class="testimonial-item">
-                        <div class="d-flex align-items-center mb-4">
-                            <img class="img-fluid" src="/static/home_assets/img/muttu.jpeg" alt="">
-                            <div class="ms-3">
-                               
-                                <h5 class="text-uppercase">Muttu Yampure</h5>
-                                <span>SMTA Founder</span>
+                    {% if team_members %}
+                        {% for member in team_members %}
+                            <div class="testimonial-item">
+                                <div class="d-flex align-items-center mb-4">
+                                    <img class="img-fluid" src="{% if member.image %}{{ member.image.url }}{% else %}/static/home_assets/img/simple-user-default-icon-free-png.webp{% endif %}" alt="{{ member.name }}">
+                                    <div class="ms-3">
+                                        <h5 class="text-uppercase">{{ member.name }}</h5>
+                                        <span>{{ member.role }}</span>
+                                    </div>
+                                </div>
+                                <p class="fs-5">{{ member.role }} at SMTA. Our dedicated team member driving quality training and learner success.</p>
                             </div>
-                        </div>
-                        <p class="fs-5">The Founder of SMTA is a dynamic sales strategist with a passion for transforming careers through practical, industry-driven training. With years of hands-on experience in sales and marketing, they established SMTA to bridge the gap between academic knowledge and real-world business skills.</p>
-                    </div>
-                     <div class="testimonial-item">
-                        <div class="d-flex align-items-center mb-4">
-                            <img class="img-fluid" src="/static/home_assets/img/basavraj.jpeg" alt="">
-                            <div class="ms-3">
-                               
-                                <h5 class="text-uppercase">Basavaraj G Patil</h5>
-                                <span>SMTA Co-Founder</span>
+                        {% endfor %}
+                    {% else %}
+                        <div class="testimonial-item">
+                            <div class="d-flex align-items-center mb-4">
+                                <img class="img-fluid" src="/static/home_assets/img/muttu.jpeg" alt="">
+                                <div class="ms-3">
+                                    <h5 class="text-uppercase">Muttu Yampure</h5>
+                                    <span>SMTA Founder</span>
+                                </div>
                             </div>
+                            <p class="fs-5">The Founder of SMTA is a dynamic sales strategist with a passion for transforming careers through practical, industry-driven training. With years of hands-on experience in sales and marketing, they established SMTA to bridge the gap between academic knowledge and real-world business skills.</p>
                         </div>
-                        <p class="fs-5">The Co-Founder oversees operations and mentoring initiatives at SMTA. With a strong background in leadership and team management, they ensure the academy maintains high standards of excellence while nurturing future sales and marketing leaders.</p>
-                    </div>
-                    <div class="testimonial-item">
-                        <div class="d-flex align-items-center mb-4">
-                            <img class="img-fluid" src="/static/home_assets/img/abhilash.jpeg" alt="">
-                            <div class="ms-3">
-                                
-                                <h5 class="text-uppercase">Abhilash Kumbar</h5>
-                                <span>SMTA Co-Founder</span>
-                            </div>
-                        </div>
-                        <p class="fs-5">The Co-Founder of SMTA brings strong expertise in business development and market strategy. Focused on innovation and scalable learning solutions, they play a key role in designing impactful programs that empower professionals to achieve measurable growth.</p>
-                    </div>
-                    <div class="testimonial-item">
-                        <div class="d-flex align-items-center mb-4">
-                            <img class="img-fluid" src="/static/home_assets/img/pradeep.jpeg" alt="">
-                            <div class="ms-3">
-                               
-                                <h5 class="text-uppercase">Pradeep Shankar Jambagi</h5>
-                                <span>SMTA Co-Founder</span>
-                            </div>
-                        </div>
-                        <p class="fs-5">As a Co-Founder, they specialize in designing structured, result-oriented training modules. Their commitment to skill enhancement ensures that every SMTA program delivers practical knowledge, confidence, and career advancement opportunities.</p>
-                    </div>
-                   
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
-<!-- Testimonial End -->
- 
+<!-- Team End -->
+
 
 
 

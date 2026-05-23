@@ -1,0 +1,48 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+
+<div class="page-heading">
+    <h3>{% if member %}Edit{% else %}Add{% endif %} Team Member</h3>
+</div>
+
+<div class="page-content mt-4">
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label">Name</label>
+                    <input type="text" class="form-control" name="name" value="{{ member.name|default:'' }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Role</label>
+                    <input type="text" class="form-control" name="role" value="{{ member.role|default:'' }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Order</label>
+                    <input type="number" class="form-control" name="order" value="{{ member.order|default:0 }}">
+                    <small class="text-muted">Lower numbers appear first on the homepage.</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Image</label>
+                    <input type="file" class="form-control" name="image" accept="image/*">
+                    {% if member and member.image %}
+                        <div class="mt-2">
+                            <img src="{{ member.image.url }}" alt="{{ member.name }}" width="120" class="rounded">
+                        </div>
+                    {% endif %}
+                </div>
+
+                <button class="btn btn-primary">{% if member %}Update{% else %}Save{% endif %}</button>
+                <a href="{% url 'site_settings' %}" class="btn btn-secondary ms-2">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% include 'notify.html' %}
+{% endblock %}

@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect,reverse
-from admin_part.models import Course, CourseSection, Lecture,Bundle, Enrollment, PaymentTransaction,Wishlist,UserProgress,LiveSession, ContactMessage ,Review, Post
+from admin_part.models import Course, CourseSection, Lecture,Bundle, Enrollment, PaymentTransaction,Wishlist,UserProgress,LiveSession, TeamMember, ContactMessage ,Review, Post
 from auth_app.models import CustomUser, UserProfile
 from django.contrib.auth import login
 from django.contrib import messages
@@ -109,7 +109,10 @@ def bundle_list(request):
 
 
 def about_us(request):
-    return render(request, 'about_us.html')
+    team_members = TeamMember.objects.all()
+    return render(request, 'about_us.html', {
+        'team_members': team_members,
+    })
 
 def contact_us(request):
     """
@@ -164,7 +167,7 @@ def contact_us(request):
             messages.error(request, "An error occurred while saving your message. Please try again.")
             return render(request, "contact_us.html", {"prefill": {"name": name, "email": email, "phone": phone, "message": message_text}})
 
-        messages.success(request, "Thanks — your message has been received. We'll get back to you soon.")
+        messages.success(request, "ThankFs — your message has been received. We'll get back to you soon.")
         return redirect("contact_us")   # change to your URL name if different
 
     # GET

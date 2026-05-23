@@ -47,7 +47,10 @@ urlpatterns = [
     path('banners/', views.banner_list, name='banner_list'),
     path('banners/add/', views.add_banner, name='add_banner'),
     path('banners/<int:banner_id>/delete/', views.delete_banner, name='delete_banner'),
-
+    path('site_settings/', views.site_settings, name='site_settings'),
+    path('team_members/add/', views.add_team_member, name='add_team_member'),
+    path('team_members/<int:member_id>/edit/', views.edit_team_member, name='edit_team_member'),
+    path('team_members/<int:member_id>/delete/', views.delete_team_member, name='delete_team_member'),
 
     # is_published toggle API urls
     path('course/<int:course_id>/toggle-publish/',views.toggle_course_publish,name='toggle_course_publish'),
