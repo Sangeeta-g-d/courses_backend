@@ -92,17 +92,18 @@
       <div class="card h-100 shadow-sm">
 
         <!-- Thumbnail -->
-        <a href="{% url 'course_detail' course.id %}" class="text-decoration-none text-dark">
-          {% if course.thumbnail %}
-          <img src="{{ course.thumbnail.url }}"
-               class="card-img-top"
-               style="height:220px; width:100%; object-fit:cover; object-position:center; display:block;">
-          {% else %}
-          <img src="/static/assets/images/default-course.jpg"
-               class="card-img-top"
-               style="height:220px; width:70%; object-fit:cover; object-position:center; display:block;">
-          {% endif %}
-        </a>
+<a href="{% url 'course_detail' course.id %}"
+   class="text-decoration-none text-dark d-flex justify-content-center">
+  {% if course.thumbnail %}
+  <img src="{{ course.thumbnail.url }}"
+       class="card-img-top"
+       style="height:220px; width:60%; ">
+  {% else %}
+  <img src="/static/assets/images/default-course.jpg"
+       class="card-img-top"
+       style="height:220px; width:60%;">
+  {% endif %}
+</a>
 
         <div class="card-body d-flex flex-column">
 
