@@ -14,80 +14,68 @@
   <!-- ✅ COURSE DETAILS SECTION -->
   <!-- ============================= -->
   {% if selected_bundle %}
-  <div class="card mb-5 shadow-sm">
-    <div class="row g-0">
+  <div class="card mb-5 shadow-sm overflow-hidden">
+    <!-- Preview Video -->
+    {% if selected_bundle.preview_video %}
+    <video class="w-100" controls style="height:320px; object-fit:cover;">
+      <source src="{{ selected_bundle.preview_video.url }}" type="video/mp4">
+    </video>
 
-      <!-- Preview Video -->
-      {% if selected_bundle.preview_video %}
-      <div class="col-md-5">
-        <video class="w-100 h-100 rounded-start" controls style="object-fit:cover;">
-          <source src="{{ selected_bundle.preview_video.url }}" type="video/mp4">
-        </video>
-      </div>
+    {% elif selected_bundle.thumbnail %}
+    <img src="{{ selected_bundle.thumbnail.url }}"
+         class="w-100"
+         style="height:320px; object-fit:cover;">
+    {% endif %}
 
-      {% elif selected_bundle.thumbnail %}
-      <div class="col-md-5">
-        <img src="{{ selected_bundle.thumbnail.url }}"
-             class="img-fluid h-100 w-100 rounded-start"
-             style="object-fit:cover;">
+    <!-- Bundle Info -->
+    <div class="card-body">
+      <h3 class="card-title mb-2">
+        {{ selected_bundle.name }}
+      </h3>
+
+      {% if selected_bundle.short_description %}
+      <p class="text-muted">
+        {{ selected_bundle.short_description }}
+      </p>
+      {% endif %}
+
+      <!-- Pricing -->
+      {% if selected_bundle.is_free %}
+        <h5 class="text-success fw-bold">Free</h5>
+      {% else %}
+        <h5 class="fw-bold">
+          ₹{{ selected_bundle.get_discounted_price }}
+          {% if selected_bundle.discount > 0 %}
+            <small class="text-muted text-decoration-line-through ms-2">
+              ₹{{ selected_bundle.price }}
+            </small>
+            <span class="badge bg-danger ms-2">
+              {{ selected_bundle.discount }}% OFF
+            </span>
+          {% endif %}
+        </h5>
+      {% endif %}
+
+      <!-- Bundle PDF Section -->
+      {% if selected_bundle.bundle_pdf %}
+      <div class="mt-3 p-3 bg-light rounded">
+        <h6 class="mb-2"><i class="bi bi-file-pdf"></i> Course PDF Available</h6>
+        <a href="{{ selected_bundle.bundle_pdf.url }}" class="btn btn-sm btn-outline-primary me-2" target="_blank">
+          <i class="bi bi-download"></i> Download PDF
+        </a>
+        {% if selected_bundle.bundle_pdf_price %}
+          <span class="badge bg-info">₹{{ selected_bundle.bundle_pdf_price }}</span>
+        {% else %}
+          <span class="badge bg-success">Free</span>
+        {% endif %}
       </div>
       {% endif %}
 
-      <!-- Bundle Info -->
-      <div class="col-md-7">
-        <div class="card-body">
-
-          <h3 class="card-title mb-2">
-            {{ selected_bundle.name }}
-          </h3>
-
-          {% if selected_bundle.short_description %}
-          <p class="text-muted">
-            {{ selected_bundle.short_description }}
-          </p>
-          {% endif %}
-
-          <!-- Pricing -->
-          {% if selected_bundle.is_free %}
-            <h5 class="text-success fw-bold">Free</h5>
-          {% else %}
-            <h5 class="fw-bold">
-              ₹{{ selected_bundle.get_discounted_price }}
-              {% if selected_bundle.discount > 0 %}
-                <small class="text-muted text-decoration-line-through ms-2">
-                  ₹{{ selected_bundle.price }}
-                </small>
-                <span class="badge bg-danger ms-2">
-                  {{ selected_bundle.discount }}% OFF
-                </span>
-              {% endif %}
-            </h5>
-          {% endif %}
-
-          <!-- Bundle PDF Section -->
-          {% if selected_bundle.bundle_pdf %}
-          <div class="mt-3 p-3 bg-light rounded">
-            <h6 class="mb-2"><i class="bi bi-file-pdf"></i> Course PDF Available</h6>
-            <a href="{{ selected_bundle.bundle_pdf.url }}" class="btn btn-sm btn-outline-primary me-2" target="_blank">
-              <i class="bi bi-download"></i> Download PDF
-            </a>
-            {% if selected_bundle.bundle_pdf_price %}
-              <span class="badge bg-info">₹{{ selected_bundle.bundle_pdf_price }}</span>
-            {% else %}
-              <span class="badge bg-success">Free</span>
-            {% endif %}
-          </div>
-          {% endif %}
-
-          {% if selected_bundle.full_description %}
-          <p class="mt-3">
-            {{ selected_bundle.full_description }}
-          </p>
-          {% endif %}
-
-        </div>
-      </div>
-
+      {% if selected_bundle.full_description %}
+      <p class="mt-3">
+        {{ selected_bundle.full_description }}
+      </p>
+      {% endif %}
     </div>
   </div>
 
@@ -108,11 +96,11 @@
           {% if course.thumbnail %}
           <img src="{{ course.thumbnail.url }}"
                class="card-img-top"
-               style="height:180px; object-fit:cover;">
+               style="height:220px; width:100%; object-fit:cover;">
           {% else %}
           <img src="/static/assets/images/default-course.jpg"
                class="card-img-top"
-               style="height:180px; object-fit:cover;">
+               style="height:220px; width:100%; object-fit:cover;">
           {% endif %}
         </a>
 
@@ -120,8 +108,8 @@
 
           <!-- Title -->
           <a href="{% url 'course_detail' course.id %}" class="text-decoration-none text-dark">
-            <h5 class="card-title">{{ course.title }}</h5>
-            <p class="card-text text-truncate">
+            <h5 class="card-title mb-2">{{ course.title }}</h5>
+            <p class="card-text mb-3" style="display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
               {{ course.short_description }}
             </p>
           </a>
