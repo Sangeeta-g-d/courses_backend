@@ -16,21 +16,16 @@
   {% if selected_bundle %}
   <div class="card mb-5 shadow-sm overflow-hidden">
     <!-- Preview Video -->
-    <div class="d-flex justify-content-center">
     {% if selected_bundle.preview_video %}
-      <video class="img-fluid"
-             controls
-             style="width:60%; max-width:100%; height:320px; object-fit:cover;">
-        <source src="{{ selected_bundle.preview_video.url }}" type="video/mp4">
-      </video>
+    <video class="w-100" controls style="height:320px; width:60%; object-fit:cover; object-position:center; display:block;">
+      <source src="{{ selected_bundle.preview_video.url }}" type="video/mp4">
+    </video>
 
     {% elif selected_bundle.thumbnail %}
-      <img src="{{ selected_bundle.thumbnail.url }}"
-           class="img-fluid"
-           style="width:60%; max-width:100%; height:320px; object-fit:cover;"
-           alt="{{ selected_bundle.title }}">
+    <img src="{{ selected_bundle.thumbnail.url }}"
+         class="w-100"
+         style="height:320px; width:100%; object-fit:cover; object-position:center; display:block;">
     {% endif %}
-  </div>
 
     <!-- Bundle Info -->
     <div class="card-body">
