@@ -210,7 +210,15 @@ def compress_image(image_file, quality=85, max_size=(1920, 1080)):
     img.save(output, format='JPEG', quality=quality, optimize=True)
     output.seek(0)
 
-    # Create new ContentFile with original name
-    compressed_file = ContentFile(output.getvalue(), name=image_file.name)
+    # Create new ContentFile with a normalized filename so Django does not
+    # prepend the upload_to path repeatedly on subsequent saves.
+    original_name = getattr(image_file, 'name', '') or 'image.jpg'
+    base_name = os.path.basename(original_name)
+    if not base_name:
+        base_name = 'image.jpg'
+
+    name_without_ext, ext = os.path.splitext(base_name)
+    safe_name = f"{name_without_ext or 'image'}.jpg"
+    compressed_file = ContentFile(output.getvalue(), name=safe_name)
 
     return compressed_file
