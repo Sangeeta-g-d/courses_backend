@@ -17,14 +17,14 @@
   <div class="card mb-5 shadow-sm overflow-hidden">
     <!-- Preview Video -->
     {% if selected_bundle.preview_video %}
-    <video class="w-100" controls style="height:320px; object-fit:cover;">
+    <video class="w-100" controls style="height:320px; width:100%; object-fit:cover; object-position:center; display:block;">
       <source src="{{ selected_bundle.preview_video.url }}" type="video/mp4">
     </video>
 
     {% elif selected_bundle.thumbnail %}
     <img src="{{ selected_bundle.thumbnail.url }}"
          class="w-100"
-         style="height:320px; object-fit:cover;">
+         style="height:320px; width:100%; object-fit:cover; object-position:center; display:block;">
     {% endif %}
 
     <!-- Bundle Info -->
@@ -96,11 +96,11 @@
           {% if course.thumbnail %}
           <img src="{{ course.thumbnail.url }}"
                class="card-img-top"
-               style="height:220px; width:100%; object-fit:cover;">
+               style="height:220px; width:100%; object-fit:cover; object-position:center; display:block;">
           {% else %}
           <img src="/static/assets/images/default-course.jpg"
                class="card-img-top"
-               style="height:220px; width:100%; object-fit:cover;">
+               style="height:220px; width:100%; object-fit:cover; object-position:center; display:block;">
           {% endif %}
         </a>
 
