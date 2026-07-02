@@ -43,7 +43,9 @@
     <div class="row">
         {% for bundle in bundles %}
         <div class="col-md-4 mb-4">
-            <div class="card shadow-sm border-0 rounded-4">
+            <div class="card shadow-sm border-0 rounded-4 h-100"
+                 style="cursor:pointer;"
+                 onclick="window.location.href='{% url 'view_courses' %}?bundle_id={{ bundle.id }}'">
                 {% if bundle.thumbnail %}
                 <img src="{{ bundle.thumbnail.url }}" class="card-img-top" alt="{{ bundle.name }}">
                 {% else %}
